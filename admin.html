@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>MicroVenta | Panel de administrador</title>
+	<link rel="stylesheet" href="usuarios.css">
+	<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+	<div class="dashboard">
+		<aside class="sidebar">
+			<div class="sidebar-brand">
+				<img src="grafico/Logo_DM.png" alt="Dulce Mordisco" class="sidebar-logo">
+				<div>
+					<h2>Dulce Mordisco</h2>
+					<p>MicroVenta</p>
+				</div>
+			</div>
+
+			<nav class="sidebar-menu">
+				<a href="admin.html" class="menu-item active">🏠 Home</a>
+				<a href="usuarios.html" class="menu-item">👤 Usuarios</a>
+				<a href="#" class="menu-item">🧁 Productos</a>
+				<a href="#" class="menu-item">📦 Inventario</a>
+				<a href="#" class="menu-item">🛒 Pedidos</a>
+				<a href="#" class="menu-item">📊 Reportes</a>
+			</nav>
+		</aside>
+
+		<main class="main-content">
+			<header class="topbar">
+				<div>
+					<h1>Panel de administración</h1>
+					<p>Gestiona el sistema MicroVenta de Dulce Mordisco.</p>
+				</div>
+
+				<div class="topbar-actions">
+					<span id="nombreAdmin" class="admin-user">Administrador</span>
+					<button id="btnCerrarSesion" class="btn btn-secondary">Cerrar sesión</button>
+				</div>
+			</header>
+
+			<section class="hero-banner">
+				<div class="hero-overlay">
+					<div class="hero-content">
+						<div class="hero-badge">
+							<img src="grafico/MicroVentaTransparente_Horizontal.png" alt="MicroVenta">
+						</div>
+
+						<h2>Gestiona Dulce Mordisco de forma sencilla y organizada.</h2>
+
+						<p>
+							Accede rápidamente a los módulos principales del sistema para administrar
+							usuarios, productos, inventario, pedidos y reportes desde un solo lugar.
+						</p>
+					</div>
+				</div>
+			</section>
+
+			<section class="card modules-card">
+				<div class="section-header">
+					<div>
+						<h2>Módulos del sistema</h2>
+						<p>Selecciona el área que deseas administrar.</p>
+					</div>
+				</div>
+
+				<div class="modules-grid">
+					<a href="usuarios.html" class="module-card">
+						<div class="module-icon">👤</div>
+						<h4>Usuarios</h4>
+						<p>Consulta, registra, edita y elimina usuarios del sistema.</p>
+					</a>
+
+					<a href="#" class="module-card">
+						<div class="module-icon">🧁</div>
+						<h4>Productos</h4>
+						<p>Administra el catálogo de productos de Dulce Mordisco.</p>
+					</a>
+
+					<a href="#" class="module-card">
+						<div class="module-icon">📦</div>
+						<h4>Inventario</h4>
+						<p>Controla stock, existencias y movimientos de productos.</p>
+					</a>
+
+					<a href="#" class="module-card">
+						<div class="module-icon">🛒</div>
+						<h4>Pedidos</h4>
+						<p>Supervisa pedidos, estatus y seguimiento de entregas.</p>
+					</a>
+
+					<a href="#" class="module-card">
+						<div class="module-icon">📊</div>
+						<h4>Reportes</h4>
+						<p>Consulta información general y desempeño del negocio.</p>
+					</a>
+
+					<a href="usuarios.html" class="module-card module-card-highlight">
+						<div class="module-icon">⚡</div>
+						<h4>Acceso rápido</h4>
+						<p>Ir directamente al catálogo de usuarios.</p>
+					</a>
+				</div>
+			</section>
+		</main>
+	</div>
+
+	<script src="admin.js"></script>
+</body>
+</html>

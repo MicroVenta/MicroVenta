@@ -45,15 +45,15 @@ body {
 	border: 1px solid rgba(255, 255, 255, 0.7);
 }
 
-.left-panel{
-			padding: 55px 48px;
-			background:
-				linear-gradient(rgba(255, 247, 239, 0.92), rgba(255, 247, 239, 0.92)),
-				url('https://images.unsplash.com/photo-1517433670267-08bbd4be890f?auto=format&fit=crop&w=1200&q=80') center/cover no-repeat;
-			display: flex;
-			flex-direction: column;
-			justify-content: space-between;
-		}
+.left-panel {
+	padding: 55px 48px;
+	background:
+		linear-gradient(rgba(255, 247, 239, 0.92), rgba(255, 247, 239, 0.92)),
+		url('https://images.unsplash.com/photo-1517433670267-08bbd4be890f?auto=format&fit=crop&w=1200&q=80') center/cover no-repeat;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
 
 /*.left-panel {
 	padding: 55px 48px;
@@ -383,6 +383,11 @@ body {
 		font-size: 1.55rem;
 	}
 
+	.welcome h3 {
+		font-size: 1.45rem;
+		line-height: 1.25;
+	}
+
 	.welcome p {
 		font-size: 0.95rem;
 		line-height: 1.7;
@@ -412,18 +417,26 @@ body {
 	}
 
 	.microventa-logo {
-		min-width: 150px;
-		height: 46px;
-		padding: 0 18px;
+		min-width: 130px;
+		height: 42px;
+		padding: 0 14px;
 	}
 
 	.microventa-logo img {
-		max-width: 95px;
-		max-height: 24px;
+		max-width: 85px;
+		max-height: 22px;
+	}
+
+	.modal-form {
+		gap: 14px;
+	}
+
+	.btn-icon {
+		width: 34px;
+		height: 34px;
+		font-size: 0.95rem;
 	}
 }
-
-
 
 .microventa-logo {
 	display: inline-flex;
@@ -443,4 +456,141 @@ body {
 .microventa-logo img {
 	width: 95px;
 	height: auto;
+}
+
+.register-box {
+	margin-top: 16px;
+	text-align: center;
+	font-size: 0.92rem;
+	color: var(--gris-texto);
+}
+
+.modal {
+	position: fixed;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+}
+
+.hidden {
+	display: none;
+}
+
+.modal-backdrop {
+	position: absolute;
+	inset: 0;
+	background: rgba(60, 32, 40, 0.45);
+}
+
+.modal-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 18px;
+}
+
+.modal-header h2 {
+	font-size: 1.5rem;
+	color: var(--cafe-oscuro);
+}
+
+.btn-icon {
+	border: none;
+	background: #f7f0f2;
+	width: 38px;
+	height: 38px;
+	border-radius: 10px;
+	cursor: pointer;
+	font-size: 1rem;
+}
+
+.modal-form {
+	display: flex;
+	flex-direction: column;
+	gap: 18px;
+}
+
+.form-grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 16px;
+}
+
+.form-group.full-width {
+	grid-column: 1 / -1;
+}
+
+.modal-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.btn {
+	border: none;
+	border-radius: 12px;
+	padding: 11px 16px;
+	cursor: pointer;
+	font-weight: 600;
+	transition: 0.2s ease;
+}
+
+.btn-primary {
+	background: linear-gradient(135deg, var(--rosa-principal), var(--rosa-oscuro));
+	color: var(--blanco);
+	box-shadow: 0 10px 20px rgba(217, 108, 138, 0.22);
+}
+
+.btn-secondary {
+	background: #f1eaec;
+	color: var(--cafe-claro);
+}
+
+.modal-form .form-control {
+	width: 100%;
+	padding: 14px;
+	border: 1.5px solid var(--gris-borde);
+	border-radius: 14px;
+	outline: none;
+	font-size: 0.96rem;
+	background: #fff;
+	color: var(--cafe-oscuro);
+	transition: 0.25s ease;
+}
+
+.modal-form .form-control:focus {
+	border-color: var(--rosa-principal);
+	box-shadow: 0 0 0 4px rgba(217, 108, 138, 0.10);
+}
+
+.modal-content {
+	position: relative;
+	background: #fff;
+	width: min(520px, 92%);
+	border-radius: 24px;
+	padding: 28px;
+	box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2);
+	z-index: 1;
+}
+
+@media (max-width: 640px) {
+	.modal-content {
+		padding: 20px;
+		border-radius: 20px;
+	}
+
+	.modal-header h2 {
+		font-size: 1.3rem;
+	}
+
+	.modal-actions {
+		flex-direction: column;
+	}
+
+	.modal-actions .btn {
+		width: 100%;
+	}
 }

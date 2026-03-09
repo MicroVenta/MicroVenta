@@ -116,7 +116,7 @@ body {
 	display: flex;
 	align-items: center;
 	gap: 12px;
-	flex-wrap: wrap;
+	flex-wrap: nowrap;
 }
 
 .search-input {
@@ -152,7 +152,7 @@ body {
 table {
 	width: 100%;
 	border-collapse: collapse;
-	min-width: 980px;
+	min-width: 800px;
 }
 
 thead {
@@ -213,6 +213,8 @@ td {
 	border-radius: 10px;
 	border: none;
 	cursor: pointer;
+	font-size: 0.88rem;
+	white-space: nowrap;
 }
 
 .btn-delete {
@@ -222,6 +224,8 @@ td {
 	border-radius: 10px;
 	border: none;
 	cursor: pointer;
+	font-size: 0.88rem;
+	white-space: nowrap;
 }
 
 .modal {
@@ -342,11 +346,57 @@ td {
 		border-bottom: 1px solid rgba(217, 108, 138, 0.12);
 	}
 
+	.main-content {
+		padding: 18px;
+	}
+
+	.topbar {
+		align-items: flex-start;
+	}
+
+	.topbar-actions {
+		width: 100%;
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.search-input {
+		max-width: 100%;
+	}
+
+	.topbar-actions .btn {
+		width: 100%;
+	}
+
 	.form-grid {
 		grid-template-columns: 1fr;
 	}
 
-	.main-content {
-		padding: 18px;
+	.actions {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.btn-edit,
+	.btn-delete {
+		width: 100%;
+		text-align: center;
+	}
+
+	.modal-content {
+		padding: 20px;
+		border-radius: 20px;
+	}
+
+	.modal-header h2 {
+		font-size: 1.3rem;
+	}
+
+	.modal-actions {
+		flex-direction: column;
+	}
+
+	.modal-actions .btn {
+		width: 100%;
 	}
 }
