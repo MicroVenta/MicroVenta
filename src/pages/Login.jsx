@@ -183,7 +183,7 @@ export default function Login() {
               <label htmlFor="correo">Correo</label>
               <div className="input-wrapper">
                 <span className="input-icon">👤</span>
-                <input type="email" id="correo" className="form-control" placeholder="Ingresa tu correo" value={correo} onChange={(e) => setCorreo(e.target.value)} required />
+                <input type="email" id="correo" className="form-control" placeholder="Ingresa tu correo" value={correo} onChange={(e) => setCorreo(e.target.value)} style={{ paddingLeft: '44px' }} required />
               </div>
             </div>
 
@@ -191,7 +191,7 @@ export default function Login() {
               <label htmlFor="password">Contraseña</label>
               <div className="input-wrapper">
                 <span className="input-icon">🔒</span>
-                <input type="password" id="password" className="form-control" placeholder="Ingresa tu contraseña" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <input type="password" id="password" className="form-control" placeholder="Ingresa tu contraseña" value={password} onChange={(e) => setPassword(e.target.value)} style={{ paddingLeft: '44px' }} required />
               </div>
             </div>
 
