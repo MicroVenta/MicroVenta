@@ -8,6 +8,7 @@ import Catalogo from './pages/Catalogo';
 import Registro from './pages/Registro';
 import Categorias from './pages/Categorias';
 import Usuarios from './pages/Usuarios';
+import Administrador from './pages/Admin';
 
 function App() {
   return (
