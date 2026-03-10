@@ -20,14 +20,17 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
         
-        {/* Ruta del Panel Principal (Micro Venta) */}
+        {/* Ruta del Catálogo (Micro Venta) */}
         <Route path="/catalogo" element={<Catalogo />} />
         
-        {/* Ruta del Panel Principal (Micro Venta) */}
+        {/* Ruta de categorías*/}
         <Route path="/Categorias" element={<Categorias />} />
 
-        {/* Ruta del Panel Principal (Micro Venta) */}
+        {/* Ruta del Panel de Usuarios (Micro Venta) */}
         <Route path="/Usuarios" element={<Usuarios />} />
+
+        {/* Ruta del Administrador */}
+        <Route path="/administrador" element={<Administrador />} />
 
         {/* Ruta para manejar errores 404 */}
         <Route path="*" element={<h2>404 - Página no encontrada</h2>} />
