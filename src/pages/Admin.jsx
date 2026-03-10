@@ -51,7 +51,7 @@ export default function Admin() {
           <div className="hero-overlay">
             <div className="hero-content">
               <div className="hero-badge">
-                <img src="/grafico/MicroVentaTransparente_Horizontal.png" alt="MicroVenta" />
+                <img src="/MicroVentaTransparente_Horizontal.png" alt="MicroVenta" />
               </div>
               <h2>Gestiona Dulce Mordisco de forma sencilla y organizada.</h2>
               <p>Accede rápidamente a los módulos principales del sistema para administrar usuarios, productos, inventario, pedidos y reportes desde un solo lugar.</p>

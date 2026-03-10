@@ -5,7 +5,7 @@ export default function Sidebar({ paginaActual }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <img src="/grafico/Logo_DM.png" alt="Dulce Mordisco" className="sidebar-logo" />
+        <img src="/Logo_DM.png" alt="Dulce Mordisco" className="sidebar-logo" />
         <div>
           <h2>Dulce Mordisco</h2>
           <p>MicroVenta</p>
