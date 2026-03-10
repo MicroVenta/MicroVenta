@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Container, Form, Button, Card } from 'react-bootstrap';
-import { supabase } from '../supabaseClient'; // Tu conexión ya configurada
+import { supabase } from '../conexion'; // Tu conexión ya configurada
 
 const Registro = () => {
   const [email, setEmail] = useState('');

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../conexion';
 import { Table, Container, Spinner, Alert } from 'react-bootstrap';
 
 const Categorias = () => {

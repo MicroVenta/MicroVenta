@@ -1,16 +1,16 @@
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+	--rosa-claro: #fff1f2;
+	--rosa-suave: #ffd6dc;
+	--rosa-principal: #d96c8a;
+	--rosa-oscuro: #b14f6b;
+	--crema: #fff7ef;
+	--durazno: #f7c59f;
+	--cafe-claro: #8b5e3c;
+	--cafe-oscuro: #5c3b28;
+	--blanco: #ffffff;
+	--gris-texto: #5f5661;
+	--gris-borde: #ecd9dd;
+	--sombra: 0 20px 45px rgba(120, 72, 92, 0.18);
 }
 
 a {

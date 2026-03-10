@@ -14,7 +14,7 @@ function App() {
     <Router>
       <Routes>
         {/* Ruta inicial: Redirige al Login por defecto */}
-        <Route path="/" element={<Navigate to="/Usuarios" />} />
+        <Route path="/" element={<Navigate to="/login" />} />
         
         {/* Rutas de Autenticación */}
         <Route path="/login" element={<Login />} />
