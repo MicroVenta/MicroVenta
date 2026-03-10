@@ -31,7 +31,7 @@ function App() {
         <Route path="/Usuarios" element={<Usuarios />} />
 
         {/* Ruta del Administrador */}
-        <Route path="/administrador" element={<Administrador />} />
+        <Route path="/Admin" element={<Admin />} />
 
         {/* Ruta para manejar errores 404 */}
         <Route path="*" element={<h2>404 - Página no encontrada</h2>} />
