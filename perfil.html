@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>MicroVenta | Mi perfil</title>
+	<link rel="stylesheet" href="perfil.css">
+</head>
+<body>
+	<div class="dashboard">
+		<aside class="sidebar">
+			<div class="sidebar-brand">
+				<img src="grafico/Logo_DM.png" alt="Dulce Mordisco" class="sidebar-logo">
+				<div>
+					<h2>Dulce Mordisco</h2>
+					<p>MicroVenta</p>
+				</div>
+			</div>
+
+			<nav class="sidebar-menu">
+				<a href="cliente.html" class="menu-item">🏠 Inicio</a>
+				<a href="productos.html" class="menu-item">🧁 Productos</a>
+				<a href="mis-pedidos.html" class="menu-item">🛒 Mis pedidos</a>
+				<a href="perfil.html" class="menu-item active">👤 Mi perfil</a>
+
+				<button id="btnCerrarSesionSidebar" class="menu-item menu-item-logout" type="button">
+					🚪 Cerrar sesión
+				</button>
+			</nav>
+		</aside>
+
+		<main class="main-content">
+			<header class="topbar">
+				<div>
+					<h1>Mi perfil</h1>
+					<p>Consulta y actualiza tus datos personales y de entrega.</p>
+				</div>
+
+				<div class="topbar-actions">
+					<span id="nombreClienteTopbar" class="client-user">Cliente</span>
+					<button id="btnCerrarSesion" class="btn btn-secondary">Cerrar sesión</button>
+				</div>
+			</header>
+
+			<section class="profile-hero card">
+				<div class="profile-hero-content">
+					<div class="profile-avatar" id="avatarCliente">C</div>
+
+					<div class="profile-hero-info">
+						<h2 id="nombreClienteHero">Cliente</h2>
+						<p id="correoClienteHero">correo@ejemplo.com</p>
+
+						<div class="profile-tags">
+							<span class="profile-tag">👤 Cliente</span>
+							<span class="profile-tag" id="estadoClienteTag">Cuenta activa</span>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<section class="profile-grid">
+				<div class="card">
+					<div class="section-header">
+						<div>
+							<h2>Información personal</h2>
+							<p>Estos datos te identifican dentro de la plataforma.</p>
+						</div>
+					</div>
+
+					<form id="formPerfil" class="profile-form">
+						<div class="form-grid">
+							<div class="form-group full-width">
+								<label for="nombre_completo">Nombre completo</label>
+								<input type="text" id="nombre_completo" name="nombre_completo" maxlength="120" required>
+							</div>
+
+							<div class="form-group">
+								<label for="nombreuser">Nombre de usuario</label>
+								<input type="text" id="nombreuser" name="nombreuser" maxlength="50">
+							</div>
+
+							<div class="form-group">
+								<label for="correo">Correo electrónico</label>
+								<input type="email" id="correo" name="correo" maxlength="120" required>
+							</div>
+
+							<div class="form-group">
+								<label for="telefono">Teléfono</label>
+								<input type="tel" id="telefono" name="telefono" maxlength="20" placeholder="Ej. 6681234567">
+							</div>
+
+							<div class="form-group full-width">
+								<label for="direccion">Dirección de entrega</label>
+								<textarea
+									id="direccion"
+									name="direccion"
+									rows="5"
+									placeholder="Calle, número, colonia, ciudad, referencias para la entrega..."
+								></textarea>
+							</div>
+						</div>
+
+						<div class="form-note">
+							<p>
+								Procura mantener actualizados tu teléfono y tu dirección para evitar problemas con tus pedidos.
+							</p>
+						</div>
+
+						<div id="mensajePerfil" class="message hidden"></div>
+
+						<div class="form-actions">
+							<button type="button" id="btnRestaurar" class="btn btn-light">Restaurar datos</button>
+							<button type="submit" id="btnGuardarPerfil" class="btn btn-primary">Guardar cambios</button>
+						</div>
+					</form>
+				</div>
+
+				<div class="side-panel">
+					<div class="card info-card">
+						<div class="section-header">
+							<div>
+								<h2>Resumen de cuenta</h2>
+								<p>Información rápida de tu usuario.</p>
+							</div>
+						</div>
+
+						<div class="info-list">
+							<div class="info-item">
+								<span class="info-label">ID de usuario</span>
+								<strong id="infoIdUsuario">-</strong>
+							</div>
+
+							<div class="info-item">
+								<span class="info-label">Rol</span>
+								<strong id="infoRol">Cliente</strong>
+							</div>
+
+							<div class="info-item">
+								<span class="info-label">Estado</span>
+								<strong id="infoEstado">Activo</strong>
+							</div>
+
+							<div class="info-item">
+								<span class="info-label">Correo</span>
+								<strong id="infoCorreo">-</strong>
+							</div>
+						</div>
+					</div>
+
+					<div class="card tips-card">
+						<div class="section-header">
+							<div>
+								<h2>Recomendaciones</h2>
+								<p>Para una mejor experiencia de compra.</p>
+							</div>
+						</div>
+
+						<ul class="tips-list">
+							<li>Verifica que tu teléfono esté correcto para contactarte.</li>
+							<li>Agrega referencias claras en tu dirección de entrega.</li>
+							<li>Usa un correo válido para futuras notificaciones.</li>
+							<li>Mantén tu nombre actualizado para identificar tus pedidos.</li>
+						</ul>
+					</div>
+				</div>
+			</section>
+		</main>
+	</div>
+
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+	<script src="conexion.js"></script>
+	<script src="perfil.js"></script>
+</body>
+</html>
