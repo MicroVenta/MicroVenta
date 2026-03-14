@@ -1,5 +1,6 @@
 const nombreAdmin = document.getElementById('nombreAdmin');
 const btnCerrarSesion = document.getElementById('btnCerrarSesion');
+const btnCerrarSesionSidebar = document.getElementById('btnCerrarSesionSidebar');
 const heroTitle = document.getElementById('heroTitle');
 const heroText = document.getElementById('heroText');
 const revealCards = document.querySelectorAll('.reveal-card');
@@ -8,23 +9,41 @@ const usuarioGuardado =
 	sessionStorage.getItem('microventa_usuario') ||
 	localStorage.getItem('microventa_usuario');
 
+let usuario = null;
+
 if (!usuarioGuardado) {
 	window.location.href = 'login.html';
 } else {
-	const usuario = JSON.parse(usuarioGuardado);
-
-	if (usuario.nombre_rol !== 'Administrador') {
+	try {
+		usuario = JSON.parse(usuarioGuardado);
+	} catch (error) {
+		sessionStorage.removeItem('microventa_usuario');
+		localStorage.removeItem('microventa_usuario');
 		window.location.href = 'login.html';
-	} else {
+	}
+}
+
+if (usuario) {
+	if (usuario.nombre_rol !== 'administrador') {
+		window.location.href = 'login.html';
+	} else if (nombreAdmin) {
 		nombreAdmin.textContent = usuario.nombre_completo;
 	}
 }
 
-btnCerrarSesion.addEventListener('click', () => {
+function cerrarSesion() {
 	sessionStorage.removeItem('microventa_usuario');
 	localStorage.removeItem('microventa_usuario');
 	window.location.href = 'login.html';
-});
+}
+
+if (btnCerrarSesion) {
+	btnCerrarSesion.addEventListener('click', cerrarSesion);
+}
+
+if (btnCerrarSesionSidebar) {
+	btnCerrarSesionSidebar.addEventListener('click', cerrarSesion);
+}
 
 function animarTextoPorPalabras(elemento, delayBase = 0, paso = 0.12) {
 	if (!elemento) {

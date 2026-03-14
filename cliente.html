@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>MicroVenta | Inicio cliente</title>
+	<link rel="stylesheet" href="cliente.css">
+</head>
+<body>
+	<div class="dashboard">
+		<aside class="sidebar">
+			<div class="sidebar-brand">
+				<img src="grafico/Logo_DM.png" alt="Dulce Mordisco" class="sidebar-logo">
+				<div>
+					<h2>Dulce Mordisco</h2>
+					<p>MicroVenta</p>
+				</div>
+			</div>
+
+			<nav class="sidebar-menu">
+				<a href="cliente.html" class="menu-item active">🏠 Inicio</a>
+				<a href="productos.html" class="menu-item">🧁 Productos</a>
+				<a href="mis-pedidos.html" class="menu-item">🛒 Mis pedidos</a>
+				<a href="perfil.html" class="menu-item">👤 Mi perfil</a>
+
+				<button id="btnCerrarSesionSidebar" class="menu-item menu-item-logout" type="button">
+					🚪 Cerrar sesión
+				</button>
+			</nav>
+		</aside>
+
+		<main class="main-content">
+			<header class="topbar">
+				<div>
+					<h1>Bienvenido a Dulce Mordisco</h1>
+					<p>Disfruta tus postres favoritos desde MicroVenta.</p>
+				</div>
+
+				<div class="topbar-actions">
+					<span id="nombreCliente" class="client-user">Cliente</span>
+					<button id="btnCerrarSesion" class="btn btn-secondary">Cerrar sesión</button>
+				</div>
+			</header>
+
+			<section class="hero-banner">
+				<div class="hero-overlay">
+					<div class="hero-content">
+						<div class="hero-badge hero-reveal">
+							<img src="grafico/MicroVentaTransparente_Horizontal.png" alt="MicroVenta">
+						</div>
+
+						<h2 id="heroTitle" class="hero-title">
+							Tus antojos favoritos, recién horneados y al alcance de un clic.
+						</h2>
+
+						<p id="heroText" class="hero-text">
+							Explora nuestros productos, realiza tus pedidos y da seguimiento a tus compras
+							de forma rápida, cómoda y deliciosa.
+						</p>
+
+						<div class="hero-buttons hero-reveal delay-2">
+							<a href="productos.html" class="hero-btn hero-btn-primary">Ver productos</a>
+							<a href="mis-pedidos.html" class="hero-btn hero-btn-secondary">Mis pedidos</a>
+						</div>
+					</div>
+
+					<div class="hero-visual hero-reveal delay-3">
+						<div class="hero-image-card">
+							<img
+								src="https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=900&q=80"
+								alt="Postres Dulce Mordisco"
+								class="hero-image"
+							>
+						</div>
+
+						<div class="floating-tag floating-tag-1">🧁 Recién horneado</div>
+						<div class="floating-tag floating-tag-2">✨ Dulce experiencia</div>
+					</div>
+				</div>
+			</section>
+
+			<section class="card summary-card">
+				<div class="section-header">
+					<div>
+						<h2>Resumen rápido</h2>
+						<p>Consulta la información principal de tu cuenta.</p>
+					</div>
+				</div>
+
+				<div class="summary-grid">
+					<div class="summary-item reveal-card">
+						<div class="summary-icon">🛒</div>
+						<h3 id="totalPedidos">0</h3>
+						<p>Pedidos realizados</p>
+					</div>
+
+					<div class="summary-item reveal-card">
+						<div class="summary-icon">⏳</div>
+						<h3 id="pedidosProceso">0</h3>
+						<p>Pedidos en proceso</p>
+					</div>
+
+					<div class="summary-item reveal-card">
+						<div class="summary-icon">❤️</div>
+						<h3 id="productoFavorito">Sin datos</h3>
+						<p>Producto más pedido</p>
+					</div>
+
+					<div class="summary-item reveal-card">
+						<div class="summary-icon">🎁</div>
+						<h3 id="promoActiva">10% OFF</h3>
+						<p>Promoción disponible</p>
+					</div>
+				</div>
+			</section>
+
+			<section class="card actions-card">
+				<div class="section-header">
+					<div>
+						<h2>Accesos rápidos</h2>
+						<p>Ve directamente a lo que necesitas.</p>
+					</div>
+				</div>
+
+				<div class="actions-grid">
+					<a href="productos.html" class="action-card reveal-card">
+						<div class="action-icon">🧁</div>
+						<h4>Explorar productos</h4>
+						<p>Consulta panadería, galletas, pays y más delicias.</p>
+					</a>
+
+					<a href="mis-pedidos.html" class="action-card reveal-card">
+						<div class="action-icon">📦</div>
+						<h4>Dar seguimiento</h4>
+						<p>Revisa el estado actual de tus pedidos y entregas.</p>
+					</a>
+
+					<a href="perfil.html" class="action-card reveal-card">
+						<div class="action-icon">👤</div>
+						<h4>Actualizar perfil</h4>
+						<p>Modifica tus datos personales y dirección de entrega.</p>
+					</a>
+				</div>
+			</section>
+
+			<section class="card products-card">
+				<div class="section-header">
+					<div>
+						<h2>Productos destacados</h2>
+						<p>Algunas recomendaciones para hoy.</p>
+					</div>
+				</div>
+
+				<div class="products-grid">
+					<article class="product-card reveal-card">
+						<img
+							src="https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=900&q=80"
+							alt="Pan dulce"
+							class="product-image"
+						>
+						<div class="product-info">
+							<h4>Pan dulce artesanal</h4>
+							<p>Suave, recién horneado y perfecto para acompañar tu café.</p>
+							<div class="product-footer">
+								<span>$35.00</span>
+								<a href="productos.html" class="mini-btn">Ver más</a>
+							</div>
+						</div>
+					</article>
+
+					<article class="product-card reveal-card">
+						<img
+							src="https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=900&q=80"
+							alt="Galletas"
+							class="product-image"
+						>
+						<div class="product-info">
+							<h4>Galletas caseras</h4>
+							<p>Crujientes por fuera, suaves por dentro y llenas de sabor.</p>
+							<div class="product-footer">
+								<span>$28.00</span>
+								<a href="productos.html" class="mini-btn">Ver más</a>
+							</div>
+						</div>
+					</article>
+
+					<article class="product-card reveal-card">
+						<img
+							src="https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?auto=format&fit=crop&w=900&q=80"
+							alt="Pay"
+							class="product-image"
+						>
+						<div class="product-info">
+							<h4>Pay especial</h4>
+							<p>Ideal para compartir en familia o darte un gusto delicioso.</p>
+							<div class="product-footer">
+								<span>$85.00</span>
+								<a href="productos.html" class="mini-btn">Ver más</a>
+							</div>
+						</div>
+					</article>
+				</div>
+			</section>
+
+			<section class="card order-card">
+				<div class="section-header">
+					<div>
+						<h2>Estado de tu último pedido</h2>
+						<p>Seguimiento rápido de tu compra más reciente.</p>
+					</div>
+				</div>
+
+				<div class="order-status reveal-card">
+					<div class="order-main">
+						<h3 id="ultimoPedidoTitulo">Aún no tienes pedidos</h3>
+						<p id="ultimoPedidoTexto">
+							Cuando realices tu primera compra, aparecerá aquí.
+						</p>
+					</div>
+
+					<div class="order-pill" id="estadoPedido">Sin pedidos</div>
+				</div>
+			</section>
+
+			<section class="card orders-card">
+				<div class="section-header">
+					<div>
+						<h2>Mis pedidos</h2>
+						<p>Consulta tus pedidos registrados en el sistema.</p>
+					</div>
+				</div>
+
+				<div id="listaPedidos" class="orders-list">
+					<div class="empty-orders">Cargando pedidos...</div>
+				</div>
+			</section>
+		</main>
+	</div>
+
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+	<script src="conexion.js"></script>
+	<script src="cliente.js"></script>
+</body>
+</html>

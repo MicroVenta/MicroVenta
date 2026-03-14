@@ -1,0 +1,691 @@
+const nombreCliente = document.getElementById('nombreCliente');
+const btnCerrarSesion = document.getElementById('btnCerrarSesion');
+const btnCerrarSesionSidebar = document.getElementById('btnCerrarSesionSidebar');
+const buscarProducto = document.getElementById('buscarProducto');
+const filtroCategoria = document.getElementById('filtroCategoria');
+const listaProductos = document.getElementById('listaProductos');
+const resumenCatalogo = document.getElementById('resumenCatalogo');
+
+const carritoLista = document.getElementById('carritoLista');
+const carritoCantidad = document.getElementById('carritoCantidad');
+const carritoTotal = document.getElementById('carritoTotal');
+const btnVaciarCarrito = document.getElementById('btnVaciarCarrito');
+const btnRealizarPedido = document.getElementById('btnRealizarPedido');
+const pedidoMensaje = document.getElementById('pedidoMensaje');
+
+const usuarioGuardado =
+	sessionStorage.getItem('microventa_usuario') ||
+	localStorage.getItem('microventa_usuario');
+
+let usuario = null;
+let productosOriginales = [];
+let categoriasOriginales = [];
+let carrito = [];
+
+if (!usuarioGuardado) {
+	window.location.href = 'login.html';
+} else {
+	try {
+		usuario = JSON.parse(usuarioGuardado);
+	} catch (error) {
+		sessionStorage.removeItem('microventa_usuario');
+		localStorage.removeItem('microventa_usuario');
+		window.location.href = 'login.html';
+	}
+}
+
+if (!usuario) {
+	window.location.href = 'login.html';
+}
+
+if ((usuario.nombre_rol ?? '').trim().toLowerCase() !== 'cliente') {
+	window.location.href = 'login.html';
+}
+
+if (nombreCliente) {
+	nombreCliente.textContent = usuario.nombre_completo;
+}
+
+function cerrarSesion() {
+	sessionStorage.removeItem('microventa_usuario');
+	localStorage.removeItem('microventa_usuario');
+	window.location.href = 'login.html';
+}
+
+if (btnCerrarSesion) {
+	btnCerrarSesion.addEventListener('click', cerrarSesion);
+}
+
+if (btnCerrarSesionSidebar) {
+	btnCerrarSesionSidebar.addEventListener('click', cerrarSesion);
+}
+
+function obtenerClaveCarrito() {
+	return `microventa_carrito_${usuario.id_usuario}`;
+}
+
+function mostrarMensaje(tipo, texto) {
+	if (!pedidoMensaje) {
+		return;
+	}
+
+	pedidoMensaje.className = 'message';
+	pedidoMensaje.textContent = '';
+
+	if (tipo) {
+		pedidoMensaje.classList.add(tipo);
+		pedidoMensaje.textContent = texto;
+	}
+}
+
+function limpiarMensaje() {
+	if (!pedidoMensaje) {
+		return;
+	}
+
+	pedidoMensaje.className = 'message';
+	pedidoMensaje.textContent = '';
+}
+
+function obtenerImagenProducto(producto) {
+	if (producto.imagen && producto.imagen.trim() !== '') {
+		return producto.imagen;
+	}
+
+	return 'https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=900&q=80';
+}
+
+function formatearMoneda(valor) {
+	return `$${Number(valor).toFixed(2)}`;
+}
+
+function guardarCarrito() {
+	localStorage.setItem(obtenerClaveCarrito(), JSON.stringify(carrito));
+}
+
+function cargarCarrito() {
+	const carritoGuardado = localStorage.getItem(obtenerClaveCarrito());
+
+	if (!carritoGuardado) {
+		carrito = [];
+		return;
+	}
+
+	try {
+		carrito = JSON.parse(carritoGuardado) ?? [];
+	} catch (error) {
+		carrito = [];
+		localStorage.removeItem(obtenerClaveCarrito());
+	}
+}
+
+function cargarCategoriasEnFiltro(categorias) {
+	if (!filtroCategoria) {
+		return;
+	}
+
+	filtroCategoria.innerHTML = '<option value="">Todas</option>';
+
+	categorias.forEach((categoria) => {
+		const option = document.createElement('option');
+		option.value = categoria.id_categoria;
+		option.textContent = categoria.nombre_categoria;
+		filtroCategoria.appendChild(option);
+	});
+}
+
+function obtenerStockProducto(producto) {
+	return Number(producto.inventario?.[0]?.stock_actual ?? 0);
+}
+
+function obtenerCantidadEnCarrito(idProducto) {
+	const item = carrito.find((producto) => Number(producto.id_producto) === Number(idProducto));
+	return item ? Number(item.cantidad) : 0;
+}
+
+function agregarAlCarrito(idProducto) {
+	limpiarMensaje();
+
+	const producto = productosOriginales.find(
+		(item) => Number(item.id_producto) === Number(idProducto)
+	);
+
+	if (!producto) {
+		mostrarMensaje('error', 'No se encontró el producto.');
+		return;
+	}
+
+	const stockActual = obtenerStockProducto(producto);
+
+	if (stockActual <= 0) {
+		mostrarMensaje('error', 'Este producto no tiene existencias.');
+		return;
+	}
+
+	const existente = carrito.find(
+		(item) => Number(item.id_producto) === Number(idProducto)
+	);
+
+	if (existente) {
+		if (existente.cantidad >= stockActual) {
+			mostrarMensaje('error', 'No puedes agregar más de lo disponible en stock.');
+			return;
+		}
+
+		existente.cantidad += 1;
+	} else {
+		carrito.push({
+			id_producto: producto.id_producto,
+			nombre_producto: producto.nombre_producto,
+			precio_unitario: Number(producto.precio_unitario),
+			imagen: producto.imagen ?? '',
+			stock_actual: stockActual,
+			cantidad: 1
+		});
+	}
+
+	guardarCarrito();
+	renderizarCarrito();
+	renderizarProductos(aplicarFiltrosInterno());
+}
+
+function disminuirCantidad(idProducto) {
+	const item = carrito.find((producto) => Number(producto.id_producto) === Number(idProducto));
+
+	if (!item) {
+		return;
+	}
+
+	item.cantidad -= 1;
+
+	if (item.cantidad <= 0) {
+		carrito = carrito.filter((producto) => Number(producto.id_producto) !== Number(idProducto));
+	}
+
+	guardarCarrito();
+	renderizarCarrito();
+	renderizarProductos(aplicarFiltrosInterno());
+}
+
+function aumentarCantidad(idProducto) {
+	const item = carrito.find((producto) => Number(producto.id_producto) === Number(idProducto));
+	const producto = productosOriginales.find((p) => Number(p.id_producto) === Number(idProducto));
+
+	if (!item || !producto) {
+		return;
+	}
+
+	const stockActual = obtenerStockProducto(producto);
+
+	if (item.cantidad >= stockActual) {
+		mostrarMensaje('error', 'No puedes agregar más de lo disponible en stock.');
+		return;
+	}
+
+	item.cantidad += 1;
+	item.stock_actual = stockActual;
+
+	guardarCarrito();
+	renderizarCarrito();
+	renderizarProductos(aplicarFiltrosInterno());
+}
+
+function eliminarDelCarrito(idProducto) {
+	carrito = carrito.filter((producto) => Number(producto.id_producto) !== Number(idProducto));
+	guardarCarrito();
+	renderizarCarrito();
+	renderizarProductos(aplicarFiltrosInterno());
+}
+
+function vaciarCarrito() {
+	carrito = [];
+	guardarCarrito();
+	renderizarCarrito();
+	renderizarProductos(aplicarFiltrosInterno());
+	limpiarMensaje();
+}
+
+function renderizarCarrito() {
+	if (!carritoLista) {
+		return;
+	}
+
+	if (!carrito || carrito.length === 0) {
+		carritoLista.innerHTML = `
+			<div class="empty-cart">Tu carrito está vacío.</div>
+		`;
+
+		if (carritoCantidad) {
+			carritoCantidad.textContent = '0';
+		}
+
+		if (carritoTotal) {
+			carritoTotal.textContent = '$0.00';
+		}
+
+		return;
+	}
+
+	carritoLista.innerHTML = carrito.map((item) => {
+		const subtotal = Number(item.precio_unitario) * Number(item.cantidad);
+
+		return `
+			<article class="cart-item">
+				<div class="cart-item-top">
+					<div>
+						<h4>${item.nombre_producto}</h4>
+						<div class="cart-item-price">${formatearMoneda(item.precio_unitario)} c/u</div>
+					</div>
+
+					<div class="cart-item-price">${formatearMoneda(subtotal)}</div>
+				</div>
+
+				<div class="cart-item-controls">
+					<div class="qty-controls">
+						<button class="qty-btn" data-action="minus" data-id="${item.id_producto}">−</button>
+						<span class="qty-value">${item.cantidad}</span>
+						<button class="qty-btn" data-action="plus" data-id="${item.id_producto}">+</button>
+					</div>
+
+					<button class="remove-btn" data-action="remove" data-id="${item.id_producto}">
+						Quitar
+					</button>
+				</div>
+			</article>
+		`;
+	}).join('');
+
+	const cantidadTotal = carrito.reduce((total, item) => total + Number(item.cantidad), 0);
+	const total = carrito.reduce(
+		(acumulado, item) => acumulado + (Number(item.precio_unitario) * Number(item.cantidad)),
+		0
+	);
+
+	if (carritoCantidad) {
+		carritoCantidad.textContent = cantidadTotal.toString();
+	}
+
+	if (carritoTotal) {
+		carritoTotal.textContent = formatearMoneda(total);
+	}
+
+	const botonesCarrito = carritoLista.querySelectorAll('[data-action]');
+
+	botonesCarrito.forEach((boton) => {
+		boton.addEventListener('click', () => {
+			const accion = boton.getAttribute('data-action');
+			const idProducto = Number(boton.getAttribute('data-id'));
+
+			if (accion === 'minus') {
+				disminuirCantidad(idProducto);
+			} else if (accion === 'plus') {
+				aumentarCantidad(idProducto);
+			} else if (accion === 'remove') {
+				eliminarDelCarrito(idProducto);
+			}
+		});
+	});
+}
+
+function renderizarProductos(productos) {
+	if (!listaProductos) {
+		return;
+	}
+
+	if (!productos || productos.length === 0) {
+		listaProductos.innerHTML = `
+			<div class="empty-state">
+				No se encontraron productos disponibles.
+			</div>
+		`;
+		return;
+	}
+
+	listaProductos.innerHTML = productos.map((producto) => {
+		const nombreCategoria = producto.categoria?.nombre_categoria ?? 'Sin categoría';
+		const stockActual = obtenerStockProducto(producto);
+		const cantidadEnCarrito = obtenerCantidadEnCarrito(producto.id_producto);
+		const disponibleParaAgregar = stockActual - cantidadEnCarrito;
+		const descripcion =
+			producto.descripcion_producto && producto.descripcion_producto.trim() !== ''
+				? producto.descripcion_producto
+				: 'Producto disponible en Dulce Mordisco.';
+
+		return `
+			<article class="product-card">
+				<img
+					src="${obtenerImagenProducto(producto)}"
+					alt="${producto.nombre_producto}"
+					class="product-image"
+				>
+
+				<div class="product-body">
+					<h3 class="product-title">${producto.nombre_producto}</h3>
+					<div class="product-category">${nombreCategoria}</div>
+
+					<p class="product-description">${descripcion}</p>
+
+					<div class="product-meta">
+						<div class="meta-box">
+							<strong>Precio</strong>
+							<span>${formatearMoneda(producto.precio_unitario)}</span>
+						</div>
+
+						<div class="meta-box">
+							<strong>Stock</strong>
+							<span>${stockActual}</span>
+						</div>
+					</div>
+
+					<div class="product-footer">
+						<div class="stock-badge ${stockActual > 0 ? 'stock-ok' : 'stock-low'}">
+							${stockActual > 0 ? 'Disponible' : 'Agotado'}
+						</div>
+
+						<button
+							class="btn-add"
+							data-id="${producto.id_producto}"
+							${disponibleParaAgregar <= 0 ? 'disabled' : ''}
+						>
+							${stockActual <= 0 ? 'Sin stock' : 'Agregar'}
+						</button>
+					</div>
+				</div>
+			</article>
+		`;
+	}).join('');
+
+	const botonesAgregar = listaProductos.querySelectorAll('.btn-add');
+
+	botonesAgregar.forEach((boton) => {
+		boton.addEventListener('click', () => {
+			const idProducto = Number(boton.getAttribute('data-id'));
+			agregarAlCarrito(idProducto);
+		});
+	});
+}
+
+function aplicarFiltrosInterno() {
+	let productosFiltrados = [...productosOriginales];
+
+	const textoBusqueda = buscarProducto ? buscarProducto.value.trim().toLowerCase() : '';
+	const categoriaSeleccionada = filtroCategoria ? filtroCategoria.value : '';
+
+	productosFiltrados = productosFiltrados.filter(
+		(producto) => producto.visible === true
+	);
+
+	if (textoBusqueda !== '') {
+		productosFiltrados = productosFiltrados.filter((producto) => {
+			const nombre = (producto.nombre_producto ?? '').toLowerCase();
+			const descripcion = (producto.descripcion_producto ?? '').toLowerCase();
+			const categoria = (producto.categoria?.nombre_categoria ?? '').toLowerCase();
+
+			return (
+				nombre.includes(textoBusqueda) ||
+				descripcion.includes(textoBusqueda) ||
+				categoria.includes(textoBusqueda)
+			);
+		});
+	}
+
+	if (categoriaSeleccionada !== '') {
+		productosFiltrados = productosFiltrados.filter(
+			(producto) => String(producto.id_categoria) === categoriaSeleccionada
+		);
+	}
+
+	if (resumenCatalogo) {
+		resumenCatalogo.textContent = `${productosFiltrados.length} producto(s) encontrado(s).`;
+	}
+
+	return productosFiltrados;
+}
+
+function aplicarFiltros() {
+	renderizarProductos(aplicarFiltrosInterno());
+}
+
+async function cargarCategorias() {
+	try {
+		const { data, error } = await db
+			.from('categoria')
+			.select('id_categoria, nombre_categoria')
+			.order('nombre_categoria', { ascending: true });
+
+		if (error) {
+			console.error('Error al cargar categorías:', error);
+			return;
+		}
+
+		categoriasOriginales = data ?? [];
+		cargarCategoriasEnFiltro(categoriasOriginales);
+
+	} catch (error) {
+		console.error('Error general al cargar categorías:', error);
+	}
+}
+
+async function cargarProductos() {
+	try {
+		const { data, error } = await db
+			.from('producto')
+			.select(`
+				id_producto,
+				nombre_producto,
+				precio_unitario,
+				id_categoria,
+				descripcion_producto,
+				imagen,
+				visible,
+				categoria (
+					id_categoria,
+					nombre_categoria
+				),
+				inventario (
+					id_inventario,
+					stock_actual
+				)
+			`)
+			.eq('visible', true)
+			.order('id_producto', { ascending: true });
+
+		if (error) {
+			console.error('Error al cargar productos:', error);
+
+			if (listaProductos) {
+				listaProductos.innerHTML = `
+					<div class="empty-state">
+						No se pudieron cargar los productos.
+					</div>
+				`;
+			}
+
+			return;
+		}
+
+		productosOriginales = data ?? [];
+		aplicarFiltros();
+
+	} catch (error) {
+		console.error('Error general al cargar productos:', error);
+
+		if (listaProductos) {
+			listaProductos.innerHTML = `
+				<div class="empty-state">
+					Ocurrió un error al consultar la información.
+				</div>
+			`;
+		}
+	}
+}
+
+async function obtenerEstatusPendiente() {
+	const { data, error } = await db
+		.from('estatuspedido')
+		.select('id_estatus, descripcion')
+		.eq('descripcion', 'Pendiente')
+		.single();
+
+	if (error || !data) {
+		throw new Error('No se encontró el estatus Pendiente.');
+	}
+
+	return data.id_estatus;
+}
+
+async function actualizarInventarioProducto(item) {
+	const producto = productosOriginales.find(
+		(productoActual) => Number(productoActual.id_producto) === Number(item.id_producto)
+	);
+
+	if (!producto) {
+		throw new Error(`No se encontró el producto ${item.nombre_producto}.`);
+	}
+
+	const inventarioActual = producto.inventario?.[0];
+
+	if (!inventarioActual) {
+		throw new Error(`El producto ${item.nombre_producto} no tiene inventario registrado.`);
+	}
+
+	const stockActual = Number(inventarioActual.stock_actual ?? 0);
+
+	if (item.cantidad > stockActual) {
+		throw new Error(`No hay suficiente stock para ${item.nombre_producto}.`);
+	}
+
+	const nuevoStock = stockActual - Number(item.cantidad);
+
+	const { error } = await db
+		.from('inventario')
+		.update({
+			stock_actual: nuevoStock,
+			ultima_actualizacion: new Date().toISOString()
+		})
+		.eq('id_inventario', inventarioActual.id_inventario);
+
+	if (error) {
+		throw new Error(`No se pudo actualizar el inventario de ${item.nombre_producto}.`);
+	}
+
+	inventarioActual.stock_actual = nuevoStock;
+}
+
+async function realizarPedido() {
+	limpiarMensaje();
+
+	if (!carrito || carrito.length === 0) {
+		mostrarMensaje('error', 'Agrega productos antes de realizar el pedido.');
+		return;
+	}
+
+	btnRealizarPedido.disabled = true;
+	btnRealizarPedido.textContent = 'Procesando...';
+
+	try {
+		for (const item of carrito) {
+			const producto = productosOriginales.find(
+				(productoActual) => Number(productoActual.id_producto) === Number(item.id_producto)
+			);
+
+			if (!producto) {
+				throw new Error(`No se encontró el producto ${item.nombre_producto}.`);
+			}
+
+			const stockActual = obtenerStockProducto(producto);
+
+			if (item.cantidad > stockActual) {
+				throw new Error(`No hay stock suficiente para ${item.nombre_producto}.`);
+			}
+		}
+
+		const total = carrito.reduce(
+			(acumulado, item) => acumulado + (Number(item.precio_unitario) * Number(item.cantidad)),
+			0
+		);
+
+		const { data: pedidoData, error: pedidoError } = await db
+			.from('pedido')
+			.insert({
+				id_cliente: usuario.id_usuario,
+				total_pagar: total
+			})
+			.select('id_pedido')
+			.single();
+
+		if (pedidoError || !pedidoData) {
+			throw new Error('No se pudo crear el pedido.');
+		}
+
+		const detalles = carrito.map((item) => ({
+			id_pedido: pedidoData.id_pedido,
+			id_producto: item.id_producto,
+			cantidad: item.cantidad,
+			subtotal: Number(item.precio_unitario) * Number(item.cantidad)
+		}));
+
+		const { error: detalleError } = await db
+			.from('detallepedido')
+			.insert(detalles);
+
+		if (detalleError) {
+			throw new Error('No se pudieron guardar los detalles del pedido.');
+		}
+
+		const idEstatusPendiente = await obtenerEstatusPendiente();
+
+		const { error: historialError } = await db
+			.from('historialestatus')
+			.insert({
+				id_pedido: pedidoData.id_pedido,
+				id_estatus: idEstatusPendiente
+			});
+
+		if (historialError) {
+			throw new Error('No se pudo registrar el estatus inicial del pedido.');
+		}
+
+		for (const item of carrito) {
+			await actualizarInventarioProducto(item);
+		}
+
+		carrito = [];
+		guardarCarrito();
+		renderizarCarrito();
+		aplicarFiltros();
+
+		mostrarMensaje(
+			'success',
+			`Pedido realizado correctamente. Tu número de pedido es #${pedidoData.id_pedido}.`
+		);
+
+	} catch (error) {
+		console.error('Error al realizar pedido:', error);
+		mostrarMensaje('error', error.message || 'No se pudo realizar el pedido.');
+	} finally {
+		btnRealizarPedido.disabled = false;
+		btnRealizarPedido.textContent = 'Realizar pedido';
+	}
+}
+
+if (buscarProducto) {
+	buscarProducto.addEventListener('input', aplicarFiltros);
+}
+
+if (filtroCategoria) {
+	filtroCategoria.addEventListener('change', aplicarFiltros);
+}
+
+if (btnVaciarCarrito) {
+	btnVaciarCarrito.addEventListener('click', vaciarCarrito);
+}
+
+if (btnRealizarPedido) {
+	btnRealizarPedido.addEventListener('click', realizarPedido);
+}
+
+cargarCarrito();
+renderizarCarrito();
+cargarCategorias();
+cargarProductos();

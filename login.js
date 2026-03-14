@@ -132,27 +132,40 @@ loginForm.addEventListener('submit', async function (e) {
 			return;
 		}
 
+		const nombreRol = (data.rol?.nombre_rol ?? '').trim().toLowerCase();
+
 		const sesionUsuario = {
 			id_usuario: data.id_usuario,
 			nombre_completo: data.nombre_completo,
 			correo: data.correo,
 			id_rol: data.id_rol,
-			nombre_rol: data.rol?.nombre_rol ?? 'Sin rol'
+			nombre_rol: nombreRol
 		};
 
+		console.log('Usuario logueado:', sesionUsuario);
+		console.log('Rol detectado:', sesionUsuario.nombre_rol);
+
 		if (document.getElementById('recordarme').checked) {
+			sessionStorage.removeItem('microventa_usuario');
 			localStorage.setItem('microventa_usuario', JSON.stringify(sesionUsuario));
 		} else {
+			localStorage.removeItem('microventa_usuario');
 			sessionStorage.setItem('microventa_usuario', JSON.stringify(sesionUsuario));
 		}
 
 		estadoBotonLogin('success', '✓ Correcto');
 
 		setTimeout(() => {
-			if (sesionUsuario.nombre_rol === 'Administrador') {
+			if (sesionUsuario.nombre_rol === 'administrador') {
 				window.location.href = 'admin.html';
-			} else {
+			} else if (sesionUsuario.nombre_rol === 'cliente') {
+				window.location.href = 'cliente.html';
+			} else if (sesionUsuario.nombre_rol === 'ayudante') {
+				window.location.href = 'cliente.html';
+			} else if (sesionUsuario.nombre_rol === 'repartidor') {
 				window.location.href = 'index.html';
+			} else {
+				window.location.href = 'login.html';
 			}
 		}, 900);
 
