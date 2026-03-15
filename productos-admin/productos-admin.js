@@ -39,29 +39,29 @@ let modoEdicion = false;
 function cerrarSesion() {
 	sessionStorage.removeItem('microventa_usuario');
 	localStorage.removeItem('microventa_usuario');
-	window.location.href = 'login.html';
+	window.location.href = '/login/login.html';
 }
 
 if (!usuarioGuardado) {
-	window.location.href = 'login.html';
+	window.location.href = '/login/login.html';
 } else {
 	try {
 		usuario = JSON.parse(usuarioGuardado);
 	} catch (error) {
 		sessionStorage.removeItem('microventa_usuario');
 		localStorage.removeItem('microventa_usuario');
-		window.location.href = 'login.html';
+		window.location.href = '/login/login.html';
 	}
 }
 
 if (!usuario) {
-	window.location.href = 'login.html';
+	window.location.href = '/login/login.html';
 }
 
 const rolUsuario = (usuario.nombre_rol ?? '').trim().toLowerCase();
 
 if (rolUsuario !== 'administrador' && rolUsuario !== 'ayudante') {
-	window.location.href = 'login.html';
+	window.location.href = '/login/login.html';
 }
 
 if (nombreUsuario) {

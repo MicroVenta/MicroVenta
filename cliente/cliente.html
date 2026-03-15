@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 	<meta charset="UTF-8">
+	<link rel="icon" type="image/svg+xml" href="/grafico/Logo_DM.png" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>MicroVenta | Inicio cliente</title>
 	<link rel="stylesheet" href="cliente.css">
@@ -10,7 +11,7 @@
 	<div class="dashboard">
 		<aside class="sidebar">
 			<div class="sidebar-brand">
-				<img src="grafico/Logo_DM.png" alt="Dulce Mordisco" class="sidebar-logo">
+				<img src="/grafico/Logo_DM.png" alt="Dulce Mordisco" class="sidebar-logo">
 				<div>
 					<h2>Dulce Mordisco</h2>
 					<p>MicroVenta</p>
@@ -19,9 +20,9 @@
 
 			<nav class="sidebar-menu">
 				<a href="cliente.html" class="menu-item active">🏠 Inicio</a>
-				<a href="productos.html" class="menu-item">🧁 Productos</a>
-				<a href="mis-pedidos.html" class="menu-item">🛒 Mis pedidos</a>
-				<a href="perfil.html" class="menu-item">👤 Mi perfil</a>
+				<a href="/productos/productos.html" class="menu-item">🧁 Productos</a>
+				<a href="/mis-pedidos/mis-pedidos.html" class="menu-item">🛒 Mis pedidos</a>
+				<a href="/perfil/perfil.html" class="menu-item">👤 Mi perfil</a>
 
 				<button id="btnCerrarSesionSidebar" class="menu-item menu-item-logout" type="button">
 					🚪 Cerrar sesión
@@ -46,7 +47,7 @@
 				<div class="hero-overlay">
 					<div class="hero-content">
 						<div class="hero-badge hero-reveal">
-							<img src="grafico/MicroVentaTransparente_Horizontal.png" alt="MicroVenta">
+							<img src="/grafico/MicroVentaTransparente_Horizontal.png" alt="MicroVenta">
 						</div>
 
 						<h2 id="heroTitle" class="hero-title">
@@ -59,8 +60,8 @@
 						</p>
 
 						<div class="hero-buttons hero-reveal delay-2">
-							<a href="productos.html" class="hero-btn hero-btn-primary">Ver productos</a>
-							<a href="mis-pedidos.html" class="hero-btn hero-btn-secondary">Mis pedidos</a>
+							<a href="/productos/productos.html" class="hero-btn hero-btn-primary">Ver productos</a>
+							<a href="/mis-pedidos/mis-pedidos.html" class="hero-btn hero-btn-secondary">Mis pedidos</a>
 						</div>
 					</div>
 
@@ -123,19 +124,19 @@
 				</div>
 
 				<div class="actions-grid">
-					<a href="productos.html" class="action-card reveal-card">
+					<a href="/productos/productos.html" class="action-card reveal-card">
 						<div class="action-icon">🧁</div>
 						<h4>Explorar productos</h4>
 						<p>Consulta panadería, galletas, pays y más delicias.</p>
 					</a>
 
-					<a href="mis-pedidos.html" class="action-card reveal-card">
+					<a href="/mis-pedidos/mis-pedidos.html" class="action-card reveal-card">
 						<div class="action-icon">📦</div>
 						<h4>Dar seguimiento</h4>
 						<p>Revisa el estado actual de tus pedidos y entregas.</p>
 					</a>
 
-					<a href="perfil.html" class="action-card reveal-card">
+					<a href="/perfil/perfil.html" class="action-card reveal-card">
 						<div class="action-icon">👤</div>
 						<h4>Actualizar perfil</h4>
 						<p>Modifica tus datos personales y dirección de entrega.</p>
@@ -179,7 +180,7 @@
 	</div>
 
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-	<script src="conexion.js"></script>
+	<script src="/conexion.js"></script>
 	<script src="cliente.js"></script>
 </body>
 </html>

@@ -3,6 +3,7 @@
 
 <head>
 	<meta charset="UTF-8">
+	<link rel="icon" type="image/svg+xml" href="/grafico/Logo_DM.png" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>MicroVenta | Catálogo de usuarios</title>
 	<link rel="stylesheet" href="usuarios.css">
@@ -14,7 +15,7 @@
 	<div class="dashboard">
 		<aside class="sidebar" id="sidebar">
 			<div class="sidebar-brand">
-				<img src="grafico/Logo_DM.png" alt="Dulce Mordisco" class="sidebar-logo">
+				<img src="/grafico/Logo_DM.png" alt="Dulce Mordisco" class="sidebar-logo">
 				<div>
 					<h2>Dulce Mordisco</h2>
 					<p>MicroVenta</p>
@@ -22,12 +23,12 @@
 			</div>
 
 			<nav class="sidebar-menu">
-				<a href="admin.html" class="menu-item">🏠 Home</a>
-				<a href="usuarios.html" class="menu-item active">👤 Usuarios</a>
-				<a href="productos-admin.html" class="menu-item">🧁 Productos</a>
-				<a href="inventario.html" class="menu-item">📦 Inventario</a>
-				<a href="pedidos.html" class="menu-item">🛒 Pedidos</a>
-				<a href="reportes.html" class="menu-item">📊 Reportes</a>
+				<a href="/admin/admin.html" class="menu-item">🏠 Home</a>
+				<a href="/usuarios/usuarios.html" class="menu-item active">👤 Usuarios</a>
+				<a href="/productos-admin/productos-admin.html" class="menu-item">🧁 Productos</a>
+				<a href="/inventario/inventario.html" class="menu-item">📦 Inventario</a>
+				<a href="/pedidos/pedidos.html" class="menu-item">🛒 Pedidos</a>
+				<a href="/reportes/reportes.html" class="menu-item">📊 Reportes</a>
 				<button id="btnCerrarSesionSidebar" class="menu-item menu-item-logout" type="button">
 		🚪 Cerrar sesión
 	</button>
@@ -119,7 +120,7 @@
 	</div>
 
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-	<script src="conexion.js"></script>
+	<script src="/conexion.js"></script>
 	<script src="usuarios.js"></script>
 </body>
 

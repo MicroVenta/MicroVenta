@@ -21,20 +21,20 @@ const usuarioGuardado =
 let usuario = null;
 
 if (!usuarioGuardado) {
-	window.location.href = 'login.html';
+	window.location.href = '/login/login.html';
 } else {
 	try {
 		usuario = JSON.parse(usuarioGuardado);
 	} catch (error) {
 		sessionStorage.removeItem('microventa_usuario');
 		localStorage.removeItem('microventa_usuario');
-		window.location.href = 'login.html';
+		window.location.href = '/login/login.html';
 	}
 }
 
 if (usuario) {
 	if (usuario.nombre_rol !== 'cliente') {
-		window.location.href = 'login.html';
+		window.location.href = '/login/login.html';
 	} else if (nombreCliente) {
 		nombreCliente.textContent = usuario.nombre_completo;
 	}
@@ -43,7 +43,7 @@ if (usuario) {
 function cerrarSesion() {
 	sessionStorage.removeItem('microventa_usuario');
 	localStorage.removeItem('microventa_usuario');
-	window.location.href = 'login.html';
+	window.location.href = '/login/login.html';
 }
 
 if (btnCerrarSesion) {

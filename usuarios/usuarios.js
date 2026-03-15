@@ -21,7 +21,7 @@ let usuarios = [];
 function cerrarSesion() {
 	sessionStorage.removeItem('microventa_usuario');
 	localStorage.removeItem('microventa_usuario');
-	window.location.href = 'login.html';
+	window.location.href = '/login/login.html';
 }
 
 /* =========================

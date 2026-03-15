@@ -157,15 +157,15 @@ loginForm.addEventListener('submit', async function (e) {
 
 		setTimeout(() => {
 			if (sesionUsuario.nombre_rol === 'administrador') {
-				window.location.href = 'admin.html';
+				window.location.href = '/admin/admin.html';
 			} else if (sesionUsuario.nombre_rol === 'cliente') {
-				window.location.href = 'cliente.html';
+				window.location.href = '/cliente/cliente.html';
 			} else if (sesionUsuario.nombre_rol === 'ayudante') {
-				window.location.href = 'cliente.html';
+				window.location.href = '/cliente/cliente.html';
 			} else if (sesionUsuario.nombre_rol === 'repartidor') {
 				window.location.href = 'index.html';
 			} else {
-				window.location.href = 'login.html';
+				window.location.href = '/login/login.html';
 			}
 		}, 900);
 

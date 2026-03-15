@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 	<meta charset="UTF-8">
+	<link rel="icon" type="image/svg+xml" href="/grafico/Logo_DM.png" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>MicroVenta | Productos</title>
 	<link rel="stylesheet" href="productos.css">
@@ -10,7 +11,7 @@
 	<div class="dashboard">
 		<aside class="sidebar">
 			<div class="sidebar-brand">
-				<img src="grafico/Logo_DM.png" alt="Dulce Mordisco" class="sidebar-logo">
+				<img src="/grafico/Logo_DM.png" alt="Dulce Mordisco" class="sidebar-logo">
 				<div>
 					<h2>Dulce Mordisco</h2>
 					<p>MicroVenta</p>
@@ -18,10 +19,10 @@
 			</div>
 
 			<nav class="sidebar-menu">
-				<a href="cliente.html" class="menu-item">🏠 Inicio</a>
-				<a href="productos.html" class="menu-item active">🧁 Productos</a>
-				<a href="mis-pedidos.html" class="menu-item">🛒 Mis pedidos</a>
-				<a href="perfil.html" class="menu-item">👤 Mi perfil</a>
+				<a href="/cliente/cliente.html" class="menu-item">🏠 Inicio</a>
+				<a href="/productos/productos.html" class="menu-item active">🧁 Productos</a>
+				<a href="/mis-pedidos/mis-pedidos.html" class="menu-item">🛒 Mis pedidos</a>
+				<a href="/perfil/perfil.html" class="menu-item">👤 Mi perfil</a>
 
 				<button id="btnCerrarSesionSidebar" class="menu-item menu-item-logout" type="button">
 					🚪 Cerrar sesión
@@ -129,7 +130,7 @@
 	</div>
 
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-	<script src="conexion.js"></script>
+	<script src="/conexion.js"></script>
 	<script src="productos.js"></script>
 </body>
 </html>

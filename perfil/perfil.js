@@ -52,25 +52,25 @@ function esCliente(usuarioData) {
 }
 
 if (!usuarioGuardado) {
-	window.location.href = 'login.html';
+	window.location.href = '/login/login.html';
 } else {
 	try {
 		usuario = JSON.parse(usuarioGuardado);
 	} catch (error) {
 		sessionStorage.removeItem('microventa_usuario');
 		localStorage.removeItem('microventa_usuario');
-		window.location.href = 'login.html';
+		window.location.href = '/login/login.html';
 	}
 }
 
 if (!esCliente(usuario)) {
-	window.location.href = 'login.html';
+	window.location.href = '/login/login.html';
 }
 
 function cerrarSesion() {
 	sessionStorage.removeItem('microventa_usuario');
 	localStorage.removeItem('microventa_usuario');
-	window.location.href = 'login.html';
+	window.location.href = '/login/login.html';
 }
 
 if (btnCerrarSesion) {
@@ -196,7 +196,7 @@ function guardarEnStorage(usuarioActualizado) {
 
 async function cargarPerfil() {
 	if (!usuario || !usuario.id_usuario) {
-		window.location.href = 'login.html';
+		window.location.href = '/login/login.html';
 		return;
 	}
 
@@ -233,7 +233,7 @@ async function cargarPerfil() {
 		};
 
 		if (!esCliente(usuarioData)) {
-			window.location.href = 'login.html';
+			window.location.href = '/login/login.html';
 			return;
 		}
 
@@ -382,7 +382,7 @@ if (formPerfil) {
 			};
 
 			if (!esCliente(usuarioActualizado)) {
-				window.location.href = 'login.html';
+				window.location.href = '/login/login.html';
 				return;
 			}
 

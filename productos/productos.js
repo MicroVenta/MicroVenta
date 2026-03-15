@@ -23,23 +23,23 @@ let categoriasOriginales = [];
 let carrito = [];
 
 if (!usuarioGuardado) {
-	window.location.href = 'login.html';
+	window.location.href = '/login/login.html';
 } else {
 	try {
 		usuario = JSON.parse(usuarioGuardado);
 	} catch (error) {
 		sessionStorage.removeItem('microventa_usuario');
 		localStorage.removeItem('microventa_usuario');
-		window.location.href = 'login.html';
+		window.location.href = '/login/login.html';
 	}
 }
 
 if (!usuario) {
-	window.location.href = 'login.html';
+	window.location.href = '/login/login.html';
 }
 
 if ((usuario.nombre_rol ?? '').trim().toLowerCase() !== 'cliente') {
-	window.location.href = 'login.html';
+	window.location.href = '/login/login.html';
 }
 
 if (nombreCliente) {
@@ -49,7 +49,7 @@ if (nombreCliente) {
 function cerrarSesion() {
 	sessionStorage.removeItem('microventa_usuario');
 	localStorage.removeItem('microventa_usuario');
-	window.location.href = 'login.html';
+	window.location.href = '/login/login.html';
 }
 
 if (btnCerrarSesion) {
