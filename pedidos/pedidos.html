@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8">
+	<link rel="icon" type="image/svg+xml" href="/grafico/Logo_DM.png" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>MicroVenta | Pedidos</title>
+	<link rel="stylesheet" href="/pedidos/pedidos.css">
+</head>
+<body>
+	<div class="dashboard">
+		<aside class="sidebar">
+			<div class="sidebar-brand">
+				<img src="/grafico/Logo_DM.png" alt="Dulce Mordisco" class="sidebar-logo">
+				<div>
+					<h2>Dulce Mordisco</h2>
+					<p>MicroVenta</p>
+				</div>
+			</div>
+
+			<nav class="sidebar-menu">
+				<a href="/admin/admin.html" class="menu-item">🏠 Home</a>
+				<a href="/usuarios/usuarios.html" class="menu-item">👤 Usuarios</a>
+				<a href="/productos-admin/productos-admin.html" class="menu-item">🧁 Productos</a>
+				<a href="/pedidos/pedidos.html" class="menu-item active">🛒 Pedidos</a>
+				<a href="/reportes/reportes.html" class="menu-item">📊 Reportes</a>
+
+				<button id="btnCerrarSesionSidebar" class="menu-item menu-item-logout" type="button">
+					🚪 Cerrar sesión
+				</button>
+			</nav>
+		</aside>
+
+		<main class="main-content">
+			<header class="topbar">
+				<div>
+					<h1>Administración de pedidos</h1>
+					<p>Consulta, filtra y actualiza pedidos de Dulce Mordisco.</p>
+				</div>
+
+				<div class="topbar-actions">
+					<span id="nombreUsuario" class="admin-user">Administrador</span>
+					<button id="btnCerrarSesion" class="btn btn-secondary">Cerrar sesión</button>
+				</div>
+			</header>
+
+			<section class="card stats-card">
+				<div class="stats-grid">
+					<div class="stat-item">
+						<div class="stat-icon">🛒</div>
+						<h3 id="statTotalPedidos">0</h3>
+						<p>Total pedidos</p>
+					</div>
+
+					<div class="stat-item">
+						<div class="stat-icon">⏳</div>
+						<h3 id="statEnProceso">0</h3>
+						<p>En proceso</p>
+					</div>
+
+					<div class="stat-item">
+						<div class="stat-icon">✅</div>
+						<h3 id="statFinalizados">0</h3>
+						<p>Finalizados</p>
+					</div>
+
+					<div class="stat-item">
+						<div class="stat-icon">💰</div>
+						<h3 id="statIngresos">$0.00</h3>
+						<p>Ingresos visibles</p>
+					</div>
+				</div>
+			</section>
+
+			<section class="card filters-card">
+				<div class="section-header">
+					<div>
+						<h2>Filtros</h2>
+						<p>Busca por pedido, cliente, repartidor o estatus.</p>
+					</div>
+				</div>
+
+				<div class="filters-grid">
+					<div class="form-group">
+						<label for="buscarPedido">Buscar</label>
+						<input
+							type="text"
+							id="buscarPedido"
+							class="form-control"
+							placeholder="Ej. 12, Jesús, enviado..."
+						>
+					</div>
+
+					<div class="form-group">
+						<label for="filtroEstatus">Estatus</label>
+						<select id="filtroEstatus" class="form-control">
+							<option value="">Todos</option>
+						</select>
+					</div>
+
+					<div class="form-group">
+						<label for="filtroRepartidor">Repartidor</label>
+						<select id="filtroRepartidor" class="form-control">
+							<option value="">Todos</option>
+						</select>
+					</div>
+				</div>
+			</section>
+
+			<section class="card orders-card">
+				<div class="section-header">
+					<div>
+						<h2>Pedidos registrados</h2>
+						<p id="resumenPedidos">Cargando pedidos...</p>
+					</div>
+				</div>
+
+				<div class="table-wrapper">
+					<table class="orders-table">
+						<thead>
+							<tr>
+								<th>Pedido</th>
+								<th>Cliente</th>
+								<th>Fecha</th>
+								<th>Total</th>
+								<th>Repartidor</th>
+								<th>Estatus</th>
+								<th>Acciones</th>
+							</tr>
+						</thead>
+						<tbody id="tablaPedidosBody">
+							<tr>
+								<td colspan="7" class="empty-row">Cargando pedidos...</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</section>
+		</main>
+	</div>
+
+	<div id="modalPedido" class="modal hidden">
+		<div id="modalBackdrop" class="modal-backdrop"></div>
+
+		<div class="modal-dialog">
+			<div class="modal-header">
+				<div>
+					<h3>Detalle del pedido</h3>
+					<p>Consulta información y actualiza el seguimiento.</p>
+				</div>
+
+				<button id="btnCerrarModal" class="modal-close" type="button">✕</button>
+			</div>
+
+			<div class="modal-content">
+				<section class="detail-section">
+					<h4>Información general</h4>
+
+					<div class="detail-grid">
+						<div class="detail-box">
+							<strong>Pedido</strong>
+							<span id="detalleIdPedido">-</span>
+						</div>
+
+						<div class="detail-box">
+							<strong>Cliente</strong>
+							<span id="detalleCliente">-</span>
+						</div>
+
+						<div class="detail-box">
+							<strong>Fecha</strong>
+							<span id="detalleFecha">-</span>
+						</div>
+
+						<div class="detail-box">
+							<strong>Total</strong>
+							<span id="detalleTotal">-</span>
+						</div>
+
+						<div class="detail-box">
+							<strong>Repartidor</strong>
+							<span id="detalleRepartidor">-</span>
+						</div>
+
+						<div class="detail-box">
+							<strong>Estatus actual</strong>
+							<span id="detalleEstatus">-</span>
+						</div>
+					</div>
+				</section>
+
+				<section class="detail-section">
+					<h4>Productos del pedido</h4>
+					<div id="detalleProductos" class="detail-list">
+						<div class="empty-detail">Sin productos.</div>
+					</div>
+				</section>
+
+				<section class="detail-section">
+					<h4>Actualizar pedido</h4>
+
+					<div id="mensajeAccion" class="message"></div>
+
+					<div class="update-grid">
+						<div class="form-group">
+							<label for="selectRepartidorModal">Asignar repartidor</label>
+							<select id="selectRepartidorModal" class="form-control">
+								<option value="">Sin asignar</option>
+							</select>
+						</div>
+
+						<div class="form-group">
+							<label for="selectEstatusModal">Cambiar estatus</label>
+							<select id="selectEstatusModal" class="form-control">
+								<option value="">Selecciona un estatus</option>
+							</select>
+						</div>
+					</div>
+
+					<div class="form-actions">
+						<button id="btnGuardarCambiosPedido" class="btn btn-primary" type="button">
+							Guardar cambios
+						</button>
+					</div>
+				</section>
+
+				<section class="detail-section">
+					<h4>Historial de estatus</h4>
+					<div id="detalleHistorial" class="timeline">
+						<div class="empty-detail">Sin historial.</div>
+					</div>
+				</section>
+			</div>
+		</div>
+	</div>
+
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+	<script src="/conexion.js"></script>
+	<script src="/pedidos/pedidos.js"></script>
+</body>
+</html>

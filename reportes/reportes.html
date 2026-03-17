@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8">
+	<link rel="icon" type="image/svg+xml" href="/grafico/Logo_DM.png" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>MicroVenta | Reportes</title>
+	<link rel="stylesheet" href="/reportes/reportes.css">
+</head>
+<body>
+	<div class="dashboard">
+		<aside class="sidebar">
+			<div class="sidebar-brand">
+				<img src="/grafico/Logo_DM.png" alt="Dulce Mordisco" class="sidebar-logo">
+				<div>
+					<h2>Dulce Mordisco</h2>
+					<p>MicroVenta</p>
+				</div>
+			</div>
+
+			<nav class="sidebar-menu">
+				<a href="/admin/admin.html" class="menu-item">🏠 Home</a>
+				<a href="/usuarios/usuarios.html" class="menu-item">👤 Usuarios</a>
+				<a href="/productos-admin/productos-admin.html" class="menu-item">🧁 Productos</a>
+				<a href="/pedidos/pedidos.html" class="menu-item">🛒 Pedidos</a>
+				<a href="/reportes/reportes.html" class="menu-item active">📊 Reportes</a>
+
+				<button id="btnCerrarSesionSidebar" class="menu-item menu-item-logout" type="button">
+					🚪 Cerrar sesión
+				</button>
+			</nav>
+		</aside>
+
+		<main class="main-content">
+			<header class="topbar">
+				<div>
+					<h1>Reportes y estadísticas</h1>
+					<p>Consulta el comportamiento de ventas de Dulce Mordisco.</p>
+				</div>
+
+				<div class="topbar-actions">
+					<span id="nombreUsuario" class="admin-user">Administrador</span>
+					<button id="btnCerrarSesion" class="btn btn-secondary">Cerrar sesión</button>
+				</div>
+			</header>
+
+			<section class="card filters-card">
+				<div class="section-header">
+					<div>
+						<h2>Rango de análisis</h2>
+						<p>Filtra la información por fechas para generar el resumen.</p>
+					</div>
+				</div>
+
+				<div class="filters-grid">
+					<div class="form-group">
+						<label for="fechaInicio">Fecha inicio</label>
+						<input type="date" id="fechaInicio" class="form-control">
+					</div>
+
+					<div class="form-group">
+						<label for="fechaFin">Fecha fin</label>
+						<input type="date" id="fechaFin" class="form-control">
+					</div>
+
+					<div class="form-group form-group-button">
+						<button id="btnAplicarFiltros" class="btn btn-primary" type="button">
+							Aplicar filtros
+						</button>
+					</div>
+
+					<div class="form-group form-group-button">
+						<button id="btnLimpiarFiltros" class="btn btn-secondary" type="button">
+							Limpiar
+						</button>
+					</div>
+				</div>
+
+				<div id="mensajeReporte" class="message"></div>
+			</section>
+
+			<section class="stats-grid">
+				<article class="card stat-card">
+					<div class="stat-icon">💰</div>
+					<div>
+						<h3 id="statIngresos">$0.00</h3>
+						<p>Ingresos totales</p>
+					</div>
+				</article>
+
+				<article class="card stat-card">
+					<div class="stat-icon">🛒</div>
+					<div>
+						<h3 id="statPedidos">0</h3>
+						<p>Total de pedidos</p>
+					</div>
+				</article>
+
+				<article class="card stat-card">
+					<div class="stat-icon">✅</div>
+					<div>
+						<h3 id="statCompletados">0</h3>
+						<p>Pedidos finalizados</p>
+					</div>
+				</article>
+
+				<article class="card stat-card">
+					<div class="stat-icon">📦</div>
+					<div>
+						<h3 id="statProductosVendidos">0</h3>
+						<p>Productos vendidos</p>
+					</div>
+				</article>
+
+				<article class="card stat-card">
+					<div class="stat-icon">📈</div>
+					<div>
+						<h3 id="statTicketPromedio">$0.00</h3>
+						<p>Ticket promedio</p>
+					</div>
+				</article>
+
+				<article class="card stat-card">
+					<div class="stat-icon">❌</div>
+					<div>
+						<h3 id="statCancelados">0</h3>
+						<p>Cancelados / rechazados</p>
+					</div>
+				</article>
+			</section>
+
+			<section class="content-grid">
+				<article class="card">
+					<div class="section-header">
+						<div>
+							<h2>Pedidos por estatus</h2>
+							<p>Distribución actual de los pedidos en el rango elegido.</p>
+						</div>
+					</div>
+					<div id="listaEstatus" class="bar-list">
+						<div class="empty-state">Cargando información...</div>
+					</div>
+				</article>
+
+				<article class="card">
+					<div class="section-header">
+						<div>
+							<h2>Ingresos por día</h2>
+							<p>Resumen de ventas diarias dentro del periodo.</p>
+						</div>
+					</div>
+					<div id="listaIngresosPorDia" class="bar-list">
+						<div class="empty-state">Cargando información...</div>
+					</div>
+				</article>
+			</section>
+
+			<section class="content-grid">
+				<article class="card">
+					<div class="section-header">
+						<div>
+							<h2>Distribución de ventas por categorías</h2>
+							<p>Participación de cada categoría en las ventas del periodo.</p>
+						</div>
+					</div>
+
+					<div class="chart-card-layout">
+						<div class="chart-box">
+							<canvas id="graficoCategorias"></canvas>
+						</div>
+
+						<div id="leyendaCategorias" class="chart-legend">
+							<div class="empty-state">Cargando información...</div>
+						</div>
+					</div>
+				</article>
+
+				<article class="card">
+					<div class="section-header">
+						<div>
+							<h2>Productos más vendidos</h2>
+							<p>Top productos según cantidad vendida.</p>
+						</div>
+					</div>
+					<div id="listaTopProductos" class="rank-list">
+						<div class="empty-state">Cargando información...</div>
+					</div>
+				</article>
+			</section>
+
+			<section class="content-grid">
+				<article class="card">
+					<div class="section-header">
+						<div>
+							<h2>Clientes con más compras</h2>
+							<p>Clientes con mayor número de pedidos en el periodo.</p>
+						</div>
+					</div>
+					<div id="listaTopClientes" class="rank-list">
+						<div class="empty-state">Cargando información...</div>
+					</div>
+				</article>
+
+				<article class="card">
+					<div class="section-header">
+						<div>
+							<h2>Resumen del periodo</h2>
+							<p>Vista rápida del comportamiento comercial.</p>
+						</div>
+					</div>
+
+					<div id="resumenExtra" class="summary-grid">
+						<div class="summary-box">
+							<strong>Categoría líder</strong>
+							<span id="categoriaLider">-</span>
+						</div>
+
+						<div class="summary-box">
+							<strong>Ingreso categoría líder</strong>
+							<span id="ingresoCategoriaLider">$0.00</span>
+						</div>
+
+						<div class="summary-box">
+							<strong>Producto líder</strong>
+							<span id="productoLider">-</span>
+						</div>
+
+						<div class="summary-box">
+							<strong>Cliente líder</strong>
+							<span id="clienteLider">-</span>
+						</div>
+					</div>
+				</article>
+			</section>
+
+			<section class="card">
+				<div class="section-header">
+					<div>
+						<h2>Pedidos recientes</h2>
+						<p id="resumenPedidosRecientes">Resumen de actividad reciente.</p>
+					</div>
+				</div>
+
+				<div class="table-wrapper">
+					<table class="report-table">
+						<thead>
+							<tr>
+								<th>Pedido</th>
+								<th>Cliente</th>
+								<th>Fecha</th>
+								<th>Estatus</th>
+								<th>Total</th>
+							</tr>
+						</thead>
+						<tbody id="tablaPedidosRecientes">
+							<tr>
+								<td colspan="5" class="empty-row">Cargando pedidos...</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</section>
+		</main>
+	</div>
+
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+	<script src="/conexion.js"></script>
+	<script src="/reportes/reportes.js"></script>
+</body>
+</html>
