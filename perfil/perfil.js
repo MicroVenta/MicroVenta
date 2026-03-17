@@ -1,4 +1,5 @@
 const ID_ROL_CLIENTE = 4;
+const ID_ROL_REPARTIDOR = 3;
 
 const nombreClienteTopbar = document.getElementById('nombreClienteTopbar');
 const nombreClienteHero = document.getElementById('nombreClienteHero');
@@ -51,6 +52,25 @@ function esCliente(usuarioData) {
 	return nombreRol === 'cliente';
 }
 
+function esRepartidor(usuarioData) {
+	if (!usuarioData) {
+		return false;
+	}
+
+	const idRol = Number(usuarioData.id_rol);
+	const nombreRol = obtenerRolNormalizado(usuarioData.nombre_rol);
+
+	if (!Number.isNaN(idRol) && idRol === ID_ROL_REPARTIDOR) {
+		return true;
+	}
+
+	return nombreRol === 'repartidor';
+}
+
+function tieneAccesoPerfil(usuarioData) {
+	return esCliente(usuarioData) || esRepartidor(usuarioData);
+}
+
 if (!usuarioGuardado) {
 	window.location.href = '/login/login.html';
 } else {
@@ -63,7 +83,7 @@ if (!usuarioGuardado) {
 	}
 }
 
-if (!esCliente(usuario)) {
+if (!tieneAccesoPerfil(usuario)) {
 	window.location.href = '/login/login.html';
 }
 
@@ -232,10 +252,12 @@ async function cargarPerfil() {
 			nombre_rol: obtenerRolNormalizado(data.rol?.nombre_rol ?? usuario?.nombre_rol ?? 'cliente')
 		};
 
-		if (!esCliente(usuarioData)) {
+		if (!tieneAccesoPerfil(usuarioData)) {
 			window.location.href = '/login/login.html';
 			return;
 		}
+
+		renderizarSidebar('perfil');
 
 		datosOriginales = {
 			nombre_completo: usuarioData.nombre_completo ?? '',
@@ -381,7 +403,7 @@ if (formPerfil) {
 				nombre_rol: obtenerRolNormalizado(data.rol?.nombre_rol ?? usuario?.nombre_rol ?? 'cliente')
 			};
 
-			if (!esCliente(usuarioActualizado)) {
+			if (!tieneAccesoPerfil(usuarioActualizado)) {
 				window.location.href = '/login/login.html';
 				return;
 			}

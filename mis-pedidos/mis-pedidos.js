@@ -40,12 +40,16 @@ if (!usuarioGuardado) {
 }
 
 if (usuario) {
-	if (usuario.nombre_rol !== 'cliente') {
+	const rolUsuario = (usuario.nombre_rol ?? '').trim().toLowerCase();
+
+	if (rolUsuario !== 'cliente' && rolUsuario !== 'repartidor') {
 		window.location.href = '/login/login.html';
 	} else if (nombreCliente) {
-		nombreCliente.textContent = usuario.nombre_completo || 'Cliente';
+		nombreCliente.textContent = usuario.nombre_completo || 'Usuario';
 	}
 }
+
+renderizarSidebar('mis-pedidos');
 
 function cerrarSesion() {
 	sessionStorage.removeItem('microventa_usuario');

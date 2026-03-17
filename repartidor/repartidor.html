@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8">
+	<link rel="icon" type="image/svg+xml" href="/grafico/Logo_DM.png" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>MicroVenta | Inicio repartidor</title>
+	<link rel="stylesheet" href="/repartidor/repartidor.css">
+</head>
+<body>
+	<div class="dashboard">
+		<aside class="sidebar">
+			<div class="sidebar-brand">
+				<img src="/grafico/Logo_DM.png" alt="Dulce Mordisco" class="sidebar-logo">
+				<div>
+					<h2>Dulce Mordisco</h2>
+					<p>MicroVenta</p>
+				</div>
+			</div>
+
+			<nav class="sidebar-menu">
+				<a href="/repartidor/repartidor.html" class="menu-item active">🏠 Inicio</a>
+				<a href="/pedidos-repartidor/pedidos-repartidor.html" class="menu-item">🛵 Mis entregas</a>
+				<a href="/productos/productos.html" class="menu-item">🧁 Catálogo</a>
+				<a href="/mis-pedidos/mis-pedidos.html" class="menu-item">🧾 Mis pedidos</a>
+				<a href="/perfil-repartidor/perfil-repartidor.html" class="menu-item">👤 Mi perfil</a>
+
+				<button id="btnCerrarSesionSidebar" class="menu-item menu-item-logout" type="button">
+					🚪 Cerrar sesión
+				</button>
+			</nav>
+		</aside>
+
+		<main class="main-content">
+			<header class="topbar">
+				<div>
+					<h1>Panel de repartidor</h1>
+					<p>Consulta tus entregas asignadas y también accede al catálogo si deseas comprar como cliente.</p>
+				</div>
+
+				<div class="topbar-actions">
+					<span id="nombreRepartidor" class="delivery-user">Repartidor</span>
+					<button id="btnCerrarSesion" class="btn btn-secondary">Cerrar sesión</button>
+				</div>
+			</header>
+
+			<section class="hero-banner">
+				<div class="hero-overlay">
+					<div class="hero-content">
+						<div class="hero-badge hero-reveal">
+							<img src="/grafico/MicroVentaTransparente_Horizontal.png" alt="MicroVenta">
+						</div>
+
+						<h2 id="heroTitle" class="hero-title">
+							Organiza tus entregas y compra tus productos favoritos desde una sola cuenta.
+						</h2>
+
+						<p id="heroText" class="hero-text">
+							Revisa tus pedidos asignados, consulta datos del cliente y lleva control
+							del estado de cada entrega. Además, también puedes entrar al catálogo y
+							dar seguimiento a tus compras como cliente.
+						</p>
+
+						<div class="hero-buttons hero-reveal delay-2">
+							<a href="/pedidos-repartidor/pedidos-repartidor.html" class="hero-btn hero-btn-primary">Ver mis entregas</a>
+							<a href="/productos/productos.html" class="hero-btn hero-btn-secondary">Ir al catálogo</a>
+						</div>
+					</div>
+
+					<div class="hero-visual hero-reveal delay-3">
+						<div class="hero-image-card">
+							<img
+								src="https://images.unsplash.com/photo-1526367790999-0150786686a2?auto=format&fit=crop&w=900&q=80"
+								alt="Entrega de pedidos"
+								class="hero-image"
+							>
+						</div>
+
+						<div class="floating-tag floating-tag-1">🛵 Ruta activa</div>
+						<div class="floating-tag floating-tag-2">🧁 Compra rápida</div>
+					</div>
+				</div>
+			</section>
+
+			<section class="card summary-card">
+				<div class="section-header">
+					<div>
+						<h2>Resumen rápido</h2>
+						<p>Consulta lo más importante de tus entregas asignadas y tus compras.</p>
+					</div>
+				</div>
+
+				<div class="summary-grid summary-grid-5">
+					<div class="summary-item reveal-card">
+						<div class="summary-icon">📦</div>
+						<h3 id="totalAsignados">0</h3>
+						<p>Pedidos asignados</p>
+					</div>
+
+					<div class="summary-item reveal-card">
+						<div class="summary-icon">🛵</div>
+						<h3 id="pedidosRuta">0</h3>
+						<p>Pedidos en ruta</p>
+					</div>
+
+					<div class="summary-item reveal-card">
+						<div class="summary-icon">✅</div>
+						<h3 id="pedidosEntregados">0</h3>
+						<p>Pedidos entregados</p>
+					</div>
+
+					<div class="summary-item reveal-card">
+						<div class="summary-icon">⏳</div>
+						<h3 id="pedidosPendientes">0</h3>
+						<p>Pedidos pendientes</p>
+					</div>
+
+					<div class="summary-item reveal-card">
+						<div class="summary-icon">🧾</div>
+						<h3 id="misCompras">0</h3>
+						<p>Mis compras</p>
+					</div>
+				</div>
+			</section>
+
+			<section class="card actions-card">
+				<div class="section-header">
+					<div>
+						<h2>Accesos rápidos</h2>
+						<p>Ve directo a tus tareas principales.</p>
+					</div>
+				</div>
+
+				<div class="actions-grid actions-grid-5">
+					<a href="/pedidos-repartidor/pedidos-repartidor.html" class="action-card reveal-card">
+						<div class="action-icon">🛵</div>
+						<h4>Mis entregas</h4>
+						<p>Consulta todos los pedidos que tienes asignados.</p>
+					</a>
+
+					<a href="/pedidos-repartidor/pedidos-repartidor.html" class="action-card reveal-card">
+						<div class="action-icon">📍</div>
+						<h4>Ver direcciones</h4>
+						<p>Revisa domicilio y contacto del cliente para la entrega.</p>
+					</a>
+
+					<a href="/productos/productos.html" class="action-card reveal-card">
+						<div class="action-icon">🧁</div>
+						<h4>Catálogo</h4>
+						<p>Explora productos y realiza compras usando tu misma cuenta.</p>
+					</a>
+
+					<a href="/mis-pedidos/mis-pedidos.html" class="action-card reveal-card">
+						<div class="action-icon">🧾</div>
+						<h4>Mis pedidos</h4>
+						<p>Consulta el estado de los pedidos que hagas como cliente.</p>
+					</a>
+
+					<a href="/perfil-repartidor/perfil-repartidor.html" class="action-card reveal-card">
+						<div class="action-icon">👤</div>
+						<h4>Actualizar perfil</h4>
+						<p>Consulta tu información personal dentro del sistema.</p>
+					</a>
+				</div>
+			</section>
+
+			<section class="card order-card">
+				<div class="section-header">
+					<div>
+						<h2>Último pedido asignado</h2>
+						<p>Consulta de forma rápida la entrega más reciente asignada a tu cuenta.</p>
+					</div>
+				</div>
+
+				<div class="order-status reveal-card">
+					<div class="order-main">
+						<h3 id="ultimoPedidoTitulo">Aún no tienes pedidos asignados</h3>
+						<p id="ultimoPedidoTexto">
+							Cuando se te asigne un pedido, aparecerá aquí con su información principal.
+						</p>
+					</div>
+
+					<div class="order-pill" id="estadoPedido">Sin pedidos</div>
+				</div>
+			</section>
+
+			<section class="card orders-card">
+				<div class="section-header">
+					<div>
+						<h2>Pedidos asignados</h2>
+						<p>Consulta cliente, dirección, teléfono, productos y estado del pedido.</p>
+					</div>
+				</div>
+
+				<div id="listaPedidos" class="orders-list">
+					<div class="empty-orders">Cargando pedidos...</div>
+				</div>
+			</section>
+		</main>
+	</div>
+
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+	<script src="/conexion.js"></script>
+	<script src="/repartidor/repartidor.js"></script>
+</body>
+</html>

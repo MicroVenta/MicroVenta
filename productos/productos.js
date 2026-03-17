@@ -38,9 +38,13 @@ if (!usuario) {
 	window.location.href = '/login/login.html';
 }
 
-if ((usuario.nombre_rol ?? '').trim().toLowerCase() !== 'cliente') {
+const rolUsuario = (usuario.nombre_rol ?? '').trim().toLowerCase();
+
+if (rolUsuario !== 'cliente' && rolUsuario !== 'repartidor') {
 	window.location.href = '/login/login.html';
 }
+
+renderizarSidebar('productos');
 
 if (nombreCliente) {
 	nombreCliente.textContent = usuario.nombre_completo;

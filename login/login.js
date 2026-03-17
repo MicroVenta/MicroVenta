@@ -163,7 +163,7 @@ loginForm.addEventListener('submit', async function (e) {
 			} else if (sesionUsuario.nombre_rol === 'ayudante') {
 				window.location.href = '/cliente/cliente.html';
 			} else if (sesionUsuario.nombre_rol === 'repartidor') {
-				window.location.href = 'index.html';
+				window.location.href = '/repartidor/repartidor.html';
 			} else {
 				window.location.href = '/login/login.html';
 			}
