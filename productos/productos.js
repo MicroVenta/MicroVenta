@@ -135,7 +135,7 @@ function cargarCategoriasEnFiltro(categorias) {
 }
 
 function obtenerStockProducto(producto) {
-	return Number(producto.inventario?.[0]?.stock_actual ?? 0);
+	return Number(producto.stock_actual ?? 0);
 }
 
 function obtenerCantidadEnCarrito(idProducto) {
@@ -173,6 +173,7 @@ function agregarAlCarrito(idProducto) {
 		}
 
 		existente.cantidad += 1;
+		existente.stock_actual = stockActual;
 	} else {
 		carrito.push({
 			id_producto: producto.id_producto,
@@ -478,13 +479,11 @@ async function cargarProductos() {
 				descripcion_producto,
 				imagen,
 				visible,
+				stock_actual,
+				stock_minimo,
 				categoria (
 					id_categoria,
 					nombre_categoria
-				),
-				inventario (
-					id_inventario,
-					stock_actual
 				)
 			`)
 			.eq('visible', true)
@@ -534,7 +533,7 @@ async function obtenerEstatusPendiente() {
 	return data.id_estatus;
 }
 
-async function actualizarInventarioProducto(item) {
+async function actualizarStockProducto(item) {
 	const producto = productosOriginales.find(
 		(productoActual) => Number(productoActual.id_producto) === Number(item.id_producto)
 	);
@@ -543,13 +542,7 @@ async function actualizarInventarioProducto(item) {
 		throw new Error(`No se encontró el producto ${item.nombre_producto}.`);
 	}
 
-	const inventarioActual = producto.inventario?.[0];
-
-	if (!inventarioActual) {
-		throw new Error(`El producto ${item.nombre_producto} no tiene inventario registrado.`);
-	}
-
-	const stockActual = Number(inventarioActual.stock_actual ?? 0);
+	const stockActual = Number(producto.stock_actual ?? 0);
 
 	if (item.cantidad > stockActual) {
 		throw new Error(`No hay suficiente stock para ${item.nombre_producto}.`);
@@ -558,18 +551,17 @@ async function actualizarInventarioProducto(item) {
 	const nuevoStock = stockActual - Number(item.cantidad);
 
 	const { error } = await db
-		.from('inventario')
+		.from('producto')
 		.update({
-			stock_actual: nuevoStock,
-			ultima_actualizacion: new Date().toISOString()
+			stock_actual: nuevoStock
 		})
-		.eq('id_inventario', inventarioActual.id_inventario);
+		.eq('id_producto', producto.id_producto);
 
 	if (error) {
-		throw new Error(`No se pudo actualizar el inventario de ${item.nombre_producto}.`);
+		throw new Error(`No se pudo actualizar el stock de ${item.nombre_producto}.`);
 	}
 
-	inventarioActual.stock_actual = nuevoStock;
+	producto.stock_actual = nuevoStock;
 }
 
 async function realizarPedido() {
@@ -605,11 +597,14 @@ async function realizarPedido() {
 			0
 		);
 
+		const idEstatusPendiente = await obtenerEstatusPendiente();
+
 		const { data: pedidoData, error: pedidoError } = await db
 			.from('pedido')
 			.insert({
 				id_cliente: usuario.id_usuario,
-				total_pagar: total
+				total_pagar: total,
+				id_estatus: idEstatusPendiente
 			})
 			.select('id_pedido')
 			.single();
@@ -633,21 +628,8 @@ async function realizarPedido() {
 			throw new Error('No se pudieron guardar los detalles del pedido.');
 		}
 
-		const idEstatusPendiente = await obtenerEstatusPendiente();
-
-		const { error: historialError } = await db
-			.from('historialestatus')
-			.insert({
-				id_pedido: pedidoData.id_pedido,
-				id_estatus: idEstatusPendiente
-			});
-
-		if (historialError) {
-			throw new Error('No se pudo registrar el estatus inicial del pedido.');
-		}
-
 		for (const item of carrito) {
-			await actualizarInventarioProducto(item);
+			await actualizarStockProducto(item);
 		}
 
 		carrito = [];
