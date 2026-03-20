@@ -104,7 +104,7 @@ function activarModoEdicion(producto) {
 	nombreProducto.value = producto.nombre_producto ?? '';
 	categoriaProducto.value = producto.id_categoria ?? '';
 	precioProducto.value = producto.precio_unitario ?? '';
-	stockProducto.value = producto.inventario?.[0]?.stock_actual ?? 0;
+	stockProducto.value = producto.stock_actual ?? 0;
 	descripcionProducto.value = producto.descripcion_producto ?? '';
 	imagenProducto.value = producto.imagen ?? '';
 	visibleProducto.checked = Boolean(producto.visible);
@@ -191,7 +191,7 @@ function renderizarProductos(productos) {
 
 	listaProductos.innerHTML = productos.map((producto) => {
 		const nombreCategoria = producto.categoria?.nombre_categoria ?? 'Sin categoría';
-		const stockActual = producto.inventario?.[0]?.stock_actual ?? 0;
+		const stockActual = producto.stock_actual ?? 0;
 		const visible = producto.visible === true;
 
 		return `
@@ -318,7 +318,6 @@ async function cargarCategorias() {
 
 		categoriasOriginales = data ?? [];
 		cargarCategoriasEnSelect(categoriasOriginales);
-
 	} catch (error) {
 		console.error('Error general al cargar categorías:', error);
 	}
@@ -336,13 +335,11 @@ async function cargarProductos() {
 				descripcion_producto,
 				imagen,
 				visible,
+				stock_actual,
+				stock_minimo,
 				categoria (
 					id_categoria,
 					nombre_categoria
-				),
-				inventario (
-					id_inventario,
-					stock_actual
 				)
 			`)
 			.order('id_producto', { ascending: true });
@@ -360,7 +357,6 @@ async function cargarProductos() {
 		productosOriginales = data ?? [];
 		actualizarContadores(productosOriginales);
 		aplicarFiltros();
-
 	} catch (error) {
 		console.error('Error general al cargar productos:', error);
 		listaProductos.innerHTML = `
@@ -372,63 +368,34 @@ async function cargarProductos() {
 }
 
 async function crearProducto(datosProducto, stockInicial) {
-	const { data: productoCreado, error: errorProducto } = await db
+	const { error } = await db
 		.from('producto')
-		.insert(datosProducto)
-		.select('id_producto')
-		.single();
-
-	if (errorProducto || !productoCreado) {
-		console.error('Error al crear producto:', errorProducto);
-		throw new Error('No se pudo crear el producto.');
-	}
-
-	const { error: errorInventario } = await db
-		.from('inventario')
 		.insert({
-			id_producto: productoCreado.id_producto,
+			...datosProducto,
 			stock_actual: stockInicial,
 			stock_minimo: 5
 		});
 
-	if (errorInventario) {
-		console.error('Error al crear inventario:', errorInventario);
-		throw new Error('El producto se creó, pero no se pudo registrar el inventario.');
+	if (error) {
+		console.error('Error al crear producto:', error);
+		throw new Error('No se pudo crear el producto.');
 	}
 }
 
 async function actualizarProducto(datosProducto, stockActual) {
 	const productoIdActual = idProducto.value;
 
-	const { error: errorProducto } = await db
+	const { error } = await db
 		.from('producto')
-		.update(datosProducto)
+		.update({
+			...datosProducto,
+			stock_actual: stockActual
+		})
 		.eq('id_producto', productoIdActual);
 
-	if (errorProducto) {
-		console.error('Error al actualizar producto:', errorProducto);
+	if (error) {
+		console.error('Error al actualizar producto:', error);
 		throw new Error('No se pudo actualizar el producto.');
-	}
-
-	const productoActual = productosOriginales.find(
-		(item) => String(item.id_producto) === String(productoIdActual)
-	);
-
-	const inventarioId = productoActual?.inventario?.[0]?.id_inventario;
-
-	if (inventarioId) {
-		const { error: errorInventario } = await db
-			.from('inventario')
-			.update({
-				stock_actual: stockActual,
-				ultima_actualizacion: new Date().toISOString()
-			})
-			.eq('id_inventario', inventarioId);
-
-		if (errorInventario) {
-			console.error('Error al actualizar inventario:', errorInventario);
-			throw new Error('El producto se actualizó, pero no se pudo actualizar el inventario.');
-		}
 	}
 }
 
@@ -455,7 +422,6 @@ async function cambiarVisibilidadProducto(productoId, visible) {
 
 		actualizarContadores(productosOriginales);
 		aplicarFiltros();
-
 	} catch (error) {
 		console.error('Error general al cambiar visibilidad:', error);
 		alert('Ocurrió un error al actualizar el producto.');
