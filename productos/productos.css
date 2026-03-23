@@ -368,10 +368,9 @@ body {
 .product-footer {
 	margin-top: auto;
 	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 12px;
-	flex-wrap: wrap;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 10px;
 }
 
 .stock-badge {
@@ -400,6 +399,7 @@ body {
 	border-radius: 12px;
 	font-weight: 700;
 	transition: 0.2s ease;
+	box-shadow: 0 8px 18px rgba(218, 16, 127, 0.25);
 }
 
 .btn-add:hover {
@@ -600,4 +600,75 @@ body {
 	.client-user {
 		max-width: 100%;
 	}
+}
+
+.modal-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.35);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 999;
+	opacity: 0;
+	pointer-events: none;
+	transition: 0.25s ease;
+	
+}
+
+.modal-overlay.active {
+	opacity: 1;
+	pointer-events: all;
+}
+
+.modal-content {
+	background: rgba(255, 255, 255, 0.95);
+	backdrop-filter: blur(12px);
+	border-radius: 20px;
+	padding: 24px;
+	width: 320px;
+	text-align: center;
+	box-shadow: 0 20px 40px rgb(53, 29, 44);
+}
+
+.modal-content h3 {
+	color: var(--cafe-oscuro);
+	margin-bottom: 10px;
+}
+
+.modal-content p {
+	color: var(--gris-texto);
+	margin-bottom: 18px;
+}
+
+.modal-actions {
+	display: flex;
+	gap: 10px;
+}
+
+.modal-actions button {
+	flex: 1;
+}
+
+.btn-custom-modal {
+	background: linear-gradient(135deg, var(--rosa-principal),var(--rosa-oscuro));
+	color: #fff;
+	font-weight: 700;
+	border-radius: 12px;
+	border: none;
+	box-shadow: 0 5px 10px rgba(218, 16, 127, 0.25);
+}
+.btn-custom-modal-cancel {
+	background: linear-gradient(135deg, var(--blanco), var(--crema));
+	color: var(--cafe-claro);
+	font-weight: 700;
+	border-radius: 12px;
+	border: none;
+	box-shadow: 0 5px 10px rgba(218, 16, 127, 0.25);
+}
+.btn-custom-modal:hover {
+	transform: translateY(-2px);
+}
+.btn-custom-modal-cancel:hover {
+	transform: translateY(-2px);
 }

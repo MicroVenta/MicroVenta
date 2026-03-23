@@ -472,3 +472,22 @@ body {
 		max-width: 100%;
 	}
 }
+.resultados {
+    border: 1px solid #ccc;
+    max-height: 150px;
+    overflow-y: auto;
+    background: white;
+}
+
+.resultado-item {
+    padding: 8px;
+    cursor: pointer;
+}
+
+.resultado-item:hover {
+    background: #eee;
+}
+
+#direccion {
+    display: none;
+}

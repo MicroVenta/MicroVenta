@@ -379,28 +379,33 @@ function renderizarHistorial(pedido) {
 }
 
 function abrirModalPedido(pedido) {
-	pedidoSeleccionado = pedido;
-	mostrarMensajeAccion('', '');
+    pedidoSeleccionado = pedido;
+    mostrarMensajeAccion('', '');
+    quitarBloqueoRepartidor();
 
-	detalleIdPedido.textContent = `#${pedido.id_pedido}`;
-	detalleCliente.textContent = obtenerNombreCliente(pedido);
-	detalleFecha.textContent = formatearFecha(pedido.fecha_pedido);
-	detalleTotal.textContent = formatearMoneda(pedido.total_pagar);
-	detalleRepartidor.textContent = obtenerNombreRepartidor(pedido);
-	detalleEstatus.innerHTML = `
-		<span class="${obtenerClaseBadgeEstatus(obtenerDescripcionEstatus(pedido))}">
-			${obtenerDescripcionEstatus(pedido)}
-		</span>
-	`;
+    detalleIdPedido.textContent = `#${pedido.id_pedido}`;
+    detalleCliente.textContent = obtenerNombreCliente(pedido);
+    detalleFecha.textContent = formatearFecha(pedido.fecha_pedido);
+    detalleTotal.textContent = formatearMoneda(pedido.total_pagar);
+    detalleRepartidor.textContent = obtenerNombreRepartidor(pedido);
+    detalleEstatus.innerHTML = `
+        <span class="${obtenerClaseBadgeEstatus(obtenerDescripcionEstatus(pedido))}">
+            ${obtenerDescripcionEstatus(pedido)}
+        </span>
+    `;
 
-	selectRepartidorModal.value = pedido.id_repartidor ? String(pedido.id_repartidor) : '';
-	selectEstatusModal.value = pedido.id_estatus ? String(pedido.id_estatus) : '';
+    selectRepartidorModal.value = pedido.id_repartidor ? String(pedido.id_repartidor) : '';
+    selectEstatusModal.value = pedido.id_estatus ? String(pedido.id_estatus) : '';
+    const descripcion = normalizarTexto(obtenerDescripcionEstatus(pedido));
+    if (descripcion === 'rechazado' || descripcion === 'cancelado') {
+        aplicarBloqueoRepartidor();
+    }
 
-	renderizarProductosDetalle(pedido);
-	renderizarHistorial(pedido);
+    renderizarProductosDetalle(pedido);
+    renderizarHistorial(pedido);
 
-	modalPedido.classList.remove('hidden');
-	document.body.style.overflow = 'hidden';
+    modalPedido.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
 }
 
 function cerrarModalPedido() {
@@ -597,6 +602,35 @@ async function inicializarPantalla() {
 	} catch (error) {
 		console.error('Error al inicializar pedidos:', error);
 	}
+}
+
+selectEstatusModal.addEventListener('change', () => {
+    const valorSeleccionado = selectEstatusModal.value;
+    const estatusSeleccionado = estatusOriginales.find(
+        e => String(e.id_estatus) === String(valorSeleccionado)
+    );
+
+    if (estatusSeleccionado) {
+        const descripcion = normalizarTexto(estatusSeleccionado.descripcion);
+        if (descripcion === 'rechazado' || descripcion === 'cancelado') {
+            aplicarBloqueoRepartidor();
+        } else {
+            quitarBloqueoRepartidor();
+        }
+    }
+});
+
+function aplicarBloqueoRepartidor() {
+    selectRepartidorModal.value = ""; 
+    selectRepartidorModal.disabled = true;
+    selectRepartidorModal.style.backgroundColor = '#fee2e2'; 
+    selectRepartidorModal.style.borderColor = '#ef4444';     
+}
+
+function quitarBloqueoRepartidor() {
+    selectRepartidorModal.disabled = false;
+    selectRepartidorModal.style.backgroundColor = ''; 
+    selectRepartidorModal.style.borderColor = '';     
 }
 
 inicializarPantalla();

@@ -12,6 +12,10 @@ const carritoTotal = document.getElementById('carritoTotal');
 const btnVaciarCarrito = document.getElementById('btnVaciarCarrito');
 const btnRealizarPedido = document.getElementById('btnRealizarPedido');
 const pedidoMensaje = document.getElementById('pedidoMensaje');
+const modal = document.getElementById('modalPersonalizado');
+const btnCancelarModal = document.getElementById('btnCancelarModal');
+const btnConfirmarModal = document.getElementById('btnConfirmarModal');
+let productoPendientePersonalizado = null;
 
 const usuarioGuardado =
 	sessionStorage.getItem('microventa_usuario') ||
@@ -43,8 +47,6 @@ const rolUsuario = (usuario.nombre_rol ?? '').trim().toLowerCase();
 if (rolUsuario !== 'cliente' && rolUsuario !== 'repartidor') {
 	window.location.href = '/login/login.html';
 }
-
-renderizarSidebar('productos');
 
 if (nombreCliente) {
 	nombreCliente.textContent = usuario.nombre_completo;
@@ -161,8 +163,54 @@ function agregarAlCarrito(idProducto) {
 
 	const stockActual = obtenerStockProducto(producto);
 
-	if (stockActual <= 0) {
-		mostrarMensaje('error', 'Este producto no tiene existencias.');
+if (stockActual <= 0) {
+	abrirModalPersonalizado(
+		idProducto,
+		'Este producto no tiene stock.\n¿Deseas crear un pedido personalizado?'
+	);
+	return;
+}
+
+	const existente = carrito.find(
+		(item) => Number(item.id_producto) === Number(idProducto)
+	);
+
+if (existente) {
+
+	if (existente.cantidad >= stockActual) {
+		abrirModalPersonalizado(
+			idProducto,
+			'Ya alcanzaste el stock disponible.\n¿Deseas continuar como pedido personalizado?'
+		);
+		return;
+	}
+	existente.cantidad += 1;
+} else {
+	carrito.push({
+		id_producto: producto.id_producto,
+		nombre_producto: producto.nombre_producto,
+		precio_unitario: Number(producto.precio_unitario),
+		imagen: producto.imagen ?? '',
+		stock_actual: stockActual,
+		cantidad: 1
+	});
+
+}
+
+	guardarCarrito();
+	renderizarCarrito();
+	renderizarProductos(aplicarFiltrosInterno());
+}
+
+function agregarPersonalizado(idProducto) {
+	limpiarMensaje();
+
+	const producto = productosOriginales.find(
+		(item) => Number(item.id_producto) === Number(idProducto)
+	);
+
+	if (!producto) {
+		mostrarMensaje('error', 'No se encontró el producto.');
 		return;
 	}
 
@@ -171,28 +219,24 @@ function agregarAlCarrito(idProducto) {
 	);
 
 	if (existente) {
-		if (existente.cantidad >= stockActual) {
-			mostrarMensaje('error', 'No puedes agregar más de lo disponible en stock.');
-			return;
-		}
-
 		existente.cantidad += 1;
-		existente.stock_actual = stockActual;
+		existente.personalizado = true; 
 	} else {
 		carrito.push({
 			id_producto: producto.id_producto,
 			nombre_producto: producto.nombre_producto,
 			precio_unitario: Number(producto.precio_unitario),
 			imagen: producto.imagen ?? '',
-			stock_actual: stockActual,
-			cantidad: 1
+			stock_actual: obtenerStockProducto(producto),
+			cantidad: 1,
+			personalizado: true 
 		});
 	}
 
 	guardarCarrito();
 	renderizarCarrito();
-	renderizarProductos(aplicarFiltrosInterno());
 }
+
 
 function disminuirCantidad(idProducto) {
 	const item = carrito.find((producto) => Number(producto.id_producto) === Number(idProducto));
@@ -222,10 +266,10 @@ function aumentarCantidad(idProducto) {
 
 	const stockActual = obtenerStockProducto(producto);
 
-	if (item.cantidad >= stockActual) {
-		mostrarMensaje('error', 'No puedes agregar más de lo disponible en stock.');
-		return;
-	}
+if (!item.personalizado && item.cantidad >= stockActual) {
+	mostrarMensaje('error', 'No puedes agregar más de lo disponible en stock.');
+	return;
+}
 
 	item.cantidad += 1;
 	item.stock_actual = stockActual;
@@ -278,7 +322,10 @@ function renderizarCarrito() {
 			<article class="cart-item">
 				<div class="cart-item-top">
 					<div>
-						<h4>${item.nombre_producto}</h4>
+						<h4>
+	${item.nombre_producto}
+	${item.personalizado ? '<span class="badge-custom"> (Personalizado)</span>' : ''}
+</h4>
 						<div class="cart-item-price">${formatearMoneda(item.precio_unitario)} c/u</div>
 					</div>
 
@@ -382,26 +429,31 @@ function renderizarProductos(productos) {
 						</div>
 					</div>
 
-					<div class="product-footer">
-						<div class="stock-badge ${stockActual > 0 ? 'stock-ok' : 'stock-low'}">
-							${stockActual > 0 ? 'Disponible' : 'Agotado'}
-						</div>
+<div class="product-footer">
+	<div class="stock-badge ${stockActual > 0 ? 'stock-ok' : 'stock-low'}">
+		${stockActual > 0 ? 'Disponible' : 'Agotado'}
+	</div>
 
-						<button
-							class="btn-add"
-							data-id="${producto.id_producto}"
-							${disponibleParaAgregar <= 0 ? 'disabled' : ''}
-						>
-							${stockActual <= 0 ? 'Sin stock' : 'Agregar'}
-						</button>
-					</div>
-				</div>
+	<button
+		class="btn-add"
+		data-id="${producto.id_producto}"
+		${''}
+	>
+		Agregar
+	</button>
+</div>
 			</article>
 		`;
 	}).join('');
 
 	const botonesAgregar = listaProductos.querySelectorAll('.btn-add');
-
+	const botonesCustom = listaProductos.querySelectorAll('.btn-custom');
+	botonesCustom.forEach((boton) => {
+	boton.addEventListener('click', () => {
+		const idProducto = Number(boton.getAttribute('data-id'));
+		agregarPersonalizado(idProducto);
+	});
+	});
 	botonesAgregar.forEach((boton) => {
 		boton.addEventListener('click', () => {
 			const idProducto = Number(boton.getAttribute('data-id'));
@@ -538,6 +590,9 @@ async function obtenerEstatusPendiente() {
 }
 
 async function actualizarStockProducto(item) {
+	if (item.personalizado) {
+		return;
+	}
 	const producto = productosOriginales.find(
 		(productoActual) => Number(productoActual.id_producto) === Number(item.id_producto)
 	);
@@ -591,9 +646,10 @@ async function realizarPedido() {
 
 			const stockActual = obtenerStockProducto(producto);
 
-			if (item.cantidad > stockActual) {
+			if (!item.personalizado && item.cantidad > stockActual) {
 				throw new Error(`No hay stock suficiente para ${item.nombre_producto}.`);
 			}
+
 		}
 
 		const total = carrito.reduce(
@@ -670,6 +726,40 @@ if (btnVaciarCarrito) {
 if (btnRealizarPedido) {
 	btnRealizarPedido.addEventListener('click', realizarPedido);
 }
+
+function abrirModalPersonalizado(idProducto, mensaje) {
+	productoPendientePersonalizado = idProducto;
+
+	const texto = document.getElementById('modalTexto');
+	if (texto && mensaje) {
+		texto.textContent = mensaje;
+	}
+
+	modal.classList.add('active');
+}
+
+function cerrarModalPersonalizado() {
+	modal.classList.remove('active');
+	productoPendientePersonalizado = null;
+}
+
+btnCancelarModal.addEventListener('click', cerrarModalPersonalizado);
+
+btnConfirmarModal.addEventListener('click', () => {
+	if (productoPendientePersonalizado !== null) {
+		agregarPersonalizado(productoPendientePersonalizado);
+	}
+
+	cerrarModalPersonalizado();
+});
+
+modal.addEventListener('click', (e) => {
+	if (e.target === modal) {
+		cerrarModalPersonalizado();
+	}
+});
+
+
 
 cargarCarrito();
 renderizarCarrito();

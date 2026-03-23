@@ -9,7 +9,26 @@
 </head>
 <body>
 	<div class="dashboard">
-		<aside class="sidebar" id="sidebarContainer"></aside>
+		<aside class="sidebar">
+			<div class="sidebar-brand">
+				<img src="/grafico/Logo_DM.png" alt="Dulce Mordisco" class="sidebar-logo">
+				<div>
+					<h2>Dulce Mordisco</h2>
+					<p>MicroVenta</p>
+				</div>
+			</div>
+
+			<nav class="sidebar-menu">
+				<a href="/cliente/cliente.html" class="menu-item">🏠 Inicio</a>
+				<a href="/productos/productos.html" class="menu-item active">🧁 Productos</a>
+				<a href="/mis-pedidos/mis-pedidos.html" class="menu-item">🛒 Mis pedidos</a>
+				<a href="/perfil/perfil.html" class="menu-item">👤 Mi perfil</a>
+
+				<button id="btnCerrarSesionSidebar" class="menu-item menu-item-logout" type="button">
+					🚪 Cerrar sesión
+				</button>
+			</nav>
+		</aside>
 
 		<main class="main-content">
 			<header class="topbar">
@@ -110,9 +129,27 @@
 		</main>
 	</div>
 
+<div id="modalPersonalizado" class="modal-overlay">
+	<div class="modal-content">
+		<h3>Pedido personalizado</h3>
+		<p id="modalTexto">
+			¿Deseas crear un pedido personalizado para este producto?
+		</p>
+
+		<div class="modal-actions">
+			<button id="btnCancelarModal" class="btn btn-custom-modal-cancel">
+				Cancelar
+			</button>
+
+			<button id="btnConfirmarModal" class="btn btn-custom-modal">
+				Personalizar
+			</button>
+		</div>
+	</div>
+</div>
+
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 	<script src="/conexion.js"></script>
-	<script src="/sidebar.js"></script>
 	<script src="/productos/productos.js"></script>
 </body>
 </html>

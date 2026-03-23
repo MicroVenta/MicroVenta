@@ -1,6 +1,5 @@
 const ID_ROL_CLIENTE = 4;
 const ID_ROL_REPARTIDOR = 3;
-
 const nombreClienteTopbar = document.getElementById('nombreClienteTopbar');
 const nombreClienteHero = document.getElementById('nombreClienteHero');
 const correoClienteHero = document.getElementById('correoClienteHero');
@@ -25,6 +24,13 @@ const inputNombreUser = document.getElementById('nombreuser');
 const inputCorreo = document.getElementById('correo');
 const inputTelefono = document.getElementById('telefono');
 const inputDireccion = document.getElementById('direccion');
+const buscadorDireccion = document.getElementById('buscadorDireccion');
+if (buscadorDireccion) {
+    buscadorDireccion.addEventListener('input', () => {
+        inputDireccion.value = buscadorDireccion.value;
+    });
+}
+const resultadosDireccion = document.getElementById('resultadosDireccion');
 
 const usuarioGuardado =
 	sessionStorage.getItem('microventa_usuario') ||
@@ -50,25 +56,6 @@ function esCliente(usuarioData) {
 	}
 
 	return nombreRol === 'cliente';
-}
-
-function esRepartidor(usuarioData) {
-	if (!usuarioData) {
-		return false;
-	}
-
-	const idRol = Number(usuarioData.id_rol);
-	const nombreRol = obtenerRolNormalizado(usuarioData.nombre_rol);
-
-	if (!Number.isNaN(idRol) && idRol === ID_ROL_REPARTIDOR) {
-		return true;
-	}
-
-	return nombreRol === 'repartidor';
-}
-
-function tieneAccesoPerfil(usuarioData) {
-	return esCliente(usuarioData) || esRepartidor(usuarioData);
 }
 
 if (!usuarioGuardado) {
@@ -194,6 +181,7 @@ function llenarFormulario(usuarioData) {
 	inputCorreo.value = usuarioData.correo ?? '';
 	inputTelefono.value = usuarioData.telefono ?? '';
 	inputDireccion.value = usuarioData.direccion ?? '';
+	buscadorDireccion.value = usuarioData.direccion ?? '';
 }
 
 function guardarEnStorage(usuarioActualizado) {
@@ -256,8 +244,6 @@ async function cargarPerfil() {
 			window.location.href = '/login/login.html';
 			return;
 		}
-
-		renderizarSidebar('perfil');
 
 		datosOriginales = {
 			nombre_completo: usuarioData.nombre_completo ?? '',
@@ -432,6 +418,125 @@ if (formPerfil) {
 			btnGuardarPerfil.textContent = 'Guardar cambios';
 		}
 	});
+}
+let timeoutBusqueda;
+let ultimaBusqueda = "";
+const cache = {};
+
+if (buscadorDireccion) {
+    buscadorDireccion.addEventListener('input', () => {
+        const query = buscadorDireccion.value.trim();
+
+        clearTimeout(timeoutBusqueda);
+
+        if (query.length < 3) {
+            resultadosDireccion.innerHTML = '';
+            return;
+        }
+
+        if (query === ultimaBusqueda) return;
+
+        if (cache[query]) {
+            mostrarResultados(cache[query]);
+            return;
+        }
+
+        timeoutBusqueda = setTimeout(async () => {
+            try {
+                const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&addressdetails=1&q=${encodeURIComponent(query)}&viewbox=-105.8,23.0,-103.0,20.0&bounded=1`;
+
+                const res = await fetch(url, {
+                    headers: {
+                        'Accept-Language': 'es',
+                        'User-Agent': 'MicroVentaApp'
+                    }
+                });
+
+                const data = await res.json();
+				ultimaBusqueda = query; 
+                cache[query] = data;
+
+                mostrarResultados(data);
+
+            } catch (error) {
+                console.error('Error buscando dirección:', error);
+            }
+        }, 700); 
+    });
+}
+
+function mostrarResultados(lugares) {
+    resultadosDireccion.innerHTML = '';
+	const lugaresUnicos = [];
+	const nombresVistos = new Set();
+
+	lugares.forEach(lugar => {
+    const limpio = lugar.display_name
+        .replace(/\d{5}/g, '')
+        .replace(', México', '')
+        .replace(/,\s*,/g, ',')
+        .replace(/,\s*$/, '')
+        .trim();
+
+    if (!nombresVistos.has(limpio)) {
+        nombresVistos.add(limpio);
+        lugaresUnicos.push(lugar);
+    }
+
+});
+    lugaresUnicos.forEach(lugar => {
+        const div = document.createElement('div');
+        div.classList.add('resultado-item');
+        const direccionLimpia = lugar.display_name
+    .replace(/\d{5}/g, '')       // quita CP
+    .replace(', , México', '.')     // quita México
+		div.textContent = direccionLimpia;
+
+div.addEventListener('click', () => {
+    const direccionLimpia = lugar.display_name
+        .replace(/\d{5}/g, '')
+        .replace(', México', '')
+        .replace(/,\s*,/g, ',')
+        .replace(/,\s*$/, '')
+        .trim();
+    const partes = direccionLimpia.split(',');
+
+    const primeraParte = partes[0]; 
+    const resto = partes.slice(1).join(','); 
+
+    const nuevaDireccion = `${primeraParte} #,${resto}`;
+
+    buscadorDireccion.value = nuevaDireccion;
+    inputDireccion.value = nuevaDireccion;
+
+    resultadosDireccion.innerHTML = '';
+    const posicionCursor = nuevaDireccion.indexOf('#') + 1;
+
+    buscadorDireccion.focus();
+    buscadorDireccion.setSelectionRange(posicionCursor, posicionCursor);
+});
+
+        resultadosDireccion.appendChild(div);
+    });
+}
+
+function esRepartidor(usuarioData) {
+	if (!usuarioData) {
+		return false;
+	}
+
+	const idRol = Number(usuarioData.id_rol);
+	const nombreRol = obtenerRolNormalizado(usuarioData.nombre_rol);
+
+	if (!Number.isNaN(idRol) && idRol === ID_ROL_REPARTIDOR) {
+		return true;
+	}
+
+	return nombreRol === 'repartidor';
+}
+
+function tieneAccesoPerfil(usuarioData) {
+	return esCliente(usuarioData) || esRepartidor(usuarioData);
 }
 
 cargarPerfil();

@@ -5,11 +5,32 @@
 	<link rel="icon" type="image/svg+xml" href="/grafico/Logo_DM.png" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>MicroVenta | Mi perfil</title>
+	<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+	<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 	<link rel="stylesheet" href="/perfil/perfil.css">
 </head>
 <body>
 	<div class="dashboard">
-		<aside class="sidebar" id="sidebarContainer"></aside>
+		<aside class="sidebar">
+			<div class="sidebar-brand">
+				<img src="/grafico/Logo_DM.png" alt="Dulce Mordisco" class="sidebar-logo">
+				<div>
+					<h2>Dulce Mordisco</h2>
+					<p>MicroVenta</p>
+				</div>
+			</div>
+
+			<nav class="sidebar-menu">
+				<a href="/cliente/cliente.html" class="menu-item">🏠 Inicio</a>
+				<a href="/productos/productos.html" class="menu-item">🧁 Productos</a>
+				<a href="/mis-pedidos/mis-pedidos.html" class="menu-item">🛒 Mis pedidos</a>
+				<a href="/perfil/perfil.html" class="menu-item active">👤 Mi perfil</a>
+
+				<button id="btnCerrarSesionSidebar" class="menu-item menu-item-logout" type="button">
+					🚪 Cerrar sesión
+				</button>
+			</nav>
+		</aside>
 
 		<main class="main-content">
 			<header class="topbar">
@@ -73,12 +94,16 @@
 
 							<div class="form-group full-width">
 								<label for="direccion">Dirección de entrega</label>
-								<textarea
-									id="direccion"
-									name="direccion"
-									rows="5"
-									placeholder="Calle, número, colonia, ciudad, referencias para la entrega..."
-								></textarea>
+<input type="text" id="buscadorDireccion" placeholder="Buscar dirección..." />
+
+<div id="resultadosDireccion"></div>
+
+<textarea
+    id="direccion"
+    name="direccion"
+    rows="5"
+    placeholder="Calle, número, colonia, ciudad..."
+></textarea>
 							</div>
 						</div>
 
@@ -151,7 +176,6 @@
 
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 	<script src="/conexion.js"></script>
-	<script src="/sidebar.js"></script>
 	<script src="/perfil/perfil.js"></script>
 </body>
 </html>
