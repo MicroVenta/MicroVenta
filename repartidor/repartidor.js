@@ -1,6 +1,5 @@
 const nombreRepartidor = document.getElementById('nombreRepartidor');
 const btnCerrarSesion = document.getElementById('btnCerrarSesion');
-const btnCerrarSesionSidebar = document.getElementById('btnCerrarSesionSidebar');
 const heroTitle = document.getElementById('heroTitle');
 const heroText = document.getElementById('heroText');
 const revealCards = document.querySelectorAll('.reveal-card');
@@ -53,6 +52,8 @@ if (usuario) {
 	}
 }
 
+renderizarSidebar('inicio');
+
 function cerrarSesion() {
 	sessionStorage.removeItem('microventa_usuario');
 	localStorage.removeItem('microventa_usuario');
@@ -61,10 +62,6 @@ function cerrarSesion() {
 
 if (btnCerrarSesion) {
 	btnCerrarSesion.addEventListener('click', cerrarSesion);
-}
-
-if (btnCerrarSesionSidebar) {
-	btnCerrarSesionSidebar.addEventListener('click', cerrarSesion);
 }
 
 function animarTextoPorPalabras(elemento, delayBase = 0, paso = 0.12) {

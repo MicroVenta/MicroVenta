@@ -30,7 +30,6 @@ const resumenCatalogo = document.getElementById('resumenCatalogo');
 const usuarioGuardado =
 	sessionStorage.getItem('microventa_usuario') ||
 	localStorage.getItem('microventa_usuario');
-const btnCerrarSesionSidebar = document.getElementById('btnCerrarSesionSidebar');
 
 let usuario = null;
 let productosOriginales = [];
@@ -65,16 +64,14 @@ if (rolUsuario !== 'administrador' && rolUsuario !== 'ayudante') {
 	window.location.href = '/login/login.html';
 }
 
+renderizarSidebar('productos-admin');
+
 if (nombreUsuario) {
 	nombreUsuario.textContent = usuario.nombre_completo;
 }
 
 if (btnCerrarSesion) {
 	btnCerrarSesion.addEventListener('click', cerrarSesion);
-}
-
-if (btnCerrarSesionSidebar) {
-	btnCerrarSesionSidebar.addEventListener('click', cerrarSesion);
 }
 
 function mostrarMensajeFormulario(tipo, texto) {

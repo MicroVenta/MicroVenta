@@ -42,7 +42,7 @@ if (!usuarioGuardado) {
 if (usuario) {
 	const rolUsuario = (usuario.nombre_rol ?? '').trim().toLowerCase();
 
-	if (rolUsuario !== 'cliente' && rolUsuario !== 'repartidor') {
+	if (rolUsuario !== 'cliente' && rolUsuario !== 'repartidor' && rolUsuario !== 'administrador') {
 		window.location.href = '/login/login.html';
 	} else if (nombreCliente) {
 		nombreCliente.textContent = usuario.nombre_completo || 'Usuario';

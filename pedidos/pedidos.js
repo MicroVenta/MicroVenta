@@ -1,6 +1,5 @@
 const nombreUsuario = document.getElementById('nombreUsuario');
 const btnCerrarSesion = document.getElementById('btnCerrarSesion');
-const btnCerrarSesionSidebar = document.getElementById('btnCerrarSesionSidebar');
 
 const buscarPedido = document.getElementById('buscarPedido');
 const filtroEstatus = document.getElementById('filtroEstatus');
@@ -73,16 +72,14 @@ if (Number(usuario.id_rol) !== 1) {
 	window.location.href = '/login/login.html';
 }
 
+renderizarSidebar('pedidos');
+
 if (nombreUsuario) {
 	nombreUsuario.textContent = usuario.nombre_completo ?? 'Administrador';
 }
 
 if (btnCerrarSesion) {
 	btnCerrarSesion.addEventListener('click', cerrarSesion);
-}
-
-if (btnCerrarSesionSidebar) {
-	btnCerrarSesionSidebar.addEventListener('click', cerrarSesion);
 }
 
 function normalizarTexto(texto) {

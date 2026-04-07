@@ -1,6 +1,5 @@
 const nombreCliente = document.getElementById('nombreCliente');
 const btnCerrarSesion = document.getElementById('btnCerrarSesion');
-const btnCerrarSesionSidebar = document.getElementById('btnCerrarSesionSidebar');
 const heroTitle = document.getElementById('heroTitle');
 const heroText = document.getElementById('heroText');
 const revealCards = document.querySelectorAll('.reveal-card');
@@ -32,13 +31,21 @@ if (!usuarioGuardado) {
 	}
 }
 
+function obtenerRolNormalizado(nombreRol) {
+	return (nombreRol ?? '').toString().trim().toLowerCase();
+}
+
 if (usuario) {
-	if (usuario.nombre_rol !== 'cliente') {
+	const rolUsuario = obtenerRolNormalizado(usuario.nombre_rol);
+
+	if (rolUsuario !== 'cliente') {
 		window.location.href = '/login/login.html';
 	} else if (nombreCliente) {
-		nombreCliente.textContent = usuario.nombre_completo;
+		nombreCliente.textContent = usuario.nombre_completo || 'Cliente';
 	}
 }
+
+renderizarSidebar('inicio');
 
 function cerrarSesion() {
 	sessionStorage.removeItem('microventa_usuario');
@@ -48,10 +55,6 @@ function cerrarSesion() {
 
 if (btnCerrarSesion) {
 	btnCerrarSesion.addEventListener('click', cerrarSesion);
-}
-
-if (btnCerrarSesionSidebar) {
-	btnCerrarSesionSidebar.addEventListener('click', cerrarSesion);
 }
 
 function animarTextoPorPalabras(elemento, delayBase = 0, paso = 0.12) {

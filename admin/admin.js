@@ -1,6 +1,5 @@
 const nombreAdmin = document.getElementById('nombreAdmin');
 const btnCerrarSesion = document.getElementById('btnCerrarSesion');
-const btnCerrarSesionSidebar = document.getElementById('btnCerrarSesionSidebar');
 const heroTitle = document.getElementById('heroTitle');
 const heroText = document.getElementById('heroText');
 const revealCards = document.querySelectorAll('.reveal-card');
@@ -26,12 +25,14 @@ if (!usuarioGuardado) {
 }
 
 if (usuario) {
-	if (usuario.nombre_rol !== 'administrador') {
+	if ((usuario.nombre_rol ?? '').trim().toLowerCase() !== 'administrador') {
 		window.location.href = '/login/login.html';
 	} else if (nombreAdmin) {
 		nombreAdmin.textContent = usuario.nombre_completo;
 	}
 }
+
+renderizarSidebar('inicio');
 
 function cerrarSesion() {
 	sessionStorage.removeItem('microventa_usuario');
@@ -41,10 +42,6 @@ function cerrarSesion() {
 
 if (btnCerrarSesion) {
 	btnCerrarSesion.addEventListener('click', cerrarSesion);
-}
-
-if (btnCerrarSesionSidebar) {
-	btnCerrarSesionSidebar.addEventListener('click', cerrarSesion);
 }
 
 function animarTextoPorPalabras(elemento, delayBase = 0, paso = 0.12) {

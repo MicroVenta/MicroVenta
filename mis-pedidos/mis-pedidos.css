@@ -649,3 +649,20 @@ body {
 		font-size: 1.55rem;
 	}
 }
+
+.sidebar-group {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-bottom: 18px;
+}
+
+.sidebar-group-title {
+	font-size: 0.8rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--gris-texto);
+	opacity: 0.8;
+	padding: 4px 14px 2px 14px;
+}

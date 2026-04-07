@@ -14,8 +14,6 @@ const btnMenu = document.getElementById('btnMenu');
 const sidebar = document.getElementById('sidebar');
 const mobileOverlay = document.getElementById('mobileOverlay');
 
-const btnCerrarSesionSidebar = document.getElementById('btnCerrarSesionSidebar');
-
 let usuarios = [];
 
 function cerrarSesion() {
@@ -23,6 +21,8 @@ function cerrarSesion() {
 	localStorage.removeItem('microventa_usuario');
 	window.location.href = '/login/login.html';
 }
+
+renderizarSidebar('usuarios');
 
 /* =========================
 	MENÚ MÓVIL
@@ -291,10 +291,6 @@ usuarioForm.addEventListener('submit', async (e) => {
 searchInput.addEventListener('input', (e) => {
 	renderUsuarios(e.target.value);
 });
-
-if (btnCerrarSesionSidebar) {
-	btnCerrarSesionSidebar.addEventListener('click', cerrarSesion);
-}
 
 /* =========================
 	INIT

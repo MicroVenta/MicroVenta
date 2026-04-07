@@ -1,6 +1,5 @@
 const nombreUsuario = document.getElementById('nombreUsuario');
 const btnCerrarSesion = document.getElementById('btnCerrarSesion');
-const btnCerrarSesionSidebar = document.getElementById('btnCerrarSesionSidebar');
 
 const fechaInicio = document.getElementById('fechaInicio');
 const fechaFin = document.getElementById('fechaFin');
@@ -62,16 +61,14 @@ if (Number(usuario.id_rol) !== 1) {
 	window.location.href = '/login/login.html';
 }
 
+renderizarSidebar('reportes');
+
 if (nombreUsuario) {
 	nombreUsuario.textContent = usuario.nombre_completo ?? 'Administrador';
 }
 
 if (btnCerrarSesion) {
 	btnCerrarSesion.addEventListener('click', cerrarSesion);
-}
-
-if (btnCerrarSesionSidebar) {
-	btnCerrarSesionSidebar.addEventListener('click', cerrarSesion);
 }
 
 function mostrarMensaje(tipo, texto) {

@@ -3,7 +3,6 @@ const NOMBRE_NEGOCIO = 'Dulce Mordisco';
 
 const nombreRepartidor = document.getElementById('nombreRepartidor');
 const btnCerrarSesion = document.getElementById('btnCerrarSesion');
-const btnCerrarSesionSidebar = document.getElementById('btnCerrarSesionSidebar');
 
 const fechaActualizacion = document.getElementById('fechaActualizacion');
 const listaPedidos = document.getElementById('listaPedidos');
@@ -86,6 +85,8 @@ if (nombreRepartidor) {
 	nombreRepartidor.textContent = usuario?.nombre_completo || 'Repartidor';
 }
 
+renderizarSidebar('mis-entregas');
+
 function cerrarSesion() {
 	sessionStorage.removeItem('microventa_usuario');
 	localStorage.removeItem('microventa_usuario');
@@ -94,10 +95,6 @@ function cerrarSesion() {
 
 if (btnCerrarSesion) {
 	btnCerrarSesion.addEventListener('click', cerrarSesion);
-}
-
-if (btnCerrarSesionSidebar) {
-	btnCerrarSesionSidebar.addEventListener('click', cerrarSesion);
 }
 
 function mostrarMensaje(texto, tipo = 'success') {

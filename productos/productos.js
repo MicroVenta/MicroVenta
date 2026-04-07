@@ -46,7 +46,11 @@ if (!usuario) {
 
 const rolUsuario = (usuario.nombre_rol ?? '').trim().toLowerCase();
 
-if (rolUsuario !== 'cliente' && rolUsuario !== 'repartidor') {
+if (
+	rolUsuario !== 'cliente' &&
+	rolUsuario !== 'repartidor' &&
+	rolUsuario !== 'administrador'
+) {
 	window.location.href = '/login/login.html';
 }
 
@@ -97,7 +101,7 @@ async function refrescarUsuarioDesdeBD() {
 		guardarUsuarioEnStorage();
 
 		if (nombreCliente) {
-			nombreCliente.textContent = usuario.nombre_completo ?? 'Cliente';
+			nombreCliente.textContent = usuario.nombre_completo ?? 'Usuario';
 		}
 	} catch (error) {
 		console.error('Error general al refrescar usuario:', error);
