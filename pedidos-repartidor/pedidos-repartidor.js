@@ -1,4 +1,5 @@
 const DIRECCION_NEGOCIO = '21.478741236697257, -104.86570974660742';
+const NOMBRE_NEGOCIO = 'Dulce Mordisco';
 
 const nombreRepartidor = document.getElementById('nombreRepartidor');
 const btnCerrarSesion = document.getElementById('btnCerrarSesion');
@@ -360,6 +361,41 @@ function marcarPedidoSeleccionado() {
 	});
 }
 
+function esCadenaCoordenadas(texto) {
+	if (!texto) {
+		return false;
+	}
+
+	return /^\s*-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?\s*$/.test(String(texto).trim());
+}
+
+function convertirCoordenadas(texto, etiqueta = 'Ubicación') {
+	if (!esCadenaCoordenadas(texto)) {
+		return null;
+	}
+
+	const [latitudTexto, longitudTexto] = String(texto).split(',');
+	const lat = Number(latitudTexto.trim());
+	const lon = Number(longitudTexto.trim());
+
+	if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+		return null;
+	}
+
+	return {
+		lat,
+		lon,
+		texto: etiqueta
+	};
+}
+
+function normalizarTextoDireccion(texto) {
+	return String(texto ?? '')
+		.replace(/\s+/g, ' ')
+		.replace(/\n/g, ' ')
+		.trim();
+}
+
 function renderizarListaPedidos(pedidos) {
 	if (!listaPedidos) {
 		return;
@@ -595,14 +631,23 @@ function inicializarMapaRuta() {
 		return;
 	}
 
+	const coordenadasNegocio = convertirCoordenadas(DIRECCION_NEGOCIO, NOMBRE_NEGOCIO);
+	const vistaInicial = coordenadasNegocio
+		? [coordenadasNegocio.lat, coordenadasNegocio.lon]
+		: [23.2494, -106.4111];
+
 	mapaRuta = L.map('mapaRuta', {
 		zoomControl: true
-	}).setView([23.2494, -106.4111], 12);
+	}).setView(vistaInicial, 13);
 
 	L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 		maxZoom: 19,
 		attribution: '&copy; OpenStreetMap'
 	}).addTo(mapaRuta);
+
+	setTimeout(() => {
+		mapaRuta.invalidateSize();
+	}, 200);
 }
 
 function limpiarMapaRuta() {
@@ -645,7 +690,7 @@ function limpiarResumenRuta() {
 
 	if (rutaOrigenTexto) {
 		rutaOrigenTexto.textContent = modoOrigenRuta === 'negocio'
-			? DIRECCION_NEGOCIO
+			? NOMBRE_NEGOCIO
 			: 'Ubicación actual del repartidor';
 	}
 
@@ -695,11 +740,17 @@ async function obtenerUbicacionActual() {
 	});
 }
 
-async function geocodificarDireccion(direccion) {
-	const texto = (direccion ?? '').trim();
+async function geocodificarDireccion(direccion, etiquetaSiEsCoordenada = 'Ubicación') {
+	const texto = normalizarTextoDireccion(direccion);
 
 	if (!texto) {
 		throw new Error('No hay una dirección válida para calcular la ruta.');
+	}
+
+	const coordenadasDirectas = convertirCoordenadas(texto, etiquetaSiEsCoordenada);
+
+	if (coordenadasDirectas) {
+		return coordenadasDirectas;
 	}
 
 	const url = new URL('https://nominatim.openstreetmap.org/search');
@@ -779,6 +830,10 @@ function dibujarRutaEnMapa(origen, destino, ruta) {
 	mapaRuta.fitBounds(grupo.getBounds(), {
 		padding: [30, 30]
 	});
+
+	setTimeout(() => {
+		mapaRuta.invalidateSize();
+	}, 150);
 }
 
 async function obtenerOrigenRuta() {
@@ -786,7 +841,7 @@ async function obtenerOrigenRuta() {
 		return obtenerUbicacionActual();
 	}
 
-	return geocodificarDireccion(DIRECCION_NEGOCIO);
+	return geocodificarDireccion(DIRECCION_NEGOCIO, NOMBRE_NEGOCIO);
 }
 
 async function mostrarRutaPedido(pedido) {
@@ -831,8 +886,14 @@ async function mostrarRutaPedido(pedido) {
 	}
 
 	try {
+		const destinoTextoOriginal = normalizarTextoDireccion(pedido.lugar_entrega ?? '');
+
+		if (!destinoTextoOriginal) {
+			throw new Error('Este pedido no tiene un lugar de entrega registrado.');
+		}
+
 		const origen = await obtenerOrigenRuta();
-		const destino = await geocodificarDireccion(pedido.lugar_entrega ?? '');
+		const destino = await geocodificarDireccion(destinoTextoOriginal, 'Destino del pedido');
 		const ruta = await consultarRuta(origen, destino);
 
 		dibujarRutaEnMapa(origen, destino, ruta);

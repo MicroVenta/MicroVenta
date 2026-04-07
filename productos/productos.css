@@ -615,7 +615,7 @@ body {
 		position: static;
 	}
 
-	products-grid {
+	.products-grid {
 		grid-template-columns: repeat(2, minmax(240px, 1fr));
 	}
 }

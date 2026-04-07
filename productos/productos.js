@@ -15,6 +15,8 @@ const pedidoMensaje = document.getElementById('pedidoMensaje');
 
 const usarDireccionPerfil = document.getElementById('usarDireccionPerfil');
 const direccionPerfilInfo = document.getElementById('direccionPerfilInfo');
+const telefonoInfo = document.getElementById('telefonoInfo');
+const telefonoPedido = document.getElementById('telefonoPedido');
 const lugarEntrega = document.getElementById('lugarEntrega');
 
 const usuarioGuardado =
@@ -52,6 +54,54 @@ renderizarSidebar('productos');
 
 if (nombreCliente) {
 	nombreCliente.textContent = usuario.nombre_completo;
+}
+
+function guardarUsuarioEnStorage() {
+	const usuarioSerializado = JSON.stringify(usuario);
+	sessionStorage.setItem('microventa_usuario', usuarioSerializado);
+	localStorage.setItem('microventa_usuario', usuarioSerializado);
+}
+
+async function refrescarUsuarioDesdeBD() {
+	try {
+		const { data, error } = await db
+			.from('usuario')
+			.select(`
+				id_usuario,
+				nombre_completo,
+				correo,
+				id_rol,
+				telefono,
+				direccion,
+				nombreuser,
+				Estado,
+				rol (
+					id_rol,
+					nombre_rol
+				)
+			`)
+			.eq('id_usuario', usuario.id_usuario)
+			.single();
+
+		if (error || !data) {
+			console.error('No se pudo refrescar el usuario desde la BD:', error);
+			return;
+		}
+
+		usuario = {
+			...usuario,
+			...data,
+			nombre_rol: data.rol?.nombre_rol ?? usuario.nombre_rol
+		};
+
+		guardarUsuarioEnStorage();
+
+		if (nombreCliente) {
+			nombreCliente.textContent = usuario.nombre_completo ?? 'Cliente';
+		}
+	} catch (error) {
+		console.error('Error general al refrescar usuario:', error);
+	}
 }
 
 function cerrarSesion() {
@@ -127,6 +177,34 @@ function cargarCarrito() {
 	}
 }
 
+function obtenerTelefonoCapturado() {
+	return String(telefonoPedido?.value ?? '').trim();
+}
+
+function tieneTelefonoRegistrado() {
+	return obtenerTelefonoCapturado() !== '';
+}
+
+function actualizarInfoTelefono() {
+	const telefonoActual = String(usuario?.telefono ?? '').trim();
+
+	if (!telefonoInfo) {
+		return;
+	}
+
+	if (telefonoActual !== '') {
+		telefonoInfo.textContent = `Teléfono registrado: ${telefonoActual}`;
+		telefonoInfo.classList.remove('hidden');
+	} else {
+		telefonoInfo.textContent = 'No tienes un teléfono guardado en tu perfil. Debes capturarlo para poder hacer un pedido.';
+		telefonoInfo.classList.remove('hidden');
+	}
+
+	if (telefonoPedido) {
+		telefonoPedido.value = telefonoActual;
+	}
+}
+
 function inicializarEntrega() {
 	const direccionGuardada = (usuario?.direccion ?? '').trim();
 
@@ -137,6 +215,8 @@ function inicializarEntrega() {
 		direccionPerfilInfo.textContent = 'No tienes una dirección guardada en tu perfil.';
 		direccionPerfilInfo.classList.remove('hidden');
 	}
+
+	actualizarInfoTelefono();
 
 	if (usarDireccionPerfil) {
 		usarDireccionPerfil.checked = false;
@@ -520,7 +600,6 @@ async function cargarCategorias() {
 
 		categoriasOriginales = data ?? [];
 		cargarCategoriasEnFiltro(categoriasOriginales);
-
 	} catch (error) {
 		console.error('Error general al cargar categorías:', error);
 	}
@@ -564,7 +643,6 @@ async function cargarProductos() {
 
 		productosOriginales = data ?? [];
 		aplicarFiltros();
-
 	} catch (error) {
 		console.error('Error general al cargar productos:', error);
 
@@ -623,6 +701,42 @@ async function actualizarStockProducto(item) {
 	producto.stock_actual = nuevoStock;
 }
 
+async function guardarTelefonoSiCambio() {
+	const telefonoNuevo = obtenerTelefonoCapturado();
+
+	if (telefonoNuevo === '') {
+		mostrarMensaje(
+			'error',
+			'Debes registrar un número de teléfono antes de realizar un pedido.'
+		);
+		telefonoPedido?.focus();
+		return false;
+	}
+
+	if (telefonoNuevo === String(usuario?.telefono ?? '').trim()) {
+		return true;
+	}
+
+	const { error } = await db
+		.from('usuario')
+		.update({
+			telefono: telefonoNuevo
+		})
+		.eq('id_usuario', usuario.id_usuario);
+
+	if (error) {
+		console.error('Error al actualizar teléfono:', error);
+		mostrarMensaje('error', 'No se pudo guardar el teléfono de contacto.');
+		return false;
+	}
+
+	usuario.telefono = telefonoNuevo;
+	guardarUsuarioEnStorage();
+	actualizarInfoTelefono();
+
+	return true;
+}
+
 function validarLugarEntrega() {
 	const lugar = lugarEntrega?.value.trim() ?? '';
 
@@ -642,6 +756,12 @@ async function realizarPedido() {
 
 	if (!carrito || carrito.length === 0) {
 		mostrarMensaje('error', 'Agrega productos antes de realizar el pedido.');
+		return;
+	}
+
+	const telefonoValido = await guardarTelefonoSiCambio();
+
+	if (!telefonoValido || !tieneTelefonoRegistrado()) {
 		return;
 	}
 
@@ -741,7 +861,6 @@ async function realizarPedido() {
 			'success',
 			`Pedido realizado correctamente. Tu número de pedido es #${pedidoData.id_pedido}.`
 		);
-
 	} catch (error) {
 		console.error('Error al realizar pedido:', error);
 		mostrarMensaje('error', error.message || 'No se pudo realizar el pedido.');
@@ -771,8 +890,11 @@ if (usarDireccionPerfil) {
 	usarDireccionPerfil.addEventListener('change', actualizarEstadoLugarEntrega);
 }
 
-cargarCarrito();
-renderizarCarrito();
-inicializarEntrega();
-cargarCategorias();
-cargarProductos();
+(async function init() {
+	cargarCarrito();
+	renderizarCarrito();
+	await refrescarUsuarioDesdeBD();
+	inicializarEntrega();
+	cargarCategorias();
+	cargarProductos();
+})();
