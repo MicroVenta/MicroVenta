@@ -93,6 +93,30 @@
 							</div>
 						</div>
 
+						<div class="delivery-section">
+							<div class="delivery-header">
+								<h3>Lugar de entrega</h3>
+								<p>Indica dónde quieres recibir tu pedido.</p>
+							</div>
+
+							<label class="check-option" for="usarDireccionPerfil">
+								<input type="checkbox" id="usarDireccionPerfil">
+								<span>Usar mi dirección guardada en el perfil como lugar de entrega</span>
+							</label>
+
+							<div id="direccionPerfilInfo" class="delivery-info hidden"></div>
+
+							<div class="form-group">
+								<label for="lugarEntrega">Lugar de entrega</label>
+								<textarea
+									id="lugarEntrega"
+									class="form-control textarea-control"
+									rows="4"
+									placeholder="Escribe el lugar de entrega"
+								></textarea>
+							</div>
+						</div>
+
 						<div id="pedidoMensaje" class="message"></div>
 
 						<div class="cart-actions">

@@ -13,6 +13,10 @@ const btnVaciarCarrito = document.getElementById('btnVaciarCarrito');
 const btnRealizarPedido = document.getElementById('btnRealizarPedido');
 const pedidoMensaje = document.getElementById('pedidoMensaje');
 
+const usarDireccionPerfil = document.getElementById('usarDireccionPerfil');
+const direccionPerfilInfo = document.getElementById('direccionPerfilInfo');
+const lugarEntrega = document.getElementById('lugarEntrega');
+
 const usuarioGuardado =
 	sessionStorage.getItem('microventa_usuario') ||
 	localStorage.getItem('microventa_usuario');
@@ -121,6 +125,57 @@ function cargarCarrito() {
 		carrito = [];
 		localStorage.removeItem(obtenerClaveCarrito());
 	}
+}
+
+function inicializarEntrega() {
+	const direccionGuardada = (usuario?.direccion ?? '').trim();
+
+	if (direccionGuardada !== '') {
+		direccionPerfilInfo.textContent = `Dirección guardada: ${direccionGuardada}`;
+		direccionPerfilInfo.classList.remove('hidden');
+	} else {
+		direccionPerfilInfo.textContent = 'No tienes una dirección guardada en tu perfil.';
+		direccionPerfilInfo.classList.remove('hidden');
+	}
+
+	if (usarDireccionPerfil) {
+		usarDireccionPerfil.checked = false;
+	}
+
+	if (lugarEntrega) {
+		lugarEntrega.value = '';
+		lugarEntrega.disabled = false;
+	}
+}
+
+function actualizarEstadoLugarEntrega() {
+	if (!usarDireccionPerfil || !lugarEntrega) {
+		return;
+	}
+
+	const direccionGuardada = (usuario?.direccion ?? '').trim();
+	const usarPerfil = usarDireccionPerfil.checked;
+
+	if (usarPerfil) {
+		if (direccionGuardada === '') {
+			usarDireccionPerfil.checked = false;
+			mostrarMensaje(
+				'error',
+				'No puedes usar la dirección del perfil porque no tienes una guardada.'
+			);
+			lugarEntrega.disabled = false;
+			lugarEntrega.value = '';
+			return;
+		}
+
+		lugarEntrega.value = direccionGuardada;
+		lugarEntrega.disabled = true;
+		limpiarMensaje();
+		return;
+	}
+
+	lugarEntrega.disabled = false;
+	lugarEntrega.value = '';
 }
 
 function cargarCategoriasEnFiltro(categorias) {
@@ -527,7 +582,7 @@ async function obtenerEstatusPendiente() {
 	const { data, error } = await db
 		.from('estatuspedido')
 		.select('id_estatus, descripcion')
-		.eq('descripcion', 'Pendiente')
+		.ilike('descripcion', 'Pendiente')
 		.single();
 
 	if (error || !data) {
@@ -568,11 +623,31 @@ async function actualizarStockProducto(item) {
 	producto.stock_actual = nuevoStock;
 }
 
+function validarLugarEntrega() {
+	const lugar = lugarEntrega?.value.trim() ?? '';
+
+	if (lugar === '') {
+		mostrarMensaje('error', 'Debes indicar el lugar de entrega.');
+		if (!lugarEntrega?.disabled) {
+			lugarEntrega?.focus();
+		}
+		return null;
+	}
+
+	return lugar;
+}
+
 async function realizarPedido() {
 	limpiarMensaje();
 
 	if (!carrito || carrito.length === 0) {
 		mostrarMensaje('error', 'Agrega productos antes de realizar el pedido.');
+		return;
+	}
+
+	const lugarEntregaFinal = validarLugarEntrega();
+
+	if (!lugarEntregaFinal) {
 		return;
 	}
 
@@ -608,7 +683,8 @@ async function realizarPedido() {
 			.insert({
 				id_cliente: usuario.id_usuario,
 				total_pagar: total,
-				id_estatus: idEstatusPendiente
+				id_estatus: idEstatusPendiente,
+				lugar_entrega: lugarEntregaFinal
 			})
 			.select('id_pedido')
 			.single();
@@ -632,6 +708,17 @@ async function realizarPedido() {
 			throw new Error('No se pudieron guardar los detalles del pedido.');
 		}
 
+		const { error: historialError } = await db
+			.from('historialestatus')
+			.insert({
+				id_pedido: pedidoData.id_pedido,
+				id_estatus: idEstatusPendiente
+			});
+
+		if (historialError) {
+			throw new Error('No se pudo registrar el historial inicial del pedido.');
+		}
+
 		for (const item of carrito) {
 			await actualizarStockProducto(item);
 		}
@@ -640,6 +727,15 @@ async function realizarPedido() {
 		guardarCarrito();
 		renderizarCarrito();
 		aplicarFiltros();
+
+		if (usarDireccionPerfil) {
+			usarDireccionPerfil.checked = false;
+		}
+
+		if (lugarEntrega) {
+			lugarEntrega.disabled = false;
+			lugarEntrega.value = '';
+		}
 
 		mostrarMensaje(
 			'success',
@@ -671,7 +767,12 @@ if (btnRealizarPedido) {
 	btnRealizarPedido.addEventListener('click', realizarPedido);
 }
 
+if (usarDireccionPerfil) {
+	usarDireccionPerfil.addEventListener('change', actualizarEstadoLugarEntrega);
+}
+
 cargarCarrito();
 renderizarCarrito();
+inicializarEntrega();
 cargarCategorias();
 cargarProductos();

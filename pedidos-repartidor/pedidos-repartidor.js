@@ -378,8 +378,11 @@ function renderizarListaPedidos(pedidos) {
 		const estatusActual = obtenerDescripcionEstatus(pedido);
 		const productos = obtenerProductosPedido(pedido.detallepedido);
 		const cliente = pedido.cliente?.nombre_completo ?? 'Cliente no disponible';
-		const direccion = pedido.cliente?.direccion ?? 'Dirección no registrada';
+		const direccion = pedido.lugar_entrega ?? 'Lugar de entrega no registrado';
 		const telefono = pedido.cliente?.telefono ?? 'Sin teléfono';
+		const fechaEntrega = pedido.fecha_entrega_aproximada
+			? formatearFechaCorta(pedido.fecha_entrega_aproximada)
+			: 'Sin definir';
 		const urlMaps = construirUrlGoogleMaps(direccion);
 
 		return `
@@ -391,8 +394,9 @@ function renderizarListaPedidos(pedidos) {
 
 				<div class="order-meta">
 					<p><strong>Cliente:</strong> ${escaparHtml(cliente)}</p>
-					<p><strong>Fecha:</strong> ${formatearFecha(pedido.fecha_pedido)}</p>
-					<p><strong>Dirección:</strong> ${escaparHtml(direccion)}</p>
+					<p><strong>Fecha pedido:</strong> ${formatearFecha(pedido.fecha_pedido)}</p>
+					<p><strong>Entrega:</strong> ${fechaEntrega}</p>
+					<p><strong>Lugar de entrega:</strong> ${escaparHtml(direccion)}</p>
 					<p><strong>Teléfono:</strong> ${escaparHtml(telefono)}</p>
 					<p><strong>Total:</strong> ${formatearMoneda(pedido.total_pagar || 0)}</p>
 				</div>
@@ -468,7 +472,7 @@ function aplicarFiltros() {
 		pedidosFiltrados = pedidosFiltrados.filter((pedido) => {
 			const idPedido = String(pedido.id_pedido ?? '').toLowerCase();
 			const cliente = (pedido.cliente?.nombre_completo ?? '').toLowerCase();
-			const direccion = (pedido.cliente?.direccion ?? '').toLowerCase();
+			const direccion = (pedido.lugar_entrega ?? '').toLowerCase();
 			const telefono = (pedido.cliente?.telefono ?? '').toLowerCase();
 			const estatus = obtenerDescripcionEstatus(pedido).toLowerCase();
 
@@ -539,7 +543,7 @@ async function actualizarEstatusPedido(idPedido, accion, boton) {
 	let etiquetaAccion = '';
 
 	if (accion === 'ruta') {
-		nuevoIdEstatus = obtenerIdEstatusPorDescripcion('en camino', 'en ruta', 'enviando');
+		nuevoIdEstatus = obtenerIdEstatusPorDescripcion('en ruta', 'enviando', 'en camino');
 		etiquetaAccion = 'en ruta';
 	} else if (accion === 'entregado') {
 		nuevoIdEstatus = obtenerIdEstatusPorDescripcion('entregado', 'completado');
@@ -823,12 +827,12 @@ async function mostrarRutaPedido(pedido) {
 	}
 
 	if (rutaDestinoTexto) {
-		rutaDestinoTexto.textContent = pedido.cliente?.direccion ?? 'Dirección no registrada';
+		rutaDestinoTexto.textContent = pedido.lugar_entrega ?? 'Lugar de entrega no registrado';
 	}
 
 	try {
 		const origen = await obtenerOrigenRuta();
-		const destino = await geocodificarDireccion(pedido.cliente?.direccion ?? '');
+		const destino = await geocodificarDireccion(pedido.lugar_entrega ?? '');
 		const ruta = await consultarRuta(origen, destino);
 
 		dibujarRutaEnMapa(origen, destino, ruta);
@@ -880,6 +884,8 @@ async function cargarPedidosRepartidor() {
 			.select(`
 				id_pedido,
 				fecha_pedido,
+				fecha_entrega_aproximada,
+				lugar_entrega,
 				total_pagar,
 				id_estatus,
 				id_repartidor,
@@ -890,7 +896,6 @@ async function cargarPedidosRepartidor() {
 				cliente:usuario!pedido_id_cliente_fkey (
 					id_usuario,
 					nombre_completo,
-					direccion,
 					telefono
 				),
 				detallepedido (

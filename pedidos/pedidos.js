@@ -21,6 +21,8 @@ const btnCerrarModal = document.getElementById('btnCerrarModal');
 const detalleIdPedido = document.getElementById('detalleIdPedido');
 const detalleCliente = document.getElementById('detalleCliente');
 const detalleFecha = document.getElementById('detalleFecha');
+const detalleFechaEntrega = document.getElementById('detalleFechaEntrega');
+const detalleLugarEntrega = document.getElementById('detalleLugarEntrega');
 const detalleTotal = document.getElementById('detalleTotal');
 const detalleRepartidor = document.getElementById('detalleRepartidor');
 const detalleEstatus = document.getElementById('detalleEstatus');
@@ -29,6 +31,9 @@ const detalleHistorial = document.getElementById('detalleHistorial');
 
 const selectRepartidorModal = document.getElementById('selectRepartidorModal');
 const selectEstatusModal = document.getElementById('selectEstatusModal');
+const inputFechaEntregaModal = document.getElementById('inputFechaEntregaModal');
+const grupoFechaEntrega = document.getElementById('grupoFechaEntrega');
+
 const btnGuardarCambiosPedido = document.getElementById('btnGuardarCambiosPedido');
 const mensajeAccion = document.getElementById('mensajeAccion');
 
@@ -102,6 +107,26 @@ function formatearFecha(fecha) {
 	});
 }
 
+function convertirFechaLocalParaBD(valorFecha) {
+	if (!valorFecha) {
+		return null;
+	}
+
+	return `${valorFecha}:00`;
+}
+
+function formatearFechaParaInput(fecha) {
+	if (!fecha) {
+		return '';
+	}
+
+	const fechaObj = new Date(fecha);
+	const offset = fechaObj.getTimezoneOffset();
+	const fechaLocal = new Date(fechaObj.getTime() - (offset * 60000));
+
+	return fechaLocal.toISOString().slice(0, 16);
+}
+
 function mostrarMensajeAccion(tipo, texto) {
 	mensajeAccion.className = 'message';
 	mensajeAccion.textContent = '';
@@ -128,12 +153,8 @@ function obtenerClaseBadgeEstatus(descripcion) {
 	const texto = normalizarTexto(descripcion);
 
 	if (texto === 'pendiente') return 'badge badge-pendiente';
-	if (texto === 'en espera') return 'badge badge-en-espera';
 	if (texto === 'aceptado') return 'badge badge-aceptado';
-	if (texto === 'amasando') return 'badge badge-amasando';
-	if (texto === 'en el horno') return 'badge badge-en-el-horno';
-	if (texto === 'decorando') return 'badge badge-decorando';
-	if (texto === 'empaquetando') return 'badge badge-empaquetando';
+	if (texto === 'en preparación') return 'badge badge-en-preparacion';
 	if (texto === 'enviando') return 'badge badge-enviando';
 	if (texto === 'entregado') return 'badge badge-entregado';
 	if (texto === 'completado') return 'badge badge-completado';
@@ -154,6 +175,16 @@ function esPedidoCerrado(descripcionEstatus) {
 		estatus === 'completado' ||
 		estatus === 'rechazado' ||
 		estatus === 'cancelado';
+}
+
+function requiereLogisticaPorEstatus(valor) {
+	const texto = normalizarTexto(valor);
+
+	if (texto === '' || texto === 'selecciona un estatus') {
+		return false;
+	}
+
+	return texto !== 'rechazado' && texto !== 'cancelado' && texto !== 'pendiente';
 }
 
 function cargarOpcionesEstatus() {
@@ -211,11 +242,33 @@ function actualizarEstadisticas(pedidos) {
 	statIngresos.textContent = formatearMoneda(ingresos);
 }
 
+function actualizarCamposSegunEstatus() {
+	const optionSeleccionada = selectEstatusModal.options[selectEstatusModal.selectedIndex];
+	const descripcionSeleccionada = optionSeleccionada
+		? optionSeleccionada.textContent
+		: '';
+
+	const necesitaLogistica = requiereLogisticaPorEstatus(descripcionSeleccionada);
+
+	selectRepartidorModal.disabled = !necesitaLogistica;
+
+	if (!necesitaLogistica) {
+		selectRepartidorModal.value = '';
+		inputFechaEntregaModal.value = '';
+		grupoFechaEntrega.classList.add('hidden');
+		inputFechaEntregaModal.disabled = true;
+		return;
+	}
+
+	grupoFechaEntrega.classList.remove('hidden');
+	inputFechaEntregaModal.disabled = false;
+}
+
 function renderizarPedidos(pedidos) {
 	if (!pedidos.length) {
 		tablaPedidosBody.innerHTML = `
 			<tr>
-				<td colspan="7" class="empty-row">
+				<td colspan="9" class="empty-row">
 					No se encontraron pedidos con los filtros seleccionados.
 				</td>
 			</tr>
@@ -228,6 +281,10 @@ function renderizarPedidos(pedidos) {
 		const nombreRepartidor = obtenerNombreRepartidor(pedido);
 		const nombreEstatus = obtenerDescripcionEstatus(pedido);
 		const cantidadProductos = Array.isArray(pedido.detalles) ? pedido.detalles.length : 0;
+		const lugarEntrega = pedido.lugar_entrega ?? 'Sin lugar registrado';
+		const fechaEntrega = pedido.fecha_entrega_aproximada
+			? formatearFecha(pedido.fecha_entrega_aproximada)
+			: 'Sin definir';
 
 		return `
 			<tr>
@@ -242,6 +299,8 @@ function renderizarPedidos(pedidos) {
 				</td>
 
 				<td>${formatearFecha(pedido.fecha_pedido)}</td>
+				<td>${fechaEntrega}</td>
+				<td>${lugarEntrega}</td>
 				<td>${formatearMoneda(pedido.total_pagar)}</td>
 				<td>${nombreRepartidor}</td>
 
@@ -290,7 +349,9 @@ function aplicarFiltrosInterno() {
 				obtenerNombreCliente(pedido),
 				obtenerNombreRepartidor(pedido),
 				obtenerDescripcionEstatus(pedido),
-				pedido.cliente?.correo ?? ''
+				pedido.cliente?.correo ?? '',
+				pedido.lugar_entrega ?? '',
+				pedido.fecha_entrega_aproximada ?? ''
 			].join(' ');
 
 			return normalizarTexto(bloqueBusqueda).includes(texto);
@@ -385,6 +446,10 @@ function abrirModalPedido(pedido) {
 	detalleIdPedido.textContent = `#${pedido.id_pedido}`;
 	detalleCliente.textContent = obtenerNombreCliente(pedido);
 	detalleFecha.textContent = formatearFecha(pedido.fecha_pedido);
+	detalleFechaEntrega.textContent = pedido.fecha_entrega_aproximada
+		? formatearFecha(pedido.fecha_entrega_aproximada)
+		: 'Sin definir';
+	detalleLugarEntrega.textContent = pedido.lugar_entrega ?? 'Sin lugar registrado';
 	detalleTotal.textContent = formatearMoneda(pedido.total_pagar);
 	detalleRepartidor.textContent = obtenerNombreRepartidor(pedido);
 	detalleEstatus.innerHTML = `
@@ -395,9 +460,11 @@ function abrirModalPedido(pedido) {
 
 	selectRepartidorModal.value = pedido.id_repartidor ? String(pedido.id_repartidor) : '';
 	selectEstatusModal.value = pedido.id_estatus ? String(pedido.id_estatus) : '';
+	inputFechaEntregaModal.value = formatearFechaParaInput(pedido.fecha_entrega_aproximada);
 
 	renderizarProductosDetalle(pedido);
 	renderizarHistorial(pedido);
+	actualizarCamposSegunEstatus();
 
 	modalPedido.classList.remove('hidden');
 	document.body.style.overflow = 'hidden';
@@ -450,6 +517,8 @@ async function cargarPedidos() {
 			id_cliente,
 			id_repartidor,
 			fecha_pedido,
+			fecha_entrega_aproximada,
+			lugar_entrega,
 			total_pagar,
 			id_estatus,
 			cliente:usuario!pedido_id_cliente_fkey (
@@ -492,7 +561,7 @@ async function cargarPedidos() {
 		console.error('Error al cargar pedidos:', error);
 		tablaPedidosBody.innerHTML = `
 			<tr>
-				<td colspan="7" class="empty-row">
+				<td colspan="9" class="empty-row">
 					No se pudieron cargar los pedidos.
 				</td>
 			</tr>
@@ -505,13 +574,10 @@ async function cargarPedidos() {
 	aplicarFiltros();
 }
 
-async function actualizarPedido(idPedido, idRepartidor, idEstatus) {
+async function actualizarPedido(idPedido, datosActualizar) {
 	const { error } = await db
 		.from('pedido')
-		.update({
-			id_repartidor: idRepartidor === '' ? null : Number(idRepartidor),
-			id_estatus: Number(idEstatus)
-		})
+		.update(datosActualizar)
 		.eq('id_pedido', idPedido);
 
 	if (error) {
@@ -525,17 +591,36 @@ btnGuardarCambiosPedido.addEventListener('click', async () => {
 		return;
 	}
 
-	const nuevoRepartidor = selectRepartidorModal.value;
 	const nuevoEstatus = selectEstatusModal.value;
+	const nuevaDescripcionEstatus = selectEstatusModal.options[selectEstatusModal.selectedIndex]
+		? selectEstatusModal.options[selectEstatusModal.selectedIndex].textContent
+		: '';
+	const nuevoRepartidor = selectRepartidorModal.value;
+	const nuevaFechaEntrega = inputFechaEntregaModal.value;
 
 	if (nuevoEstatus === '') {
 		mostrarMensajeAccion('error', 'Selecciona un estatus.');
 		return;
 	}
 
+	const requiereLogistica = requiereLogisticaPorEstatus(nuevaDescripcionEstatus);
+
+	if (requiereLogistica) {
+		if (nuevoRepartidor === '') {
+			mostrarMensajeAccion('error', 'Debes asignar un repartidor para ese estatus.');
+			return;
+		}
+
+		if (nuevaFechaEntrega === '') {
+			mostrarMensajeAccion('error', 'Debes indicar la fecha y hora de entrega.');
+			return;
+		}
+	}
+
 	const sinCambios =
-		String(pedidoSeleccionado.id_repartidor ?? '') === String(nuevoRepartidor) &&
-		String(pedidoSeleccionado.id_estatus ?? '') === String(nuevoEstatus);
+		String(pedidoSeleccionado.id_repartidor ?? '') === String(requiereLogistica ? nuevoRepartidor : '') &&
+		String(pedidoSeleccionado.id_estatus ?? '') === String(nuevoEstatus) &&
+		String(formatearFechaParaInput(pedidoSeleccionado.fecha_entrega_aproximada) ?? '') === String(requiereLogistica ? nuevaFechaEntrega : '');
 
 	if (sinCambios) {
 		mostrarMensajeAccion('error', 'No hay cambios para guardar.');
@@ -549,8 +634,11 @@ btnGuardarCambiosPedido.addEventListener('click', async () => {
 	try {
 		await actualizarPedido(
 			pedidoSeleccionado.id_pedido,
-			nuevoRepartidor,
-			nuevoEstatus
+			{
+				id_estatus: Number(nuevoEstatus),
+				id_repartidor: requiereLogistica ? Number(nuevoRepartidor) : null,
+				fecha_entrega_aproximada: requiereLogistica ? convertirFechaLocalParaBD(nuevaFechaEntrega) : null
+			}
 		);
 
 		await cargarPedidos();
@@ -576,6 +664,8 @@ btnGuardarCambiosPedido.addEventListener('click', async () => {
 buscarPedido.addEventListener('input', aplicarFiltros);
 filtroEstatus.addEventListener('change', aplicarFiltros);
 filtroRepartidor.addEventListener('change', aplicarFiltros);
+
+selectEstatusModal.addEventListener('change', actualizarCamposSegunEstatus);
 
 btnCerrarModal.addEventListener('click', cerrarModalPedido);
 modalBackdrop.addEventListener('click', cerrarModalPedido);

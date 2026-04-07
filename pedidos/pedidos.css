@@ -43,7 +43,8 @@ img {
 
 button,
 input,
-select {
+select,
+textarea {
 	font: inherit;
 }
 
@@ -257,6 +258,10 @@ select {
 	min-width: 0;
 }
 
+.form-group-full {
+	grid-column: 1 / -1;
+}
+
 .form-group label {
 	font-weight: 600;
 	color: var(--cafe-claro);
@@ -277,6 +282,11 @@ select {
 .form-control:focus {
 	border-color: var(--rosa-principal);
 	box-shadow: 0 0 0 3px rgba(217, 108, 138, 0.12);
+}
+
+.textarea-control {
+	resize: vertical;
+	min-height: 110px;
 }
 
 .stats-grid {
@@ -315,7 +325,7 @@ select {
 .orders-table {
 	width: 100%;
 	border-collapse: collapse;
-	min-width: 940px;
+	min-width: 1280px;
 }
 
 .orders-table thead th {
@@ -359,17 +369,13 @@ select {
 	white-space: nowrap;
 }
 
-.badge-pendiente,
-.badge-en-espera {
+.badge-pendiente {
 	background: rgba(245, 159, 0, 0.14);
 	color: var(--amarillo);
 }
 
 .badge-aceptado,
-.badge-amasando,
-.badge-en-el-horno,
-.badge-decorando,
-.badge-empaquetando,
+.badge-en-preparacion,
 .badge-enviando {
 	background: rgba(59, 130, 246, 0.14);
 	color: var(--azul);
@@ -515,6 +521,10 @@ select {
 	border-radius: 16px;
 	padding: 14px;
 	min-width: 0;
+}
+
+.detail-box-wide {
+	grid-column: 1 / -1;
 }
 
 .detail-box strong {
@@ -811,7 +821,7 @@ select {
 	}
 
 	.orders-table {
-		min-width: 760px;
+		min-width: 980px;
 	}
 
 	.detail-box span {

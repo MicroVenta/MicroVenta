@@ -87,7 +87,7 @@
 							type="text"
 							id="buscarPedido"
 							class="form-control"
-							placeholder="Ej. 12, Jesús, enviado..."
+							placeholder="Ej. 12, Jesús, enviando..."
 						>
 					</div>
 
@@ -121,7 +121,9 @@
 							<tr>
 								<th>Pedido</th>
 								<th>Cliente</th>
-								<th>Fecha</th>
+								<th>Fecha pedido</th>
+								<th>Entrega</th>
+								<th>Lugar de entrega</th>
 								<th>Total</th>
 								<th>Repartidor</th>
 								<th>Estatus</th>
@@ -130,7 +132,7 @@
 						</thead>
 						<tbody id="tablaPedidosBody">
 							<tr>
-								<td colspan="7" class="empty-row">Cargando pedidos...</td>
+								<td colspan="9" class="empty-row">Cargando pedidos...</td>
 							</tr>
 						</tbody>
 					</table>
@@ -168,8 +170,18 @@
 						</div>
 
 						<div class="detail-box">
-							<strong>Fecha</strong>
+							<strong>Fecha pedido</strong>
 							<span id="detalleFecha">-</span>
+						</div>
+
+						<div class="detail-box">
+							<strong>Fecha y hora de entrega</strong>
+							<span id="detalleFechaEntrega">-</span>
+						</div>
+
+						<div class="detail-box detail-box-wide">
+							<strong>Lugar de entrega</strong>
+							<span id="detalleLugarEntrega">-</span>
 						</div>
 
 						<div class="detail-box">
@@ -203,17 +215,26 @@
 
 					<div class="update-grid">
 						<div class="form-group">
+							<label for="selectEstatusModal">Cambiar estatus</label>
+							<select id="selectEstatusModal" class="form-control">
+								<option value="">Selecciona un estatus</option>
+							</select>
+						</div>
+
+						<div class="form-group">
 							<label for="selectRepartidorModal">Asignar repartidor</label>
 							<select id="selectRepartidorModal" class="form-control">
 								<option value="">Sin asignar</option>
 							</select>
 						</div>
 
-						<div class="form-group">
-							<label for="selectEstatusModal">Cambiar estatus</label>
-							<select id="selectEstatusModal" class="form-control">
-								<option value="">Selecciona un estatus</option>
-							</select>
+						<div id="grupoFechaEntrega" class="form-group">
+							<label for="inputFechaEntregaModal">Fecha y hora de entrega</label>
+							<input
+								type="datetime-local"
+								id="inputFechaEntregaModal"
+								class="form-control"
+							>
 						</div>
 					</div>
 
