@@ -38,6 +38,7 @@ let usuario = null;
 let datosOriginales = null;
 let temporizadorBusquedaDireccion = null;
 let controladorBusquedaDireccion = null;
+let seleccionandoSugerenciaDireccion = false;
 
 function obtenerRolNormalizado(nombreRol) {
 	return (nombreRol ?? '').toString().trim().toLowerCase();
@@ -333,6 +334,21 @@ function seleccionarSugerenciaDireccion(direccionCompleta) {
 	}, 1800);
 }
 
+function aplicarSugerenciaDesdeBoton(boton) {
+	const direccion = decodeURIComponent(boton.dataset.direccion || '');
+
+	if (!direccion) {
+		return;
+	}
+
+	seleccionandoSugerenciaDireccion = true;
+	seleccionarSugerenciaDireccion(direccion);
+
+	setTimeout(() => {
+		seleccionandoSugerenciaDireccion = false;
+	}, 200);
+}
+
 function renderizarSugerenciasDirecciones(resultados) {
 	if (!sugerenciasDireccion) {
 		return;
@@ -368,9 +384,19 @@ function renderizarSugerenciasDirecciones(resultados) {
 	sugerenciasDireccion.classList.remove('hidden');
 
 	sugerenciasDireccion.querySelectorAll('.address-suggestion-item').forEach((boton) => {
-		boton.addEventListener('click', () => {
-			const direccion = decodeURIComponent(boton.dataset.direccion || '');
-			seleccionarSugerenciaDireccion(direccion);
+		boton.addEventListener('mousedown', (event) => {
+			event.preventDefault();
+			aplicarSugerenciaDesdeBoton(boton);
+		});
+
+		boton.addEventListener('touchstart', (event) => {
+			event.preventDefault();
+			aplicarSugerenciaDesdeBoton(boton);
+		}, { passive: false });
+
+		boton.addEventListener('click', (event) => {
+			event.preventDefault();
+			aplicarSugerenciaDesdeBoton(boton);
 		});
 	});
 }
@@ -670,7 +696,9 @@ if (inputDireccion) {
 
 	inputDireccion.addEventListener('blur', () => {
 		setTimeout(() => {
-			ocultarSugerenciasDireccion();
+			if (!seleccionandoSugerenciaDireccion) {
+				ocultarSugerenciasDireccion();
+			}
 		}, 180);
 	});
 }
@@ -678,6 +706,16 @@ if (inputDireccion) {
 if (btnUbicacionActual) {
 	btnUbicacionActual.addEventListener('click', usarUbicacionActual);
 }
+
+document.addEventListener('click', (event) => {
+	const clicDentroDeDireccion =
+		inputDireccion?.contains(event.target) ||
+		sugerenciasDireccion?.contains(event.target);
+
+	if (!clicDentroDeDireccion) {
+		ocultarSugerenciasDireccion();
+	}
+});
 
 if (formPerfil) {
 	formPerfil.addEventListener('submit', async (e) => {
