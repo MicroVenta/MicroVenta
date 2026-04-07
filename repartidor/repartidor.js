@@ -174,7 +174,7 @@ function renderizarListaPedidos(pedidos) {
 		const estatusActual = obtenerDescripcionEstatus(pedido);
 		const productos = obtenerProductosPedido(pedido.detallepedido);
 		const cliente = pedido.cliente?.nombre_completo ?? 'Cliente no disponible';
-		const direccion = pedido.cliente?.direccion ?? 'Dirección no registrada';
+		const direccion = pedido.lugar_entrega ?? 'Lugar de entrega no registrado';
 		const telefono = pedido.cliente?.telefono ?? 'Sin teléfono';
 
 		return `
@@ -233,7 +233,7 @@ function cargarResumenVisual(pedidos, comprasUsuario = []) {
 		)[0];
 
 		const cliente = ultimoPedido.cliente?.nombre_completo ?? 'Cliente';
-		const direccion = ultimoPedido.cliente?.direccion ?? 'Dirección no registrada';
+		const direccion = ultimoPedido.lugar_entrega ?? 'Lugar de entrega no registrado';
 		const estatusActual = obtenerDescripcionEstatus(ultimoPedido);
 
 		if (ultimoPedidoTitulo) {
@@ -300,6 +300,7 @@ async function cargarPedidosRepartidor() {
 					fecha_pedido,
 					total_pagar,
 					id_estatus,
+					lugar_entrega,
 					estatuspedido (
 						id_estatus,
 						descripcion
@@ -307,7 +308,6 @@ async function cargarPedidosRepartidor() {
 					cliente:usuario!pedido_id_cliente_fkey (
 						id_usuario,
 						nombre_completo,
-						direccion,
 						telefono
 					),
 					detallepedido (

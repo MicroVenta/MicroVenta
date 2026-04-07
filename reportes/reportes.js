@@ -119,12 +119,8 @@ function obtenerClaseBadgeEstatus(descripcion) {
 	const texto = normalizarTexto(descripcion);
 
 	if (texto === 'pendiente') return 'badge badge-pendiente';
-	if (texto === 'en espera') return 'badge badge-en-espera';
 	if (texto === 'aceptado') return 'badge badge-aceptado';
-	if (texto === 'amasando') return 'badge badge-amasando';
-	if (texto === 'en el horno') return 'badge badge-en-el-horno';
-	if (texto === 'decorando') return 'badge badge-decorando';
-	if (texto === 'empaquetando') return 'badge badge-empaquetando';
+	if (texto === 'en preparación') return 'badge badge-en-preparacion';
 	if (texto === 'enviando') return 'badge badge-enviando';
 	if (texto === 'entregado') return 'badge badge-entregado';
 	if (texto === 'completado') return 'badge badge-completado';
@@ -402,6 +398,7 @@ function renderizarTopClientes(pedidos) {
 			</div>
 		`;
 	}).join('');
+
 	clienteLider.textContent = top[0].nombre;
 }
 
