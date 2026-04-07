@@ -376,6 +376,12 @@ body {
 	border: 1px solid rgba(177, 77, 87, 0.16);
 }
 
+.message.success {
+	background: var(--verde-suave);
+	color: var(--verde-texto);
+	border: 1px solid rgba(47, 122, 78, 0.16);
+}
+
 .hidden {
 	display: none;
 }
@@ -498,6 +504,8 @@ body {
 .order-actions {
 	display: flex;
 	justify-content: flex-end;
+	gap: 12px;
+	flex-wrap: wrap;
 	margin-bottom: 14px;
 }
 
@@ -515,6 +523,30 @@ body {
 .btn-toggle:hover {
 	transform: translateY(-2px);
 	box-shadow: 0 10px 20px rgba(120, 72, 92, 0.10);
+}
+
+.btn-cancel-order {
+	background: rgba(177, 77, 87, 0.10);
+	color: var(--rojo-texto);
+	border: 1px solid rgba(177, 77, 87, 0.20);
+	padding: 11px 16px;
+	border-radius: 14px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: 0.25s ease;
+}
+
+.btn-cancel-order:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 10px 20px rgba(177, 77, 87, 0.12);
+	background: rgba(177, 77, 87, 0.14);
+}
+
+.btn-cancel-order:disabled {
+	opacity: 0.7;
+	cursor: not-allowed;
+	transform: none;
+	box-shadow: none;
 }
 
 .order-detail {
@@ -647,6 +679,16 @@ body {
 
 	.banner-content h2 {
 		font-size: 1.55rem;
+	}
+
+	.order-actions {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.btn-toggle,
+	.btn-cancel-order {
+		width: 100%;
 	}
 }
 

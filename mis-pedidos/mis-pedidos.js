@@ -26,6 +26,7 @@ const usuarioGuardado =
 let usuario = null;
 let pedidosOriginales = [];
 let pedidosFiltrados = [];
+let estatusCatalogo = [];
 
 if (!usuarioGuardado) {
 	window.location.href = '/login/login.html';
@@ -92,6 +93,10 @@ function ocultarMensaje() {
 	mensajePedidos.className = 'message hidden';
 }
 
+function normalizarTexto(texto) {
+	return String(texto ?? '').trim().toLowerCase();
+}
+
 function formatearFecha(fecha) {
 	if (!fecha) {
 		return 'Sin fecha';
@@ -126,30 +131,34 @@ function formatearDinero(cantidad) {
 	return `$${Number(cantidad || 0).toFixed(2)}`;
 }
 
-function obtenerEstatusActual(historial) {
-	if (!historial || historial.length === 0) {
-		return 'Sin estatus';
+function obtenerEstatusActual(historial, pedido) {
+	const historialNormalizado = Array.isArray(historial) ? historial : [];
+
+	if (historialNormalizado.length > 0) {
+		const historialOrdenado = [...historialNormalizado].sort((a, b) =>
+			new Date(b.fecha_registro) - new Date(a.fecha_registro)
+		);
+
+		return historialOrdenado[0]?.estatuspedido?.descripcion
+			?? pedido?.estatuspedido?.descripcion
+			?? 'Sin estatus';
 	}
 
-	const historialOrdenado = [...historial].sort((a, b) =>
-		new Date(b.fecha_registro) - new Date(a.fecha_registro)
-	);
-
-	return historialOrdenado[0]?.estatuspedido?.descripcion ?? 'Sin estatus';
+	return pedido?.estatuspedido?.descripcion ?? 'Sin estatus';
 }
 
 function obtenerClaseEstado(estatus) {
-	const estado = (estatus || '').toLowerCase().trim();
+	const estado = normalizarTexto(estatus);
 
-	if (estado === 'pendiente') {
+	if (estado === 'pendiente' || estado === 'aceptado') {
 		return 'estado-pendiente';
 	}
 
-	if (estado === 'preparando') {
+	if (estado === 'en preparación') {
 		return 'estado-preparando';
 	}
 
-	if (estado === 'en camino') {
+	if (estado === 'enviando') {
 		return 'estado-en-camino';
 	}
 
@@ -180,7 +189,7 @@ function contarPedidosEnProceso(pedidos) {
 	const estadosFinales = ['entregado', 'completado', 'cancelado', 'rechazado'];
 
 	return pedidos.filter((pedido) => {
-		const estatus = obtenerEstatusActual(pedido.historialestatus).toLowerCase();
+		const estatus = normalizarTexto(obtenerEstatusActual(pedido.historialestatus, pedido));
 		return !estadosFinales.includes(estatus);
 	}).length;
 }
@@ -189,7 +198,7 @@ function contarPedidosEntregados(pedidos) {
 	const estadosExito = ['entregado', 'completado'];
 
 	return pedidos.filter((pedido) => {
-		const estatus = obtenerEstatusActual(pedido.historialestatus).toLowerCase();
+		const estatus = normalizarTexto(obtenerEstatusActual(pedido.historialestatus, pedido));
 		return estadosExito.includes(estatus);
 	}).length;
 }
@@ -231,12 +240,20 @@ function renderizarDetalleProductos(detalles) {
 				const nombreProducto = detalle.producto?.nombre_producto ?? 'Producto';
 				const cantidad = Number(detalle.cantidad || 0);
 				const subtotal = Number(detalle.subtotal || 0);
+				const cantidadStock = Number(detalle.cantidad_stock ?? 0);
+				const cantidadPersonalizada = Number(detalle.cantidad_personalizada ?? 0);
+				const esPersonalizado = Boolean(detalle.personalizado);
 
 				return `
 					<div class="product-row">
 						<div class="product-main">
 							<strong>${nombreProducto}</strong>
-							<span>Cantidad: ${cantidad}</span>
+							<span>
+								Cantidad: ${cantidad}
+								· De stock: ${cantidadStock}
+								· Personalizadas: ${cantidadPersonalizada}
+								${esPersonalizado ? '· Pedido personalizado' : ''}
+							</span>
 						</div>
 						<div class="product-subtotal">${formatearDinero(subtotal)}</div>
 					</div>
@@ -278,6 +295,79 @@ function renderizarHistorial(historial) {
 	`;
 }
 
+function puedeCancelarPedido(pedido) {
+	const estatusActual = normalizarTexto(obtenerEstatusActual(pedido.historialestatus, pedido));
+
+	return estatusActual === 'pendiente' || estatusActual === 'aceptado';
+}
+
+function obtenerIdEstatusCancelado() {
+	const cancelado = estatusCatalogo.find((estatus) => {
+		return normalizarTexto(estatus.descripcion) === 'cancelado';
+	});
+
+	return cancelado?.id_estatus ?? null;
+}
+
+async function cancelarPedido(idPedido) {
+	const pedido = pedidosOriginales.find((item) => Number(item.id_pedido) === Number(idPedido));
+
+	if (!pedido) {
+		mostrarMensaje('No se encontró el pedido.');
+		return;
+	}
+
+	if (!puedeCancelarPedido(pedido)) {
+		mostrarMensaje('Este pedido ya no se puede cancelar porque ya entró a preparación o a una etapa posterior.');
+		return;
+	}
+
+	const idEstatusCancelado = obtenerIdEstatusCancelado();
+
+	if (!idEstatusCancelado) {
+		mostrarMensaje('No se encontró el estatus Cancelado en la base de datos.');
+		return;
+	}
+
+	const confirmacion = window.confirm(
+		`¿Seguro que deseas cancelar el pedido #${pedido.id_pedido}?`
+	);
+
+	if (!confirmacion) {
+		return;
+	}
+
+	ocultarMensaje();
+
+	try {
+		const { error } = await db
+			.from('pedido')
+			.update({
+				id_estatus: idEstatusCancelado,
+				id_repartidor: null,
+				fecha_entrega_aproximada: null
+			})
+			.eq('id_pedido', pedido.id_pedido)
+			.eq('id_cliente', usuario.id_usuario);
+
+		if (error) {
+			console.error('Error al cancelar pedido:', error);
+			mostrarMensaje('No se pudo cancelar el pedido.');
+			return;
+		}
+
+		mostrarMensaje(
+			`El pedido #${pedido.id_pedido} fue cancelado correctamente.`,
+			'success'
+		);
+
+		await cargarPedidosCliente();
+	} catch (error) {
+		console.error('Error general al cancelar pedido:', error);
+		mostrarMensaje('Ocurrió un error al cancelar el pedido.');
+	}
+}
+
 function renderizarPedidos(pedidos) {
 	if (!listaPedidos) {
 		return;
@@ -302,10 +392,12 @@ function renderizarPedidos(pedidos) {
 	}
 
 	listaPedidos.innerHTML = pedidos.map((pedido) => {
-		const estatusActual = obtenerEstatusActual(pedido.historialestatus);
+		const estatusActual = obtenerEstatusActual(pedido.historialestatus, pedido);
 		const claseEstado = obtenerClaseEstado(estatusActual);
 		const totalProductos = contarProductos(pedido.detallepedido);
 		const detalleId = `detalle-pedido-${pedido.id_pedido}`;
+		const puedeCancelar = puedeCancelarPedido(pedido);
+		const repartidorTexto = pedido.repartidor?.nombre_completo ?? 'Pendiente';
 
 		return `
 			<article class="order-item">
@@ -333,7 +425,7 @@ function renderizarPedidos(pedidos) {
 
 					<div class="summary-chip">
 						<span>Repartidor</span>
-						<strong>${pedido.id_repartidor ?? 'Pendiente'}</strong>
+						<strong>${repartidorTexto}</strong>
 					</div>
 
 					<div class="summary-chip">
@@ -346,6 +438,12 @@ function renderizarPedidos(pedidos) {
 					<button class="btn-toggle" type="button" data-target="${detalleId}">
 						Ver detalle
 					</button>
+
+					${puedeCancelar ? `
+						<button class="btn-cancel-order" type="button" data-cancelar="${pedido.id_pedido}">
+							Cancelar pedido
+						</button>
+					` : ''}
 				</div>
 
 				<div class="order-detail" id="${detalleId}">
@@ -364,6 +462,7 @@ function renderizarPedidos(pedidos) {
 	}).join('');
 
 	asignarEventosDetalle();
+	asignarEventosCancelacion();
 }
 
 function asignarEventosDetalle() {
@@ -391,16 +490,36 @@ function asignarEventosDetalle() {
 	});
 }
 
+function asignarEventosCancelacion() {
+	const botonesCancelar = document.querySelectorAll('[data-cancelar]');
+
+	botonesCancelar.forEach((boton) => {
+		boton.addEventListener('click', async () => {
+			const idPedido = Number(boton.getAttribute('data-cancelar'));
+
+			boton.disabled = true;
+			boton.textContent = 'Cancelando...';
+
+			try {
+				await cancelarPedido(idPedido);
+			} finally {
+				boton.disabled = false;
+				boton.textContent = 'Cancelar pedido';
+			}
+		});
+	});
+}
+
 function aplicarFiltros() {
-	const textoBusqueda = (buscarPedido?.value || '').trim().toLowerCase();
-	const estadoSeleccionado = (filtroEstado?.value || 'todos').toLowerCase();
+	const textoBusqueda = normalizarTexto(buscarPedido?.value || '');
+	const estadoSeleccionado = normalizarTexto(filtroEstado?.value || 'todos');
 
 	pedidosFiltrados = pedidosOriginales.filter((pedido) => {
 		const coincideBusqueda =
 			textoBusqueda === '' ||
 			String(pedido.id_pedido).toLowerCase().includes(textoBusqueda);
 
-		const estatusActual = obtenerEstatusActual(pedido.historialestatus).toLowerCase();
+		const estatusActual = normalizarTexto(obtenerEstatusActual(pedido.historialestatus, pedido));
 
 		const coincideEstado =
 			estadoSeleccionado === 'todos' ||
@@ -435,6 +554,24 @@ if (btnLimpiarFiltros) {
 	});
 }
 
+async function cargarEstatus() {
+	try {
+		const { data, error } = await db
+			.from('estatuspedido')
+			.select('id_estatus, descripcion')
+			.order('id_estatus', { ascending: true });
+
+		if (error) {
+			console.error('Error al cargar estatus:', error);
+			return;
+		}
+
+		estatusCatalogo = data ?? [];
+	} catch (error) {
+		console.error('Error general al cargar estatus:', error);
+	}
+}
+
 async function cargarPedidosCliente() {
 	if (!usuario || !usuario.id_usuario) {
 		window.location.href = '/login/login.html';
@@ -450,13 +587,27 @@ async function cargarPedidosCliente() {
 				id_pedido,
 				id_cliente,
 				id_repartidor,
+				id_estatus,
 				fecha_pedido,
 				total_pagar,
+				fecha_entrega_aproximada,
+				lugar_entrega,
+				estatuspedido (
+					id_estatus,
+					descripcion
+				),
+				repartidor:usuario!pedido_id_repartidor_fkey (
+					id_usuario,
+					nombre_completo
+				),
 				detallepedido (
 					id_detalle,
 					id_producto,
 					cantidad,
 					subtotal,
+					cantidad_stock,
+					cantidad_personalizada,
+					personalizado,
 					producto (
 						id_producto,
 						nombre_producto
@@ -500,7 +651,6 @@ async function cargarPedidosCliente() {
 				minute: '2-digit'
 			});
 		}
-
 	} catch (err) {
 		console.error('Error general al cargar pedidos:', err);
 		mostrarMensaje('Ocurrió un error al consultar tus pedidos.');
@@ -512,5 +662,10 @@ async function cargarPedidosCliente() {
 	}
 }
 
-animarTarjetas();
-cargarPedidosCliente();
+async function inicializarPantalla() {
+	animarTarjetas();
+	await cargarEstatus();
+	await cargarPedidosCliente();
+}
+
+inicializarPantalla();

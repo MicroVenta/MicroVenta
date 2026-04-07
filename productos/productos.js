@@ -158,7 +158,7 @@ function obtenerImagenProducto(producto) {
 }
 
 function formatearMoneda(valor) {
-	return `$${Number(valor).toFixed(2)}`;
+	return `$${Number(valor ?? 0).toFixed(2)}`;
 }
 
 function guardarCarrito() {
@@ -350,7 +350,9 @@ function disminuirCantidad(idProducto) {
 	item.cantidad -= 1;
 
 	if (item.cantidad <= 0) {
-		carrito = carrito.filter((productoCarrito) => Number(productoCarrito.id_producto) !== Number(idProducto));
+		carrito = carrito.filter(
+			(productoCarrito) => Number(productoCarrito.id_producto) !== Number(idProducto)
+		);
 	} else if (producto) {
 		recalcularEstadoItemCarrito(item, producto);
 	}
@@ -717,51 +719,6 @@ async function cargarProductos() {
 	}
 }
 
-async function obtenerEstatusPendiente() {
-	const { data, error } = await db
-		.from('estatuspedido')
-		.select('id_estatus, descripcion')
-		.ilike('descripcion', 'Pendiente')
-		.single();
-
-	if (error || !data) {
-		throw new Error('No se encontró el estatus Pendiente.');
-	}
-
-	return data.id_estatus;
-}
-
-async function actualizarStockProducto(item) {
-	const producto = productosOriginales.find(
-		(productoActual) => Number(productoActual.id_producto) === Number(item.id_producto)
-	);
-
-	if (!producto) {
-		throw new Error(`No se encontró el producto ${item.nombre_producto}.`);
-	}
-
-	const stockActual = Number(producto.stock_actual ?? 0);
-	const cantidadADescontar = Math.min(
-		stockActual,
-		Number(item.cantidad_stock ?? 0)
-	);
-
-	const nuevoStock = Math.max(0, stockActual - cantidadADescontar);
-
-	const { error } = await db
-		.from('producto')
-		.update({
-			stock_actual: nuevoStock
-		})
-		.eq('id_producto', producto.id_producto);
-
-	if (error) {
-		throw new Error(`No se pudo actualizar el stock de ${item.nombre_producto}.`);
-	}
-
-	producto.stock_actual = nuevoStock;
-}
-
 async function guardarTelefonoSiCambio() {
 	const telefonoNuevo = obtenerTelefonoCapturado();
 
@@ -845,45 +802,24 @@ async function realizarPedido() {
 			0
 		);
 
-		const idEstatusPendiente = await obtenerEstatusPendiente();
-		const esPedidoPersonalizado = pedidoTienePersonalizacion();
+		const huboPersonalizacion = pedidoTienePersonalizacion();
 
-		const { data: pedidoData, error: pedidoError } = await db
-			.from('pedido')
-			.insert({
-				id_cliente: usuario.id_usuario,
-				total_pagar: total,
-				id_estatus: idEstatusPendiente,
-				personalizado: esPedidoPersonalizado,
-				lugar_entrega: lugarEntregaFinal
-			})
-			.select('id_pedido')
-			.single();
-
-		if (pedidoError || !pedidoData) {
-			throw new Error('No se pudo crear el pedido.');
-		}
-
-		const detalles = carrito.map((item) => ({
-			id_pedido: pedidoData.id_pedido,
-			id_producto: item.id_producto,
-			cantidad: item.cantidad,
-			subtotal: Number(item.precio_unitario) * Number(item.cantidad),
-			cantidad_stock: Number(item.cantidad_stock ?? 0),
-			cantidad_personalizada: Number(item.cantidad_personalizada ?? 0),
-			personalizado: Boolean(item.es_personalizado)
+		const detallesPedido = carrito.map((item) => ({
+			id_producto: Number(item.id_producto),
+			cantidad: Number(item.cantidad),
+			subtotal: Number(item.precio_unitario) * Number(item.cantidad)
 		}));
 
-		const { error: detalleError } = await db
-			.from('detallepedido')
-			.insert(detalles);
+		const { data: idPedido, error } = await db.rpc('procesar_pedido', {
+			p_id_cliente: Number(usuario.id_usuario),
+			p_total: Number(total),
+			p_lugar_entrega: lugarEntregaFinal,
+			p_detalles: detallesPedido
+		});
 
-		if (detalleError) {
-			throw new Error('No se pudieron guardar los detalles del pedido.');
-		}
-
-		for (const item of carrito) {
-			await actualizarStockProducto(item);
+		if (error || !idPedido) {
+			console.error('Error al procesar pedido:', error);
+			throw new Error('No se pudo crear el pedido.');
 		}
 
 		carrito = [];
@@ -900,15 +836,15 @@ async function realizarPedido() {
 			lugarEntrega.value = '';
 		}
 
-		if (esPedidoPersonalizado) {
+		if (huboPersonalizacion) {
 			mostrarMensaje(
 				'success',
-				`Pedido realizado correctamente. Tu número de pedido es #${pedidoData.id_pedido}. Se registró como pedido personalizado porque uno o más productos requieren preparación adicional.`
+				`Pedido realizado correctamente. Tu número de pedido es #${idPedido}. Se registró como pedido personalizado porque uno o más productos requieren preparación adicional.`
 			);
 		} else {
 			mostrarMensaje(
 				'success',
-				`Pedido realizado correctamente. Tu número de pedido es #${pedidoData.id_pedido}.`
+				`Pedido realizado correctamente. Tu número de pedido es #${idPedido}.`
 			);
 		}
 	} catch (error) {
