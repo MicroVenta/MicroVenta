@@ -16,6 +16,7 @@
 	--azul: #3b82f6;
 	--amarillo: #f59f00;
 	--morado: #7c3aed;
+	--naranja: #e67e22;
 	--sombra: 0 14px 35px rgba(120, 72, 92, 0.14);
 }
 
@@ -325,7 +326,7 @@ textarea {
 .orders-table {
 	width: 100%;
 	border-collapse: collapse;
-	min-width: 1280px;
+	min-width: 1180px;
 }
 
 .orders-table thead th {
@@ -345,6 +346,16 @@ textarea {
 
 .orders-table tbody tr:hover {
 	background: rgba(255, 247, 239, 0.65);
+}
+
+.order-row {
+	cursor: pointer;
+	transition: background 0.2s ease;
+}
+
+.order-row:focus {
+	outline: 2px solid rgba(217, 108, 138, 0.35);
+	outline-offset: -2px;
 }
 
 .order-id {
@@ -398,35 +409,10 @@ textarea {
 	color: var(--morado);
 }
 
-.row-actions {
-	display: flex;
-	gap: 10px;
-	flex-wrap: wrap;
-}
-
-.btn-mini {
-	border: none;
-	cursor: pointer;
-	padding: 10px 14px;
-	border-radius: 12px;
-	font-weight: 700;
-	transition: 0.2s ease;
-	min-height: 42px;
-}
-
-.btn-view {
-	background: rgba(59, 130, 246, 0.14);
-	color: var(--azul);
-}
-
-.btn-mini:hover {
-	transform: translateY(-2px);
-}
-
-.empty-row {
-	text-align: center;
-	color: var(--gris-texto);
-	padding: 24px;
+.badge-personalizado {
+	background: rgba(230, 126, 34, 0.16);
+	color: var(--naranja);
+	margin-top: 6px;
 }
 
 .modal {
@@ -560,7 +546,7 @@ textarea {
 .product-line-left {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: 6px;
 	min-width: 0;
 }
 
@@ -581,6 +567,12 @@ textarea {
 	color: var(--rosa-oscuro);
 	white-space: nowrap;
 	flex-shrink: 0;
+}
+
+.product-line-badges {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
 }
 
 .update-grid {
@@ -850,10 +842,6 @@ textarea {
 	.btn {
 		min-height: 44px;
 		padding: 11px 13px;
-	}
-
-	.btn-mini {
-		width: 100%;
 	}
 
 	.modal-header h3 {

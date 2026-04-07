@@ -286,6 +286,18 @@ function obtenerCantidadEnCarrito(idProducto) {
 	return item ? Number(item.cantidad) : 0;
 }
 
+function recalcularEstadoItemCarrito(item, producto) {
+	const stockActual = Math.max(0, obtenerStockProducto(producto));
+	const cantidad = Math.max(0, Number(item.cantidad ?? 0));
+
+	item.stock_actual = stockActual;
+	item.cantidad_stock = Math.min(cantidad, stockActual);
+	item.cantidad_personalizada = Math.max(0, cantidad - stockActual);
+	item.es_personalizado = item.cantidad_personalizada > 0 || stockActual <= 0;
+
+	return item;
+}
+
 function agregarAlCarrito(idProducto) {
 	limpiarMensaje();
 
@@ -298,34 +310,28 @@ function agregarAlCarrito(idProducto) {
 		return;
 	}
 
-	const stockActual = obtenerStockProducto(producto);
-
-	if (stockActual <= 0) {
-		mostrarMensaje('error', 'Este producto no tiene existencias.');
-		return;
-	}
-
 	const existente = carrito.find(
 		(item) => Number(item.id_producto) === Number(idProducto)
 	);
 
 	if (existente) {
-		if (existente.cantidad >= stockActual) {
-			mostrarMensaje('error', 'No puedes agregar más de lo disponible en stock.');
-			return;
-		}
-
 		existente.cantidad += 1;
-		existente.stock_actual = stockActual;
+		recalcularEstadoItemCarrito(existente, producto);
 	} else {
-		carrito.push({
+		const nuevoItem = {
 			id_producto: producto.id_producto,
 			nombre_producto: producto.nombre_producto,
 			precio_unitario: Number(producto.precio_unitario),
 			imagen: producto.imagen ?? '',
-			stock_actual: stockActual,
-			cantidad: 1
-		});
+			cantidad: 1,
+			stock_actual: obtenerStockProducto(producto),
+			cantidad_stock: 0,
+			cantidad_personalizada: 0,
+			es_personalizado: false
+		};
+
+		recalcularEstadoItemCarrito(nuevoItem, producto);
+		carrito.push(nuevoItem);
 	}
 
 	guardarCarrito();
@@ -335,6 +341,7 @@ function agregarAlCarrito(idProducto) {
 
 function disminuirCantidad(idProducto) {
 	const item = carrito.find((producto) => Number(producto.id_producto) === Number(idProducto));
+	const producto = productosOriginales.find((p) => Number(p.id_producto) === Number(idProducto));
 
 	if (!item) {
 		return;
@@ -343,7 +350,9 @@ function disminuirCantidad(idProducto) {
 	item.cantidad -= 1;
 
 	if (item.cantidad <= 0) {
-		carrito = carrito.filter((producto) => Number(producto.id_producto) !== Number(idProducto));
+		carrito = carrito.filter((productoCarrito) => Number(productoCarrito.id_producto) !== Number(idProducto));
+	} else if (producto) {
+		recalcularEstadoItemCarrito(item, producto);
 	}
 
 	guardarCarrito();
@@ -359,15 +368,8 @@ function aumentarCantidad(idProducto) {
 		return;
 	}
 
-	const stockActual = obtenerStockProducto(producto);
-
-	if (item.cantidad >= stockActual) {
-		mostrarMensaje('error', 'No puedes agregar más de lo disponible en stock.');
-		return;
-	}
-
 	item.cantidad += 1;
-	item.stock_actual = stockActual;
+	recalcularEstadoItemCarrito(item, producto);
 
 	guardarCarrito();
 	renderizarCarrito();
@@ -412,6 +414,32 @@ function renderizarCarrito() {
 
 	carritoLista.innerHTML = carrito.map((item) => {
 		const subtotal = Number(item.precio_unitario) * Number(item.cantidad);
+		const tienePartePersonalizada = Number(item.cantidad_personalizada ?? 0) > 0;
+		const soloPersonalizado =
+			Number(item.stock_actual ?? 0) <= 0 && Number(item.cantidad ?? 0) > 0;
+
+		let notaItem = '';
+
+		if (soloPersonalizado) {
+			notaItem = `
+				<div class="cart-item-note personalizado">
+					Este producto se registrará completamente como pedido personalizado.
+				</div>
+			`;
+		} else if (tienePartePersonalizada) {
+			notaItem = `
+				<div class="cart-item-note personalizado">
+					${item.cantidad_stock} unidad(es) salen de stock y
+					${item.cantidad_personalizada} unidad(es) se prepararán como pedido personalizado.
+				</div>
+			`;
+		} else {
+			notaItem = `
+				<div class="cart-item-note stock">
+					Este producto se cubrirá con stock disponible.
+				</div>
+			`;
+		}
 
 		return `
 			<article class="cart-item">
@@ -435,6 +463,8 @@ function renderizarCarrito() {
 						Quitar
 					</button>
 				</div>
+
+				${notaItem}
 			</article>
 		`;
 	}).join('');
@@ -489,11 +519,24 @@ function renderizarProductos(productos) {
 		const nombreCategoria = producto.categoria?.nombre_categoria ?? 'Sin categoría';
 		const stockActual = obtenerStockProducto(producto);
 		const cantidadEnCarrito = obtenerCantidadEnCarrito(producto.id_producto);
-		const disponibleParaAgregar = stockActual - cantidadEnCarrito;
 		const descripcion =
 			producto.descripcion_producto && producto.descripcion_producto.trim() !== ''
 				? producto.descripcion_producto
 				: 'Producto disponible en Dulce Mordisco.';
+
+		let claseStock = 'stock-ok';
+		let textoStock = 'Disponible';
+		let textoBoton = 'Agregar';
+
+		if (stockActual <= 0) {
+			claseStock = 'stock-low';
+			textoStock = 'Agotado / personalizado';
+			textoBoton = 'Pedir personalizado';
+		} else if (cantidadEnCarrito >= stockActual) {
+			claseStock = 'stock-low';
+			textoStock = 'Stock cubierto / personalizado';
+			textoBoton = 'Agregar más';
+		}
 
 		return `
 			<article class="product-card">
@@ -522,16 +565,15 @@ function renderizarProductos(productos) {
 					</div>
 
 					<div class="product-footer">
-						<div class="stock-badge ${stockActual > 0 ? 'stock-ok' : 'stock-low'}">
-							${stockActual > 0 ? 'Disponible' : 'Agotado'}
+						<div class="stock-badge ${claseStock}">
+							${textoStock}
 						</div>
 
 						<button
 							class="btn-add"
 							data-id="${producto.id_producto}"
-							${disponibleParaAgregar <= 0 ? 'disabled' : ''}
 						>
-							${stockActual <= 0 ? 'Sin stock' : 'Agregar'}
+							${textoBoton}
 						</button>
 					</div>
 				</div>
@@ -646,6 +688,21 @@ async function cargarProductos() {
 		}
 
 		productosOriginales = data ?? [];
+
+		carrito = carrito.map((item) => {
+			const productoActual = productosOriginales.find(
+				(producto) => Number(producto.id_producto) === Number(item.id_producto)
+			);
+
+			if (!productoActual) {
+				return item;
+			}
+
+			return recalcularEstadoItemCarrito(item, productoActual);
+		});
+
+		guardarCarrito();
+		renderizarCarrito();
 		aplicarFiltros();
 	} catch (error) {
 		console.error('Error general al cargar productos:', error);
@@ -684,12 +741,12 @@ async function actualizarStockProducto(item) {
 	}
 
 	const stockActual = Number(producto.stock_actual ?? 0);
+	const cantidadADescontar = Math.min(
+		stockActual,
+		Number(item.cantidad_stock ?? 0)
+	);
 
-	if (item.cantidad > stockActual) {
-		throw new Error(`No hay suficiente stock para ${item.nombre_producto}.`);
-	}
-
-	const nuevoStock = stockActual - Number(item.cantidad);
+	const nuevoStock = Math.max(0, stockActual - cantidadADescontar);
 
 	const { error } = await db
 		.from('producto')
@@ -755,6 +812,10 @@ function validarLugarEntrega() {
 	return lugar;
 }
 
+function pedidoTienePersonalizacion() {
+	return carrito.some((item) => Boolean(item.es_personalizado));
+}
+
 async function realizarPedido() {
 	limpiarMensaje();
 
@@ -779,28 +840,13 @@ async function realizarPedido() {
 	btnRealizarPedido.textContent = 'Procesando...';
 
 	try {
-		for (const item of carrito) {
-			const producto = productosOriginales.find(
-				(productoActual) => Number(productoActual.id_producto) === Number(item.id_producto)
-			);
-
-			if (!producto) {
-				throw new Error(`No se encontró el producto ${item.nombre_producto}.`);
-			}
-
-			const stockActual = obtenerStockProducto(producto);
-
-			if (item.cantidad > stockActual) {
-				throw new Error(`No hay stock suficiente para ${item.nombre_producto}.`);
-			}
-		}
-
 		const total = carrito.reduce(
 			(acumulado, item) => acumulado + (Number(item.precio_unitario) * Number(item.cantidad)),
 			0
 		);
 
 		const idEstatusPendiente = await obtenerEstatusPendiente();
+		const esPedidoPersonalizado = pedidoTienePersonalizacion();
 
 		const { data: pedidoData, error: pedidoError } = await db
 			.from('pedido')
@@ -808,6 +854,7 @@ async function realizarPedido() {
 				id_cliente: usuario.id_usuario,
 				total_pagar: total,
 				id_estatus: idEstatusPendiente,
+				personalizado: esPedidoPersonalizado,
 				lugar_entrega: lugarEntregaFinal
 			})
 			.select('id_pedido')
@@ -821,7 +868,10 @@ async function realizarPedido() {
 			id_pedido: pedidoData.id_pedido,
 			id_producto: item.id_producto,
 			cantidad: item.cantidad,
-			subtotal: Number(item.precio_unitario) * Number(item.cantidad)
+			subtotal: Number(item.precio_unitario) * Number(item.cantidad),
+			cantidad_stock: Number(item.cantidad_stock ?? 0),
+			cantidad_personalizada: Number(item.cantidad_personalizada ?? 0),
+			personalizado: Boolean(item.es_personalizado)
 		}));
 
 		const { error: detalleError } = await db
@@ -832,17 +882,6 @@ async function realizarPedido() {
 			throw new Error('No se pudieron guardar los detalles del pedido.');
 		}
 
-		const { error: historialError } = await db
-			.from('historialestatus')
-			.insert({
-				id_pedido: pedidoData.id_pedido,
-				id_estatus: idEstatusPendiente
-			});
-
-		if (historialError) {
-			throw new Error('No se pudo registrar el historial inicial del pedido.');
-		}
-
 		for (const item of carrito) {
 			await actualizarStockProducto(item);
 		}
@@ -850,7 +889,7 @@ async function realizarPedido() {
 		carrito = [];
 		guardarCarrito();
 		renderizarCarrito();
-		aplicarFiltros();
+		await cargarProductos();
 
 		if (usarDireccionPerfil) {
 			usarDireccionPerfil.checked = false;
@@ -861,10 +900,17 @@ async function realizarPedido() {
 			lugarEntrega.value = '';
 		}
 
-		mostrarMensaje(
-			'success',
-			`Pedido realizado correctamente. Tu número de pedido es #${pedidoData.id_pedido}.`
-		);
+		if (esPedidoPersonalizado) {
+			mostrarMensaje(
+				'success',
+				`Pedido realizado correctamente. Tu número de pedido es #${pedidoData.id_pedido}. Se registró como pedido personalizado porque uno o más productos requieren preparación adicional.`
+			);
+		} else {
+			mostrarMensaje(
+				'success',
+				`Pedido realizado correctamente. Tu número de pedido es #${pedidoData.id_pedido}.`
+			);
+		}
 	} catch (error) {
 		console.error('Error al realizar pedido:', error);
 		mostrarMensaje('error', error.message || 'No se pudo realizar el pedido.');

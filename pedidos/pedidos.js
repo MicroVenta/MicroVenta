@@ -21,6 +21,7 @@ const detalleIdPedido = document.getElementById('detalleIdPedido');
 const detalleCliente = document.getElementById('detalleCliente');
 const detalleFecha = document.getElementById('detalleFecha');
 const detalleFechaEntrega = document.getElementById('detalleFechaEntrega');
+const detalleTipoPedido = document.getElementById('detalleTipoPedido');
 const detalleLugarEntrega = document.getElementById('detalleLugarEntrega');
 const detalleTotal = document.getElementById('detalleTotal');
 const detalleRepartidor = document.getElementById('detalleRepartidor');
@@ -109,7 +110,7 @@ function convertirFechaLocalParaBD(valorFecha) {
 		return null;
 	}
 
-	return `${valorFecha}:00`;
+	return new Date(valorFecha).toISOString();
 }
 
 function formatearFechaParaInput(fecha) {
@@ -265,7 +266,7 @@ function renderizarPedidos(pedidos) {
 	if (!pedidos.length) {
 		tablaPedidosBody.innerHTML = `
 			<tr>
-				<td colspan="9" class="empty-row">
+				<td colspan="8" class="empty-row">
 					No se encontraron pedidos con los filtros seleccionados.
 				</td>
 			</tr>
@@ -284,10 +285,11 @@ function renderizarPedidos(pedidos) {
 			: 'Sin definir';
 
 		return `
-			<tr>
+			<tr class="order-row" data-id="${pedido.id_pedido}" tabindex="0">
 				<td>
 					<div class="order-id">#${pedido.id_pedido}</div>
 					<div class="order-subtext">${cantidadProductos} producto(s)</div>
+					${pedido.personalizado ? '<div class="badge badge-personalizado">Personalizado</div>' : ''}
 				</td>
 
 				<td>
@@ -306,27 +308,34 @@ function renderizarPedidos(pedidos) {
 						${nombreEstatus}
 					</span>
 				</td>
-
-				<td>
-					<div class="row-actions">
-						<button class="btn-mini btn-view" data-id="${pedido.id_pedido}">
-							Ver detalle
-						</button>
-					</div>
-				</td>
 			</tr>
 		`;
 	}).join('');
 
-	document.querySelectorAll('.btn-view').forEach((boton) => {
-		boton.addEventListener('click', () => {
-			const idPedido = boton.getAttribute('data-id');
+	document.querySelectorAll('.order-row').forEach((fila) => {
+		fila.addEventListener('click', () => {
+			const idPedido = fila.getAttribute('data-id');
 			const pedido = pedidosOriginales.find(
 				(item) => String(item.id_pedido) === String(idPedido)
 			);
 
 			if (pedido) {
 				abrirModalPedido(pedido);
+			}
+		});
+
+		fila.addEventListener('keydown', (event) => {
+			if (event.key === 'Enter' || event.key === ' ') {
+				event.preventDefault();
+
+				const idPedido = fila.getAttribute('data-id');
+				const pedido = pedidosOriginales.find(
+					(item) => String(item.id_pedido) === String(idPedido)
+				);
+
+				if (pedido) {
+					abrirModalPedido(pedido);
+				}
 			}
 		});
 	});
@@ -348,7 +357,8 @@ function aplicarFiltrosInterno() {
 				obtenerDescripcionEstatus(pedido),
 				pedido.cliente?.correo ?? '',
 				pedido.lugar_entrega ?? '',
-				pedido.fecha_entrega_aproximada ?? ''
+				pedido.fecha_entrega_aproximada ?? '',
+				pedido.personalizado ? 'personalizado' : 'normal'
 			].join(' ');
 
 			return normalizarTexto(bloqueBusqueda).includes(texto);
@@ -393,13 +403,23 @@ function renderizarProductosDetalle(pedido) {
 		const precioUnitario = Number(detalle.producto?.precio_unitario ?? 0);
 		const cantidad = Number(detalle.cantidad ?? 0);
 		const subtotal = Number(detalle.subtotal ?? 0);
+		const cantidadStock = Number(detalle.cantidad_stock ?? 0);
+		const cantidadPersonalizada = Number(detalle.cantidad_personalizada ?? 0);
+		const esPersonalizado = Boolean(detalle.personalizado);
 
 		return `
 			<div class="product-line">
 				<div class="product-line-left">
 					<div class="product-line-name">${nombreProducto}</div>
 					<div class="product-line-meta">
-						Cantidad: ${cantidad} · Precio unitario: ${formatearMoneda(precioUnitario)}
+						Cantidad total: ${cantidad} · Precio unitario: ${formatearMoneda(precioUnitario)}
+					</div>
+					<div class="product-line-meta">
+						De stock: ${cantidadStock} · Personalizadas: ${cantidadPersonalizada}
+					</div>
+
+					<div class="product-line-badges">
+						${esPersonalizado ? '<span class="badge badge-personalizado">Pedido personalizado</span>' : ''}
 					</div>
 				</div>
 
@@ -446,6 +466,9 @@ function abrirModalPedido(pedido) {
 	detalleFechaEntrega.textContent = pedido.fecha_entrega_aproximada
 		? formatearFecha(pedido.fecha_entrega_aproximada)
 		: 'Sin definir';
+	detalleTipoPedido.innerHTML = pedido.personalizado
+		? '<span class="badge badge-personalizado">Pedido personalizado</span>'
+		: '<span class="badge badge-entregado">Pedido normal</span>';
 	detalleLugarEntrega.textContent = pedido.lugar_entrega ?? 'Sin lugar registrado';
 	detalleTotal.textContent = formatearMoneda(pedido.total_pagar);
 	detalleRepartidor.textContent = obtenerNombreRepartidor(pedido);
@@ -518,6 +541,7 @@ async function cargarPedidos() {
 			lugar_entrega,
 			total_pagar,
 			id_estatus,
+			personalizado,
 			cliente:usuario!pedido_id_cliente_fkey (
 				id_usuario,
 				nombre_completo,
@@ -536,6 +560,9 @@ async function cargarPedidos() {
 				id_producto,
 				cantidad,
 				subtotal,
+				cantidad_stock,
+				cantidad_personalizada,
+				personalizado,
 				producto:producto (
 					id_producto,
 					nombre_producto,
@@ -558,7 +585,7 @@ async function cargarPedidos() {
 		console.error('Error al cargar pedidos:', error);
 		tablaPedidosBody.innerHTML = `
 			<tr>
-				<td colspan="9" class="empty-row">
+				<td colspan="8" class="empty-row">
 					No se pudieron cargar los pedidos.
 				</td>
 			</tr>
