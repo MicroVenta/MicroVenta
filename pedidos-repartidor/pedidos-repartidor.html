@@ -5,6 +5,7 @@
 	<link rel="icon" type="image/svg+xml" href="/grafico/Logo_DM.png" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>MicroVenta | Mis entregas</title>
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 	<link rel="stylesheet" href="/pedidos-repartidor/pedidos-repartidor.css">
 </head>
 <body>
@@ -35,7 +36,7 @@
 			<header class="topbar">
 				<div>
 					<h1>Mis entregas</h1>
-					<p>Consulta tus pedidos asignados y actualiza su estado de entrega.</p>
+					<p>Consulta tus pedidos asignados, visualiza la ruta y actualiza su estado.</p>
 				</div>
 
 				<div class="topbar-actions">
@@ -148,23 +149,97 @@
 				</div>
 			</section>
 
-			<section class="card orders-card">
-				<div class="section-header">
-					<div>
-						<h2>Listado de entregas</h2>
-						<p id="textoResultados">Cargando entregas...</p>
-					</div>
+			<section class="delivery-layout">
+				<div class="delivery-main">
+					<section class="card orders-card">
+						<div class="section-header">
+							<div>
+								<h2>Listado de entregas</h2>
+								<p id="textoResultados">Cargando entregas...</p>
+							</div>
+						</div>
+
+						<div id="mensajePedidos" class="message hidden"></div>
+
+						<div id="listaPedidos" class="orders-list">
+							<div class="empty-orders">Cargando entregas...</div>
+						</div>
+					</section>
 				</div>
 
-				<div id="mensajePedidos" class="message hidden"></div>
+				<aside class="delivery-map-panel">
+					<section class="card map-card sticky-card">
+						<div class="section-header">
+							<div>
+								<h2>Mapa de ruta</h2>
+								<p>Selecciona un pedido para visualizar el trayecto.</p>
+							</div>
+						</div>
 
-				<div id="listaPedidos" class="orders-list">
-					<div class="empty-orders">Cargando entregas...</div>
-				</div>
+						<div id="mensajeRuta" class="message hidden"></div>
+
+						<div class="route-origin-selector">
+							<button id="btnOrigenNegocio" class="btn btn-light origin-btn active" type="button">
+								Usar negocio
+							</button>
+
+							<button id="btnOrigenActual" class="btn btn-light origin-btn" type="button">
+								Usar ubicación actual
+							</button>
+						</div>
+
+						<div class="route-summary-grid">
+							<div class="route-summary-box">
+								<strong>Pedido</strong>
+								<span id="rutaPedidoId">-</span>
+							</div>
+
+							<div class="route-summary-box">
+								<strong>Cliente</strong>
+								<span id="rutaClienteNombre">-</span>
+							</div>
+
+							<div class="route-summary-box">
+								<strong>Distancia</strong>
+								<span id="rutaDistancia">-</span>
+							</div>
+
+							<div class="route-summary-box">
+								<strong>Tiempo estimado</strong>
+								<span id="rutaDuracion">-</span>
+							</div>
+						</div>
+
+						<div class="route-addresses">
+							<div class="route-address-box">
+								<strong>Origen</strong>
+								<p id="rutaOrigenTexto">Negocio</p>
+							</div>
+
+							<div class="route-address-box">
+								<strong>Destino</strong>
+								<p id="rutaDestinoTexto">Selecciona un pedido.</p>
+							</div>
+						</div>
+
+						<div id="mapaRuta" class="route-map"></div>
+
+						<div class="route-actions">
+							<button id="btnRecalcularRuta" class="btn btn-light" type="button">
+								Recalcular ruta
+							</button>
+
+							<button id="btnAbrirRutaExterna" class="btn btn-primary" type="button" disabled>
+								Abrir ruta externa
+							</button>
+						</div>
+					</section>
+				</aside>
 			</section>
 		</main>
 	</div>
 
+	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 	<script src="/conexion.js"></script>
 	<script src="/pedidos-repartidor/pedidos-repartidor.js"></script>

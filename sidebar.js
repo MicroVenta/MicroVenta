@@ -20,6 +20,17 @@ function normalizarRol(nombreRol) {
 	return (nombreRol ?? '').toString().trim().toLowerCase();
 }
 
+function esAdministrador(usuario) {
+	if (!usuario) {
+		return false;
+	}
+
+	const rol = normalizarRol(usuario.nombre_rol);
+	const idRol = Number(usuario.id_rol);
+
+	return rol === 'administrador' || idRol === 1;
+}
+
 function esRepartidor(usuario) {
 	if (!usuario) {
 		return false;
@@ -35,6 +46,31 @@ function cerrarSesionSidebar() {
 	sessionStorage.removeItem('microventa_usuario');
 	localStorage.removeItem('microventa_usuario');
 	window.location.href = '/login/login.html';
+}
+
+function obtenerSidebarAdmin(activo) {
+	return `
+		<div class="sidebar-brand">
+			<img src="/grafico/Logo_DM.png" alt="Dulce Mordisco" class="sidebar-logo">
+			<div>
+				<h2>Dulce Mordisco</h2>
+				<p>MicroVenta</p>
+			</div>
+		</div>
+
+		<nav class="sidebar-menu">
+			<a href="/admin/admin.html" class="menu-item ${activo === 'inicio' ? 'active' : ''}">🏠 Home</a>
+			<a href="/usuarios/usuarios.html" class="menu-item ${activo === 'usuarios' ? 'active' : ''}">👤 Usuarios</a>
+			<a href="/productos-admin/productos-admin.html" class="menu-item ${activo === 'productos' ? 'active' : ''}">🧁 Productos</a>
+			<a href="/pedidos/pedidos.html" class="menu-item ${activo === 'pedidos' ? 'active' : ''}">🛒 Pedidos</a>
+			<a href="/reportes/reportes.html" class="menu-item ${activo === 'reportes' ? 'active' : ''}">📊 Reportes</a>
+			<a href="/perfil/perfil.html" class="menu-item ${activo === 'perfil' ? 'active' : ''}">👤 Mi perfil</a>
+
+			<button id="btnCerrarSesionSidebar" class="menu-item menu-item-logout" type="button">
+				🚪 Cerrar sesión
+			</button>
+		</nav>
+	`;
 }
 
 function obtenerSidebarCliente(activo) {
@@ -92,7 +128,9 @@ function renderizarSidebar(activo = '') {
 		return;
 	}
 
-	if (esRepartidor(usuario)) {
+	if (esAdministrador(usuario)) {
+		contenedorSidebar.innerHTML = obtenerSidebarAdmin(activo);
+	} else if (esRepartidor(usuario)) {
 		contenedorSidebar.innerHTML = obtenerSidebarRepartidor(activo);
 	} else {
 		contenedorSidebar.innerHTML = obtenerSidebarCliente(activo);

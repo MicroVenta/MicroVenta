@@ -33,7 +33,7 @@
 						<p id="correoClienteHero">correo@ejemplo.com</p>
 
 						<div class="profile-tags">
-							<span class="profile-tag">👤 Cliente</span>
+							<span class="profile-tag">👤 Usuario</span>
 							<span class="profile-tag" id="estadoClienteTag">Cuenta activa</span>
 						</div>
 					</div>
@@ -71,14 +71,29 @@
 								<input type="tel" id="telefono" name="telefono" maxlength="20" placeholder="Ej. 6681234567">
 							</div>
 
-							<div class="form-group full-width">
+							<div class="form-group full-width address-group">
 								<label for="direccion">Dirección de entrega</label>
+
+								<div class="address-toolbar">
+									<button type="button" id="btnUbicacionActual" class="btn btn-light btn-address">
+										Usar mi ubicación actual
+									</button>
+									<span id="estadoDireccion" class="address-status hidden"></span>
+								</div>
+
 								<textarea
 									id="direccion"
 									name="direccion"
 									rows="5"
-									placeholder="Calle, número, colonia, ciudad, referencias para la entrega..."
+									placeholder="Escribe tu calle, número, colonia, ciudad o referencias..."
+									autocomplete="off"
 								></textarea>
+
+								<div id="sugerenciasDireccion" class="address-suggestions hidden"></div>
+
+								<p class="address-help">
+									Escribe tu dirección y selecciona una sugerencia para dejarla mejor capturada.
+								</p>
 							</div>
 						</div>
 
@@ -114,7 +129,7 @@
 
 							<div class="info-item">
 								<span class="info-label">Rol</span>
-								<strong id="infoRol">Cliente</strong>
+								<strong id="infoRol">Usuario</strong>
 							</div>
 
 							<div class="info-item">
@@ -139,9 +154,9 @@
 
 						<ul class="tips-list">
 							<li>Verifica que tu teléfono esté correcto para contactarte.</li>
-							<li>Agrega referencias claras en tu dirección de entrega.</li>
+							<li>Selecciona una sugerencia de domicilio cuando aparezca.</li>
+							<li>Agrega referencias claras si tu ubicación es difícil de encontrar.</li>
 							<li>Usa un correo válido para futuras notificaciones.</li>
-							<li>Mantén tu nombre actualizado para identificar tus pedidos.</li>
 						</ul>
 					</div>
 				</div>
