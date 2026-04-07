@@ -83,6 +83,23 @@
 				</div>
 			</section>
 
+			<section class="card stock-alert-card">
+				<div class="section-header">
+					<div>
+						<h2>Alertas de stock bajo</h2>
+						<p>Productos que ya alcanzaron o bajaron de su stock mínimo.</p>
+					</div>
+				</div>
+
+				<div id="stockAlertasResumen" class="stock-alert-summary">
+					Cargando alertas...
+				</div>
+
+				<div id="listaAlertasStock" class="stock-alert-list">
+					<div class="stock-alert-empty">Cargando alertas...</div>
+				</div>
+			</section>
+
 			<section class="card modules-card">
 				<div class="section-header">
 					<div>
@@ -132,6 +149,8 @@
 		</main>
 	</div>
 
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+	<script src="/conexion.js"></script>
 	<script src="/admin/admin.js"></script>
 </body>
 </html>

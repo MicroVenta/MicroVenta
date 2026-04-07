@@ -4,6 +4,8 @@ const btnCerrarSesionSidebar = document.getElementById('btnCerrarSesionSidebar')
 const heroTitle = document.getElementById('heroTitle');
 const heroText = document.getElementById('heroText');
 const revealCards = document.querySelectorAll('.reveal-card');
+const stockAlertasResumen = document.getElementById('stockAlertasResumen');
+const listaAlertasStock = document.getElementById('listaAlertasStock');
 
 const usuarioGuardado =
 	sessionStorage.getItem('microventa_usuario') ||
@@ -81,6 +83,89 @@ function animarTarjetas() {
 	});
 }
 
+function renderizarAlertasStock(productos) {
+	if (!listaAlertasStock || !stockAlertasResumen) {
+		return;
+	}
+
+	if (!productos || productos.length === 0) {
+		stockAlertasResumen.textContent = 'No hay productos en stock bajo.';
+		listaAlertasStock.innerHTML = `
+			<div class="stock-alert-empty">
+				Todo está en orden. No hay alertas de stock bajo por ahora.
+			</div>
+		`;
+		return;
+	}
+
+	stockAlertasResumen.textContent = `Hay ${productos.length} producto(s) con stock bajo o igual al mínimo.`;
+
+	listaAlertasStock.innerHTML = productos.map((producto) => {
+		const stockActual = Number(producto.stock_actual ?? 0);
+		const stockMinimo = Number(producto.stock_minimo ?? 0);
+		const categoria = producto.categoria?.nombre_categoria ?? 'Sin categoría';
+
+		return `
+			<article class="stock-alert-item">
+				<h4>${producto.nombre_producto}</h4>
+				<p><strong>Categoría:</strong> ${categoria}</p>
+				<p><strong>Stock actual:</strong> ${stockActual}</p>
+				<p><strong>Stock mínimo:</strong> ${stockMinimo}</p>
+			</article>
+		`;
+	}).join('');
+}
+
+async function cargarAlertasStock() {
+	if (!listaAlertasStock || !stockAlertasResumen) {
+		return;
+	}
+
+	try {
+		const { data, error } = await db
+			.from('producto')
+			.select(`
+				id_producto,
+				nombre_producto,
+				stock_actual,
+				stock_minimo,
+				categoria (
+					id_categoria,
+					nombre_categoria
+				)
+			`)
+			.order('stock_actual', { ascending: true });
+
+		if (error) {
+			console.error('Error al cargar alertas de stock:', error);
+			stockAlertasResumen.textContent = 'No se pudieron cargar las alertas.';
+			listaAlertasStock.innerHTML = `
+				<div class="stock-alert-empty">
+					No se pudieron consultar las alertas de stock bajo.
+				</div>
+			`;
+			return;
+		}
+
+		const productosStockBajo = (data ?? []).filter((producto) => {
+			const stockActual = Number(producto.stock_actual ?? 0);
+			const stockMinimo = Number(producto.stock_minimo ?? 0);
+			return stockActual <= stockMinimo;
+		});
+
+		renderizarAlertasStock(productosStockBajo);
+	} catch (error) {
+		console.error('Error general al cargar alertas de stock:', error);
+		stockAlertasResumen.textContent = 'No se pudieron cargar las alertas.';
+		listaAlertasStock.innerHTML = `
+			<div class="stock-alert-empty">
+				Ocurrió un error al consultar las alertas de stock bajo.
+			</div>
+		`;
+	}
+}
+
 animarTextoPorPalabras(heroTitle, 0, 0.10);
 animarTextoPorPalabras(heroText, 0.65, 0.05);
 animarTarjetas();
+cargarAlertasStock();

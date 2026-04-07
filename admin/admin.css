@@ -202,6 +202,61 @@
 	animation-delay: 1s;
 }
 
+/* ALERTAS STOCK */
+.stock-alert-card {
+	padding: 26px;
+}
+
+.stock-alert-summary {
+	margin-bottom: 18px;
+	padding: 14px 16px;
+	border-radius: 16px;
+	background: rgba(255, 247, 239, 0.95);
+	border: 1px solid rgba(217, 108, 138, 0.12);
+	color: var(--cafe-oscuro);
+	font-weight: 600;
+}
+
+.stock-alert-list {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(260px, 1fr));
+	gap: 18px;
+}
+
+.stock-alert-item {
+	background: rgba(255, 255, 255, 0.94);
+	border: 1px solid rgba(217, 72, 95, 0.18);
+	border-left: 6px solid rgba(217, 72, 95, 0.9);
+	border-radius: 20px;
+	padding: 18px;
+	box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+}
+
+.stock-alert-item h4 {
+	font-size: 1.1rem;
+	color: var(--cafe-oscuro);
+	margin-bottom: 10px;
+}
+
+.stock-alert-item p {
+	color: var(--gris-texto);
+	line-height: 1.6;
+}
+
+.stock-alert-item p + p {
+	margin-top: 4px;
+}
+
+.stock-alert-empty {
+	background: rgba(255, 255, 255, 0.96);
+	border: 1px dashed rgba(217, 108, 138, 0.22);
+	border-radius: 18px;
+	padding: 24px;
+	text-align: center;
+	color: var(--gris-texto);
+	grid-column: 1 / -1;
+}
+
 /* SECCIÓN MÓDULOS */
 .modules-card {
 	padding: 26px;
@@ -246,10 +301,8 @@
 	display: flex;
 	flex-direction: column;
 	justify-content: flex-start;
-
 	opacity: 0;
 	transform: translateY(18px);
-
 	transition:
 		opacity 0.55s ease,
 		transform 0.22s ease,
@@ -359,6 +412,7 @@
 		justify-content: flex-start;
 	}
 
+	.stock-alert-list,
 	.modules-grid {
 		grid-template-columns: repeat(2, minmax(220px, 1fr));
 	}
@@ -418,11 +472,13 @@
 		padding: 8px 12px;
 	}
 
+	.stock-alert-list,
 	.modules-grid {
 		grid-template-columns: 1fr;
 	}
 
-	.modules-card {
+	.modules-card,
+	.stock-alert-card {
 		padding: 20px;
 	}
 

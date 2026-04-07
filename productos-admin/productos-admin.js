@@ -7,6 +7,7 @@ const nombreProducto = document.getElementById('nombreProducto');
 const categoriaProducto = document.getElementById('categoriaProducto');
 const precioProducto = document.getElementById('precioProducto');
 const stockProducto = document.getElementById('stockProducto');
+const stockMinimoProducto = document.getElementById('stockMinimoProducto');
 const descripcionProducto = document.getElementById('descripcionProducto');
 const imagenProducto = document.getElementById('imagenProducto');
 const visibleProducto = document.getElementById('visibleProducto');
@@ -90,6 +91,7 @@ function limpiarFormulario() {
 	productoForm.reset();
 	idProducto.value = '';
 	visibleProducto.checked = true;
+	stockMinimoProducto.value = 5;
 	modoEdicion = false;
 	btnCancelarEdicion.classList.add('hidden');
 	btnGuardarProducto.textContent = 'Guardar producto';
@@ -105,6 +107,7 @@ function activarModoEdicion(producto) {
 	categoriaProducto.value = producto.id_categoria ?? '';
 	precioProducto.value = producto.precio_unitario ?? '';
 	stockProducto.value = producto.stock_actual ?? 0;
+	stockMinimoProducto.value = producto.stock_minimo ?? 5;
 	descripcionProducto.value = producto.descripcion_producto ?? '';
 	imagenProducto.value = producto.imagen ?? '';
 	visibleProducto.checked = Boolean(producto.visible);
@@ -155,6 +158,24 @@ function actualizarContadores(productos) {
 	productosOcultos.textContent = ocultos.toString();
 }
 
+function obtenerClaseStock(producto) {
+	const stockActual = Number(producto.stock_actual ?? 0);
+	const stockMinimo = Number(producto.stock_minimo ?? 5);
+
+	return stockActual <= stockMinimo ? 'status-hidden' : 'status-visible';
+}
+
+function obtenerTextoStock(producto) {
+	const stockActual = Number(producto.stock_actual ?? 0);
+	const stockMinimo = Number(producto.stock_minimo ?? 5);
+
+	if (stockActual <= stockMinimo) {
+		return 'Stock bajo';
+	}
+
+	return 'Stock normal';
+}
+
 function crearBotonesAccion(producto) {
 	return `
 		<div class="action-buttons">
@@ -191,7 +212,8 @@ function renderizarProductos(productos) {
 
 	listaProductos.innerHTML = productos.map((producto) => {
 		const nombreCategoria = producto.categoria?.nombre_categoria ?? 'Sin categoría';
-		const stockActual = producto.stock_actual ?? 0;
+		const stockActual = Number(producto.stock_actual ?? 0);
+		const stockMinimo = Number(producto.stock_minimo ?? 5);
 		const visible = producto.visible === true;
 
 		return `
@@ -222,14 +244,28 @@ function renderizarProductos(productos) {
 						</div>
 
 						<div class="meta-box">
-							<strong>Stock</strong>
+							<strong>Stock actual</strong>
 							<span>${stockActual}</span>
+						</div>
+
+						<div class="meta-box">
+							<strong>Stock bajo</strong>
+							<span>${stockMinimo}</span>
+						</div>
+
+						<div class="meta-box">
+							<strong>Estado stock</strong>
+							<span>${obtenerTextoStock(producto)}</span>
 						</div>
 					</div>
 
 					<div class="product-footer">
 						<div class="status-badge ${visible ? 'status-visible' : 'status-hidden'}">
 							${visible ? 'Visible' : 'Oculto'}
+						</div>
+
+						<div class="status-badge ${obtenerClaseStock(producto)}">
+							${obtenerTextoStock(producto)}
 						</div>
 
 						${crearBotonesAccion(producto)}
@@ -367,13 +403,13 @@ async function cargarProductos() {
 	}
 }
 
-async function crearProducto(datosProducto, stockInicial) {
+async function crearProducto(datosProducto, stockInicial, stockMinimo) {
 	const { error } = await db
 		.from('producto')
 		.insert({
 			...datosProducto,
 			stock_actual: stockInicial,
-			stock_minimo: 5
+			stock_minimo: stockMinimo
 		});
 
 	if (error) {
@@ -382,14 +418,15 @@ async function crearProducto(datosProducto, stockInicial) {
 	}
 }
 
-async function actualizarProducto(datosProducto, stockActual) {
+async function actualizarProducto(datosProducto, stockActual, stockMinimo) {
 	const productoIdActual = idProducto.value;
 
 	const { error } = await db
 		.from('producto')
 		.update({
 			...datosProducto,
-			stock_actual: stockActual
+			stock_actual: stockActual,
+			stock_minimo: stockMinimo
 		})
 		.eq('id_producto', productoIdActual);
 
@@ -437,11 +474,21 @@ productoForm.addEventListener('submit', async (e) => {
 	const categoria = categoriaProducto.value;
 	const precio = Number(precioProducto.value);
 	const stock = Number(stockProducto.value);
+	const stockMinimo = Number(stockMinimoProducto.value);
 	const descripcion = descripcionProducto.value.trim();
 	const imagen = imagenProducto.value.trim();
 	const visible = visibleProducto.checked;
 
-	if (!nombre || !categoria || Number.isNaN(precio) || precio < 0 || Number.isNaN(stock) || stock < 0) {
+	if (
+		!nombre ||
+		!categoria ||
+		Number.isNaN(precio) ||
+		precio < 0 ||
+		Number.isNaN(stock) ||
+		stock < 0 ||
+		Number.isNaN(stockMinimo) ||
+		stockMinimo < 0
+	) {
 		mostrarMensajeFormulario('error', 'Completa correctamente los campos obligatorios.');
 		return;
 	}
@@ -460,12 +507,12 @@ productoForm.addEventListener('submit', async (e) => {
 
 	try {
 		if (modoEdicion) {
-			await actualizarProducto(datosProducto, stock);
+			await actualizarProducto(datosProducto, stock, stockMinimo);
 			await cargarProductos();
 			limpiarFormulario();
 			mostrarMensajeFormulario('success', 'Producto actualizado correctamente.');
 		} else {
-			await crearProducto(datosProducto, stock);
+			await crearProducto(datosProducto, stock, stockMinimo);
 			await cargarProductos();
 			limpiarFormulario();
 			mostrarMensajeFormulario('success', 'Producto creado correctamente.');
