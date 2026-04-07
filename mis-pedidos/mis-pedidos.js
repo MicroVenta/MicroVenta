@@ -28,6 +28,30 @@ let pedidosOriginales = [];
 let pedidosFiltrados = [];
 let estatusCatalogo = [];
 
+function normalizarTexto(texto) {
+	return String(texto ?? '').trim().toLowerCase();
+}
+
+function puedeVerMisPedidos(usuarioData) {
+	if (!usuarioData) {
+		return false;
+	}
+
+	const rolUsuario = normalizarTexto(usuarioData.nombre_rol);
+	const idRol = Number(usuarioData.id_rol);
+
+	return (
+		rolUsuario === 'cliente' ||
+		rolUsuario === 'repartidor' ||
+		rolUsuario === 'administrador' ||
+		rolUsuario === 'ayudante' ||
+		idRol === 1 ||
+		idRol === 2 ||
+		idRol === 3 ||
+		idRol === 4
+	);
+}
+
 if (!usuarioGuardado) {
 	window.location.href = '/login/login.html';
 } else {
@@ -40,14 +64,12 @@ if (!usuarioGuardado) {
 	}
 }
 
-if (usuario) {
-	const rolUsuario = (usuario.nombre_rol ?? '').trim().toLowerCase();
+if (!usuario || !puedeVerMisPedidos(usuario)) {
+	window.location.href = '/login/login.html';
+}
 
-	if (rolUsuario !== 'cliente' && rolUsuario !== 'repartidor' && rolUsuario !== 'administrador') {
-		window.location.href = '/login/login.html';
-	} else if (nombreCliente) {
-		nombreCliente.textContent = usuario.nombre_completo || 'Usuario';
-	}
+if (nombreCliente) {
+	nombreCliente.textContent = usuario.nombre_completo || 'Usuario';
 }
 
 renderizarSidebar('mis-pedidos');
@@ -91,10 +113,6 @@ function ocultarMensaje() {
 
 	mensajePedidos.textContent = '';
 	mensajePedidos.className = 'message hidden';
-}
-
-function normalizarTexto(texto) {
-	return String(texto ?? '').trim().toLowerCase();
 }
 
 function formatearFecha(fecha) {

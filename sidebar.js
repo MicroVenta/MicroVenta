@@ -31,6 +31,17 @@ function esAdministrador(usuario) {
 	return rol === 'administrador' || idRol === 1;
 }
 
+function esAyudante(usuario) {
+	if (!usuario) {
+		return false;
+	}
+
+	const rol = normalizarRol(usuario.nombre_rol);
+	const idRol = Number(usuario.id_rol);
+
+	return rol === 'ayudante' || idRol === 2;
+}
+
 function esRepartidor(usuario) {
 	if (!usuario) {
 		return false;
@@ -67,6 +78,40 @@ function obtenerSidebarAdmin(activo) {
 				<a href="/productos-admin/productos-admin.html" class="menu-item ${activo === 'productos-admin' ? 'active' : ''}">🧁 Productos</a>
 				<a href="/pedidos/pedidos.html" class="menu-item ${activo === 'pedidos' ? 'active' : ''}">🛒 Pedidos</a>
 				<a href="/reportes/reportes.html" class="menu-item ${activo === 'reportes' ? 'active' : ''}">📊 Reportes</a>
+			</div>
+
+			<div class="sidebar-group">
+				<div class="sidebar-group-title">Mi cuenta</div>
+
+				<a href="/productos/productos.html" class="menu-item ${activo === 'productos' ? 'active' : ''}">🛍️ Comprar</a>
+				<a href="/mis-pedidos/mis-pedidos.html" class="menu-item ${activo === 'mis-pedidos' ? 'active' : ''}">🧾 Mis pedidos</a>
+				<a href="/perfil/perfil.html" class="menu-item ${activo === 'perfil' ? 'active' : ''}">👤 Mi perfil</a>
+			</div>
+
+			<button id="btnCerrarSesionSidebar" class="menu-item menu-item-logout" type="button">
+				🚪 Cerrar sesión
+			</button>
+		</nav>
+	`;
+}
+
+function obtenerSidebarAyudante(activo) {
+	return `
+		<div class="sidebar-brand">
+			<img src="/grafico/Logo_DM.png" alt="Dulce Mordisco" class="sidebar-logo">
+			<div>
+				<h2>Dulce Mordisco</h2>
+				<p>MicroVenta</p>
+			</div>
+		</div>
+
+		<nav class="sidebar-menu">
+			<div class="sidebar-group">
+				<div class="sidebar-group-title">Operación</div>
+
+				<a href="/ayudante/ayudante.html" class="menu-item ${activo === 'inicio' ? 'active' : ''}">🏠 Home</a>
+				<a href="/productos-ayudante/productos-ayudante.html" class="menu-item ${activo === 'productos-admin' ? 'active' : ''}">🧁 Productos</a>
+				<a href="/pedidos/pedidos.html" class="menu-item ${activo === 'pedidos' ? 'active' : ''}">🛒 Pedidos</a>
 			</div>
 
 			<div class="sidebar-group">
@@ -150,6 +195,8 @@ function renderizarSidebar(activo = '') {
 
 	if (esAdministrador(usuario)) {
 		contenedorSidebar.innerHTML = obtenerSidebarAdmin(activo);
+	} else if (esAyudante(usuario)) {
+		contenedorSidebar.innerHTML = obtenerSidebarAyudante(activo);
 	} else if (esRepartidor(usuario)) {
 		contenedorSidebar.innerHTML = obtenerSidebarRepartidor(activo);
 	} else {

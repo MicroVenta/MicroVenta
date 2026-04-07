@@ -47,6 +47,21 @@ let repartidoresOriginales = [];
 let estatusOriginales = [];
 let pedidoSeleccionado = null;
 
+function normalizarTexto(texto) {
+	return String(texto ?? '').trim().toLowerCase();
+}
+
+function esAdministradorOAyudante(usuarioData) {
+	if (!usuarioData) {
+		return false;
+	}
+
+	const idRol = Number(usuarioData.id_rol);
+	const nombreRol = normalizarTexto(usuarioData.nombre_rol);
+
+	return idRol === 1 || idRol === 2 || nombreRol === 'administrador' || nombreRol === 'ayudante';
+}
+
 function cerrarSesion() {
 	sessionStorage.removeItem('microventa_usuario');
 	localStorage.removeItem('microventa_usuario');
@@ -69,22 +84,18 @@ if (!usuario) {
 	window.location.href = '/login/login.html';
 }
 
-if (Number(usuario.id_rol) !== 1) {
+if (!esAdministradorOAyudante(usuario)) {
 	window.location.href = '/login/login.html';
 }
 
 renderizarSidebar('pedidos');
 
 if (nombreUsuario) {
-	nombreUsuario.textContent = usuario.nombre_completo ?? 'Administrador';
+	nombreUsuario.textContent = usuario.nombre_completo ?? 'Usuario';
 }
 
 if (btnCerrarSesion) {
 	btnCerrarSesion.addEventListener('click', cerrarSesion);
-}
-
-function normalizarTexto(texto) {
-	return String(texto ?? '').trim().toLowerCase();
 }
 
 function formatearMoneda(valor) {

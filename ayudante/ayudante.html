@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8">
+	<link rel="icon" type="image/svg+xml" href="/grafico/Logo_DM.png" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>MicroVenta | Panel de ayudante</title>
+	<link rel="stylesheet" href="/ayudante/ayudante.css">
+</head>
+<body>
+	<div class="dashboard">
+		<aside class="sidebar" id="sidebarContainer"></aside>
+
+		<main class="main-content">
+			<header class="topbar">
+				<div>
+					<h1>Panel de ayudante</h1>
+					<p>Da seguimiento operativo a productos y pedidos dentro de Dulce Mordisco.</p>
+				</div>
+
+				<div class="topbar-actions">
+					<span id="nombreAyudante" class="admin-user">Ayudante</span>
+					<button id="btnCerrarSesion" class="btn btn-secondary">Cerrar sesión</button>
+				</div>
+			</header>
+
+			<section class="hero-banner">
+				<div class="hero-overlay">
+					<div class="hero-content">
+						<div class="hero-badge hero-reveal">
+							<img src="/grafico/MicroVentaTransparente_Horizontal.png" alt="MicroVenta">
+						</div>
+
+						<h2 id="heroTitle" class="hero-title">
+							Apoya la operación diaria con control rápido de pedidos y catálogo.
+						</h2>
+
+						<p id="heroText" class="hero-text">
+							Como ayudante puedes actualizar productos existentes, ocultarlos cuando sea necesario,
+							dar seguimiento a pedidos, cambiar su estatus y asignar repartidores. Además, puedes
+							comprar desde el catálogo, revisar tus propios pedidos y administrar tu perfil.
+						</p>
+
+						<div class="hero-buttons hero-reveal delay-2">
+							<a href="/pedidos/pedidos.html" class="hero-btn hero-btn-primary">Gestionar pedidos</a>
+							<a href="/productos-admin/productos-admin.html" class="hero-btn hero-btn-secondary">Administrar productos</a>
+							<a href="/productos/productos.html" class="hero-btn hero-btn-secondary">Comprar</a>
+							<a href="/mis-pedidos/mis-pedidos.html" class="hero-btn hero-btn-secondary">Mis pedidos</a>
+						</div>
+					</div>
+
+					<div class="hero-visual hero-reveal delay-3">
+						<div class="hero-image-card">
+							<img
+								src="https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=900&q=80"
+								alt="Postres Dulce Mordisco"
+								class="hero-image"
+							>
+						</div>
+
+						<div class="floating-tag floating-tag-1">🧁 Operación</div>
+						<div class="floating-tag floating-tag-2">📦 Seguimiento</div>
+					</div>
+				</div>
+			</section>
+
+			<section class="card stock-alert-card">
+				<div class="section-header">
+					<div>
+						<h2>Alertas de stock bajo</h2>
+						<p>Productos que alcanzaron o bajaron de su stock mínimo.</p>
+					</div>
+				</div>
+
+				<div id="stockAlertasResumen" class="stock-alert-summary">
+					Cargando alertas...
+				</div>
+
+				<div id="listaAlertasStock" class="stock-alert-list">
+					<div class="stock-alert-empty">Cargando alertas...</div>
+				</div>
+			</section>
+
+			<section class="card modules-card">
+				<div class="section-header">
+					<div>
+						<h2>Módulos disponibles</h2>
+						<p>Accesos rápidos a tus pantallas principales y compartidas.</p>
+					</div>
+				</div>
+
+				<div class="modules-grid">
+					<a href="/productos-admin/productos-admin.html" class="module-card reveal-card module-card-highlight">
+						<div class="module-icon">🧁</div>
+						<h4>Productos</h4>
+						<p>Entra a la pantalla compartida de administración de productos.</p>
+					</a>
+
+					<a href="/pedidos/pedidos.html" class="module-card reveal-card module-card-highlight">
+						<div class="module-icon">🛒</div>
+						<h4>Pedidos</h4>
+						<p>Entra a la pantalla compartida para seguimiento y asignación de pedidos.</p>
+					</a>
+
+					<a href="/productos/productos.html" class="module-card reveal-card">
+						<div class="module-icon">🛍️</div>
+						<h4>Comprar</h4>
+						<p>Haz compras usando tu cuenta, igual que en las pantallas compartidas de cliente.</p>
+					</a>
+
+					<a href="/mis-pedidos/mis-pedidos.html" class="module-card reveal-card">
+						<div class="module-icon">🧾</div>
+						<h4>Mis pedidos</h4>
+						<p>Consulta el historial y seguimiento de tus pedidos personales.</p>
+					</a>
+
+					<a href="/perfil/perfil.html" class="module-card reveal-card">
+						<div class="module-icon">👤</div>
+						<h4>Mi perfil</h4>
+						<p>Actualiza teléfono, dirección y demás datos de tu cuenta.</p>
+					</a>
+
+					<button id="btnCerrarSesionCard" class="module-card reveal-card module-card-button" type="button">
+						<div class="module-icon">🚪</div>
+						<h4>Cerrar sesión</h4>
+						<p>Salir del sistema de forma segura.</p>
+					</button>
+				</div>
+			</section>
+		</main>
+	</div>
+
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+	<script src="/conexion.js"></script>
+	<script src="/sidebar.js"></script>
+	<script src="/ayudante/ayudante.js"></script>
+</body>
+</html>

@@ -1,4 +1,5 @@
 const ID_ROL_ADMINISTRADOR = 1;
+const ID_ROL_AYUDANTE = 2;
 const ID_ROL_REPARTIDOR = 3;
 const ID_ROL_CLIENTE = 4;
 
@@ -59,6 +60,21 @@ function esAdministrador(usuarioData) {
 	return nombreRol === 'administrador';
 }
 
+function esAyudante(usuarioData) {
+	if (!usuarioData) {
+		return false;
+	}
+
+	const idRol = Number(usuarioData.id_rol);
+	const nombreRol = obtenerRolNormalizado(usuarioData.nombre_rol);
+
+	if (!Number.isNaN(idRol) && idRol === ID_ROL_AYUDANTE) {
+		return true;
+	}
+
+	return nombreRol === 'ayudante';
+}
+
 function esCliente(usuarioData) {
 	if (!usuarioData) {
 		return false;
@@ -90,7 +106,7 @@ function esRepartidor(usuarioData) {
 }
 
 function tieneAccesoPerfil(usuarioData) {
-	return esAdministrador(usuarioData) || esCliente(usuarioData) || esRepartidor(usuarioData);
+	return esAdministrador(usuarioData) || esAyudante(usuarioData) || esCliente(usuarioData) || esRepartidor(usuarioData);
 }
 
 if (!usuarioGuardado) {
@@ -169,6 +185,10 @@ function obtenerEtiquetaEstadoCuenta(usuarioData) {
 
 	if (rol === 'administrador') {
 		return 'Administrador activo';
+	}
+
+	if (rol === 'ayudante') {
+		return 'Ayudante activo';
 	}
 
 	if (rol === 'repartidor') {
