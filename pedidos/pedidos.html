@@ -8,14 +8,24 @@
 	<link rel="stylesheet" href="/pedidos/pedidos.css">
 </head>
 <body>
+	<div class="mobile-overlay hidden" id="mobileOverlay"></div>
+
 	<div class="dashboard">
 		<aside class="sidebar" id="sidebarContainer"></aside>
 
 		<main class="main-content">
 			<header class="topbar">
-				<div>
-					<h1>Administración de pedidos</h1>
-					<p>Consulta, filtra y actualiza pedidos de Dulce Mordisco.</p>
+				<div class="topbar-left">
+					<button class="menu-toggle" id="btnMenu" type="button" aria-label="Abrir menú">
+						<span></span>
+						<span></span>
+						<span></span>
+					</button>
+
+					<div>
+						<h1>Administración de pedidos</h1>
+						<p>Consulta, filtra y actualiza pedidos de Dulce Mordisco.</p>
+					</div>
 				</div>
 
 				<div class="topbar-actions">
@@ -146,6 +156,21 @@
 						<div class="detail-box">
 							<strong>Cliente</strong>
 							<span id="detalleCliente">-</span>
+						</div>
+
+						<div class="detail-box">
+							<strong>Tipo de cliente</strong>
+							<span id="detalleTipoCliente">-</span>
+						</div>
+
+						<div class="detail-box">
+							<strong>Correo</strong>
+							<span id="detalleCorreo">-</span>
+						</div>
+
+						<div class="detail-box">
+							<strong>Teléfono</strong>
+							<span id="detalleTelefono">-</span>
 						</div>
 
 						<div class="detail-box">

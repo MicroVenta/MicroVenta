@@ -11,7 +11,7 @@ const modalBackdrop = document.getElementById('modalBackdrop');
 const selectRol = document.getElementById('id_rol');
 
 const btnMenu = document.getElementById('btnMenu');
-const sidebar = document.getElementById('sidebar');
+const sidebar = document.getElementById('sidebarContainer');
 const mobileOverlay = document.getElementById('mobileOverlay');
 
 let usuarios = [];
@@ -48,6 +48,22 @@ function cerrarMenuMovil() {
 	document.body.style.overflow = '';
 }
 
+function vincularCierreMenuEnSidebar() {
+	if (!sidebar) {
+		return;
+	}
+
+	const enlacesSidebar = sidebar.querySelectorAll('a, button');
+
+	enlacesSidebar.forEach((elemento) => {
+		elemento.addEventListener('click', () => {
+			if (window.innerWidth <= 900) {
+				cerrarMenuMovil();
+			}
+		});
+	});
+}
+
 if (btnMenu) {
 	btnMenu.addEventListener('click', () => {
 		if (sidebar.classList.contains('sidebar-open')) {
@@ -74,12 +90,14 @@ window.addEventListener('resize', () => {
 
 function abrirModal() {
 	modalUsuario.classList.remove('hidden');
+	document.body.style.overflow = 'hidden';
 }
 
 function cerrarModal() {
 	modalUsuario.classList.add('hidden');
 	usuarioForm.reset();
 	document.getElementById('id_usuario').value = '';
+	document.body.style.overflow = '';
 }
 
 /* =========================
@@ -171,11 +189,11 @@ function renderUsuarios(filtro = '') {
 		const tr = document.createElement('tr');
 
 		tr.innerHTML = `
-			<td>${usuario.id_usuario}</td>
-			<td>${usuario.nombre_completo}</td>
-			<td>${usuario.correo}</td>
-			<td><span class="badge-role">${usuario.rol?.nombre_rol ?? 'Sin rol'}</span></td>
-			<td>
+			<td data-label="ID">${usuario.id_usuario}</td>
+			<td data-label="Nombre completo">${usuario.nombre_completo}</td>
+			<td data-label="Correo">${usuario.correo}</td>
+			<td data-label="Rol"><span class="badge-role">${usuario.rol?.nombre_rol ?? 'Sin rol'}</span></td>
+			<td data-label="Acciones">
 				<div class="actions">
 					<button class="btn-edit" onclick="editarUsuario(${usuario.id_usuario})">Editar</button>
 					<button class="btn-delete" onclick="eliminarUsuario(${usuario.id_usuario})">Eliminar</button>
@@ -292,6 +310,16 @@ searchInput.addEventListener('input', (e) => {
 	renderUsuarios(e.target.value);
 });
 
+document.addEventListener('keydown', (e) => {
+	if (e.key === 'Escape' && !modalUsuario.classList.contains('hidden')) {
+		cerrarModal();
+	}
+
+	if (e.key === 'Escape' && sidebar.classList.contains('sidebar-open')) {
+		cerrarMenuMovil();
+	}
+});
+
 /* =========================
 	INIT
 ========================= */
@@ -299,6 +327,7 @@ searchInput.addEventListener('input', (e) => {
 async function init() {
 	await cargarRoles();
 	await cargarUsuarios();
+	vincularCierreMenuEnSidebar();
 }
 
 init();

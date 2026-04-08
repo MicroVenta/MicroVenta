@@ -263,6 +263,38 @@ function obtenerClaseBadge(pedido) {
 	return 'badge-pendiente';
 }
 
+function esPedidoInvitado(pedido) {
+	return pedido?.invitado != null;
+}
+
+function obtenerNombreCliente(pedido) {
+	if (esPedidoInvitado(pedido)) {
+		return pedido.invitado?.nombre_invitado ?? 'Invitado';
+	}
+
+	return pedido.cliente?.nombre_completo ?? 'Cliente no disponible';
+}
+
+function obtenerTelefonoCliente(pedido) {
+	if (esPedidoInvitado(pedido)) {
+		return pedido.invitado?.telefono_contacto ?? 'Sin teléfono';
+	}
+
+	return pedido.cliente?.telefono ?? 'Sin teléfono';
+}
+
+function obtenerCorreoCliente(pedido) {
+	if (esPedidoInvitado(pedido)) {
+		return pedido.invitado?.correo_contacto ?? 'Sin correo';
+	}
+
+	return 'Sin correo';
+}
+
+function obtenerTipoCliente(pedido) {
+	return esPedidoInvitado(pedido) ? 'Invitado' : 'Registrado';
+}
+
 function obtenerProductosPedido(detalles) {
 	if (!detalles || detalles.length === 0) {
 		return [];
@@ -410,9 +442,10 @@ function renderizarListaPedidos(pedidos) {
 	listaPedidos.innerHTML = pedidos.map((pedido) => {
 		const estatusActual = obtenerDescripcionEstatus(pedido);
 		const productos = obtenerProductosPedido(pedido.detallepedido);
-		const cliente = pedido.cliente?.nombre_completo ?? 'Cliente no disponible';
+		const cliente = obtenerNombreCliente(pedido);
+		const tipoCliente = obtenerTipoCliente(pedido);
 		const direccion = pedido.lugar_entrega ?? 'Lugar de entrega no registrado';
-		const telefono = pedido.cliente?.telefono ?? 'Sin teléfono';
+		const telefono = obtenerTelefonoCliente(pedido);
 		const fechaEntrega = pedido.fecha_entrega_aproximada
 			? formatearFechaCorta(pedido.fecha_entrega_aproximada)
 			: 'Sin definir';
@@ -427,6 +460,7 @@ function renderizarListaPedidos(pedidos) {
 
 				<div class="order-meta">
 					<p><strong>Cliente:</strong> ${escaparHtml(cliente)}</p>
+					<p><strong>Tipo:</strong> ${escaparHtml(tipoCliente)}</p>
 					<p><strong>Fecha pedido:</strong> ${formatearFecha(pedido.fecha_pedido)}</p>
 					<p><strong>Entrega:</strong> ${fechaEntrega}</p>
 					<p><strong>Lugar de entrega:</strong> ${escaparHtml(direccion)}</p>
@@ -504,17 +538,19 @@ function aplicarFiltros() {
 	if (textoBusqueda) {
 		pedidosFiltrados = pedidosFiltrados.filter((pedido) => {
 			const idPedido = String(pedido.id_pedido ?? '').toLowerCase();
-			const cliente = (pedido.cliente?.nombre_completo ?? '').toLowerCase();
-			const direccion = (pedido.lugar_entrega ?? '').toLowerCase();
-			const telefono = (pedido.cliente?.telefono ?? '').toLowerCase();
+			const cliente = obtenerNombreCliente(pedido).toLowerCase();
+			const direccion = String(pedido.lugar_entrega ?? '').toLowerCase();
+			const telefono = obtenerTelefonoCliente(pedido).toLowerCase();
 			const estatus = obtenerDescripcionEstatus(pedido).toLowerCase();
+			const tipoCliente = obtenerTipoCliente(pedido).toLowerCase();
 
 			return (
 				idPedido.includes(textoBusqueda) ||
 				cliente.includes(textoBusqueda) ||
 				direccion.includes(textoBusqueda) ||
 				telefono.includes(textoBusqueda) ||
-				estatus.includes(textoBusqueda)
+				estatus.includes(textoBusqueda) ||
+				tipoCliente.includes(textoBusqueda)
 			);
 		});
 	}
@@ -867,7 +903,7 @@ async function mostrarRutaPedido(pedido) {
 	}
 
 	if (rutaClienteNombre) {
-		rutaClienteNombre.textContent = pedido.cliente?.nombre_completo ?? 'Cliente no disponible';
+		rutaClienteNombre.textContent = obtenerNombreCliente(pedido);
 	}
 
 	if (rutaDistancia) {
@@ -941,6 +977,8 @@ async function cargarPedidosRepartidor() {
 			.from('pedido')
 			.select(`
 				id_pedido,
+				id_cliente,
+				id_invitado,
 				fecha_pedido,
 				fecha_entrega_aproximada,
 				lugar_entrega,
@@ -955,6 +993,13 @@ async function cargarPedidosRepartidor() {
 					id_usuario,
 					nombre_completo,
 					telefono
+				),
+				invitado:invitado!pedido_id_invitado_fkey (
+					id_invitado,
+					nombre_invitado,
+					correo_contacto,
+					telefono_contacto,
+					direccion_contacto
 				),
 				detallepedido (
 					id_detalle,
@@ -1121,26 +1166,31 @@ if (btnOrigenActual) {
 
 if (btnRecalcularRuta) {
 	btnRecalcularRuta.addEventListener('click', async () => {
-		if (pedidoRutaActual) {
-			await mostrarRutaPedido(pedidoRutaActual);
+		if (!pedidoRutaActual) {
+			mostrarMensajeRuta('Selecciona un pedido para calcular la ruta.', 'error');
+			return;
 		}
+
+		await mostrarRutaPedido(pedidoRutaActual);
 	});
 }
 
 if (btnAbrirRutaExterna) {
 	btnAbrirRutaExterna.addEventListener('click', () => {
-		if (ultimaRutaExterna) {
-			window.open(ultimaRutaExterna, '_blank');
+		if (!ultimaRutaExterna) {
+			mostrarMensajeRuta('No hay una ruta calculada para abrir.', 'error');
+			return;
 		}
+
+		window.open(ultimaRutaExterna, '_blank');
 	});
 }
 
-animarTarjetas();
-actualizarBotonesOrigen();
-inicializarMapaRuta();
-limpiarResumenRuta();
-
-(async function init() {
+document.addEventListener('DOMContentLoaded', async () => {
+	animarTarjetas();
+	inicializarMapaRuta();
+	limpiarResumenRuta();
+	actualizarBotonesOrigen();
 	await cargarCatalogoEstatus();
 	await cargarPedidosRepartidor();
-})();
+});

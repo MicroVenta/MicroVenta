@@ -19,6 +19,9 @@ const btnCerrarModal = document.getElementById('btnCerrarModal');
 
 const detalleIdPedido = document.getElementById('detalleIdPedido');
 const detalleCliente = document.getElementById('detalleCliente');
+const detalleTipoCliente = document.getElementById('detalleTipoCliente');
+const detalleCorreo = document.getElementById('detalleCorreo');
+const detalleTelefono = document.getElementById('detalleTelefono');
 const detalleFecha = document.getElementById('detalleFecha');
 const detalleFechaEntrega = document.getElementById('detalleFechaEntrega');
 const detalleTipoPedido = document.getElementById('detalleTipoPedido');
@@ -36,6 +39,10 @@ const grupoFechaEntrega = document.getElementById('grupoFechaEntrega');
 
 const btnGuardarCambiosPedido = document.getElementById('btnGuardarCambiosPedido');
 const mensajeAccion = document.getElementById('mensajeAccion');
+
+const btnMenu = document.getElementById('btnMenu');
+const sidebar = document.getElementById('sidebarContainer');
+const mobileOverlay = document.getElementById('mobileOverlay');
 
 const usuarioGuardado =
 	sessionStorage.getItem('microventa_usuario') ||
@@ -98,6 +105,66 @@ if (btnCerrarSesion) {
 	btnCerrarSesion.addEventListener('click', cerrarSesion);
 }
 
+/* =========================
+	MENÚ MÓVIL
+========================= */
+
+function abrirMenuMovil() {
+	if (!sidebar || !mobileOverlay) {
+		return;
+	}
+
+	sidebar.classList.add('sidebar-open');
+	mobileOverlay.classList.remove('hidden');
+	document.body.style.overflow = 'hidden';
+}
+
+function cerrarMenuMovil() {
+	if (!sidebar || !mobileOverlay) {
+		return;
+	}
+
+	sidebar.classList.remove('sidebar-open');
+	mobileOverlay.classList.add('hidden');
+	document.body.style.overflow = '';
+}
+
+function vincularCierreMenuEnSidebar() {
+	if (!sidebar) {
+		return;
+	}
+
+	const enlacesSidebar = sidebar.querySelectorAll('a, button');
+
+	enlacesSidebar.forEach((elemento) => {
+		elemento.addEventListener('click', () => {
+			if (window.innerWidth <= 900) {
+				cerrarMenuMovil();
+			}
+		});
+	});
+}
+
+if (btnMenu) {
+	btnMenu.addEventListener('click', () => {
+		if (sidebar.classList.contains('sidebar-open')) {
+			cerrarMenuMovil();
+		} else {
+			abrirMenuMovil();
+		}
+	});
+}
+
+if (mobileOverlay) {
+	mobileOverlay.addEventListener('click', cerrarMenuMovil);
+}
+
+window.addEventListener('resize', () => {
+	if (window.innerWidth > 900) {
+		cerrarMenuMovil();
+	}
+});
+
 function formatearMoneda(valor) {
 	return `$${Number(valor ?? 0).toFixed(2)}`;
 }
@@ -146,8 +213,36 @@ function mostrarMensajeAccion(tipo, texto) {
 	}
 }
 
+function esPedidoInvitado(pedido) {
+	return pedido?.invitado != null;
+}
+
 function obtenerNombreCliente(pedido) {
+	if (esPedidoInvitado(pedido)) {
+		return pedido.invitado?.nombre_invitado ?? 'Invitado';
+	}
+
 	return pedido.cliente?.nombre_completo ?? 'Cliente no disponible';
+}
+
+function obtenerCorreoCliente(pedido) {
+	if (esPedidoInvitado(pedido)) {
+		return pedido.invitado?.correo_contacto ?? 'Sin correo';
+	}
+
+	return pedido.cliente?.correo ?? 'Sin correo';
+}
+
+function obtenerTelefonoCliente(pedido) {
+	if (esPedidoInvitado(pedido)) {
+		return pedido.invitado?.telefono_contacto ?? 'Sin teléfono';
+	}
+
+	return pedido.cliente?.telefono ?? 'Sin teléfono';
+}
+
+function obtenerTipoCliente(pedido) {
+	return esPedidoInvitado(pedido) ? 'Invitado' : 'Registrado';
 }
 
 function obtenerNombreRepartidor(pedido) {
@@ -287,6 +382,7 @@ function renderizarPedidos(pedidos) {
 
 	tablaPedidosBody.innerHTML = pedidos.map((pedido) => {
 		const nombreCliente = obtenerNombreCliente(pedido);
+		const correoCliente = obtenerCorreoCliente(pedido);
 		const nombreRepartidor = obtenerNombreRepartidor(pedido);
 		const nombreEstatus = obtenerDescripcionEstatus(pedido);
 		const cantidadProductos = Array.isArray(pedido.detalles) ? pedido.detalles.length : 0;
@@ -294,27 +390,31 @@ function renderizarPedidos(pedidos) {
 		const fechaEntrega = pedido.fecha_entrega_aproximada
 			? formatearFecha(pedido.fecha_entrega_aproximada)
 			: 'Sin definir';
+		const etiquetaTipoCliente = esPedidoInvitado(pedido)
+			? '<div class="order-subtext">Invitado</div>'
+			: '';
 
 		return `
 			<tr class="order-row" data-id="${pedido.id_pedido}" tabindex="0">
-				<td>
+				<td data-label="Pedido">
 					<div class="order-id">#${pedido.id_pedido}</div>
 					<div class="order-subtext">${cantidadProductos} producto(s)</div>
 					${pedido.personalizado ? '<div class="badge badge-personalizado">Personalizado</div>' : ''}
 				</td>
 
-				<td>
+				<td data-label="Cliente">
 					<div class="order-id">${nombreCliente}</div>
-					<div class="order-subtext">${pedido.cliente?.correo ?? 'Sin correo'}</div>
+					<div class="order-subtext">${correoCliente}</div>
+					${etiquetaTipoCliente}
 				</td>
 
-				<td>${formatearFecha(pedido.fecha_pedido)}</td>
-				<td>${fechaEntrega}</td>
-				<td>${lugarEntrega}</td>
-				<td>${formatearMoneda(pedido.total_pagar)}</td>
-				<td>${nombreRepartidor}</td>
+				<td data-label="Fecha pedido">${formatearFecha(pedido.fecha_pedido)}</td>
+				<td data-label="Entrega">${fechaEntrega}</td>
+				<td data-label="Lugar">${lugarEntrega}</td>
+				<td data-label="Total">${formatearMoneda(pedido.total_pagar)}</td>
+				<td data-label="Repartidor">${nombreRepartidor}</td>
 
-				<td>
+				<td data-label="Estatus">
 					<span class="${obtenerClaseBadgeEstatus(nombreEstatus)}">
 						${nombreEstatus}
 					</span>
@@ -364,12 +464,14 @@ function aplicarFiltrosInterno() {
 			const bloqueBusqueda = [
 				String(pedido.id_pedido),
 				obtenerNombreCliente(pedido),
+				obtenerCorreoCliente(pedido),
+				obtenerTelefonoCliente(pedido),
 				obtenerNombreRepartidor(pedido),
 				obtenerDescripcionEstatus(pedido),
-				pedido.cliente?.correo ?? '',
 				pedido.lugar_entrega ?? '',
 				pedido.fecha_entrega_aproximada ?? '',
-				pedido.personalizado ? 'personalizado' : 'normal'
+				pedido.personalizado ? 'personalizado' : 'normal',
+				esPedidoInvitado(pedido) ? 'invitado' : 'registrado'
 			].join(' ');
 
 			return normalizarTexto(bloqueBusqueda).includes(texto);
@@ -473,6 +575,9 @@ function abrirModalPedido(pedido) {
 
 	detalleIdPedido.textContent = `#${pedido.id_pedido}`;
 	detalleCliente.textContent = obtenerNombreCliente(pedido);
+	detalleTipoCliente.textContent = obtenerTipoCliente(pedido);
+	detalleCorreo.textContent = obtenerCorreoCliente(pedido);
+	detalleTelefono.textContent = obtenerTelefonoCliente(pedido);
 	detalleFecha.textContent = formatearFecha(pedido.fecha_pedido);
 	detalleFechaEntrega.textContent = pedido.fecha_entrega_aproximada
 		? formatearFecha(pedido.fecha_entrega_aproximada)
@@ -546,6 +651,7 @@ async function cargarPedidos() {
 		.select(`
 			id_pedido,
 			id_cliente,
+			id_invitado,
 			id_repartidor,
 			fecha_pedido,
 			fecha_entrega_aproximada,
@@ -556,7 +662,15 @@ async function cargarPedidos() {
 			cliente:usuario!pedido_id_cliente_fkey (
 				id_usuario,
 				nombre_completo,
-				correo
+				correo,
+				telefono
+			),
+			invitado:invitado!pedido_id_invitado_fkey (
+				id_invitado,
+				nombre_invitado,
+				correo_contacto,
+				telefono_contacto,
+				direccion_contacto
 			),
 			repartidor:usuario!pedido_id_repartidor_fkey (
 				id_usuario,
@@ -709,6 +823,10 @@ document.addEventListener('keydown', (event) => {
 	if (event.key === 'Escape' && !modalPedido.classList.contains('hidden')) {
 		cerrarModalPedido();
 	}
+
+	if (event.key === 'Escape' && sidebar.classList.contains('sidebar-open')) {
+		cerrarMenuMovil();
+	}
 });
 
 async function inicializarPantalla() {
@@ -719,6 +837,7 @@ async function inicializarPantalla() {
 		]);
 
 		await cargarPedidos();
+		vincularCierreMenuEnSidebar();
 	} catch (error) {
 		console.error('Error al inicializar pedidos:', error);
 	}

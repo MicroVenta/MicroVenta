@@ -27,6 +27,10 @@ const ingresoCategoriaLider = document.getElementById('ingresoCategoriaLider');
 const productoLider = document.getElementById('productoLider');
 const clienteLider = document.getElementById('clienteLider');
 
+const btnMenu = document.getElementById('btnMenu');
+const sidebar = document.getElementById('sidebarContainer');
+const mobileOverlay = document.getElementById('mobileOverlay');
+
 const usuarioGuardado =
 	sessionStorage.getItem('microventa_usuario') ||
 	localStorage.getItem('microventa_usuario');
@@ -71,6 +75,66 @@ if (btnCerrarSesion) {
 	btnCerrarSesion.addEventListener('click', cerrarSesion);
 }
 
+/* =========================
+	MENÚ MÓVIL
+========================= */
+
+function abrirMenuMovil() {
+	if (!sidebar || !mobileOverlay) {
+		return;
+	}
+
+	sidebar.classList.add('sidebar-open');
+	mobileOverlay.classList.remove('hidden');
+	document.body.style.overflow = 'hidden';
+}
+
+function cerrarMenuMovil() {
+	if (!sidebar || !mobileOverlay) {
+		return;
+	}
+
+	sidebar.classList.remove('sidebar-open');
+	mobileOverlay.classList.add('hidden');
+	document.body.style.overflow = '';
+}
+
+function vincularCierreMenuEnSidebar() {
+	if (!sidebar) {
+		return;
+	}
+
+	const enlacesSidebar = sidebar.querySelectorAll('a, button');
+
+	enlacesSidebar.forEach((elemento) => {
+		elemento.addEventListener('click', () => {
+			if (window.innerWidth <= 900) {
+				cerrarMenuMovil();
+			}
+		});
+	});
+}
+
+if (btnMenu) {
+	btnMenu.addEventListener('click', () => {
+		if (sidebar.classList.contains('sidebar-open')) {
+			cerrarMenuMovil();
+		} else {
+			abrirMenuMovil();
+		}
+	});
+}
+
+if (mobileOverlay) {
+	mobileOverlay.addEventListener('click', cerrarMenuMovil);
+}
+
+window.addEventListener('resize', () => {
+	if (window.innerWidth > 900) {
+		cerrarMenuMovil();
+	}
+});
+
 function mostrarMensaje(tipo, texto) {
 	mensajeReporte.className = 'message';
 	mensajeReporte.textContent = '';
@@ -113,6 +177,30 @@ function formatearFechaSoloDia(fecha) {
 
 function normalizarTexto(texto) {
 	return String(texto ?? '').trim().toLowerCase();
+}
+
+function esPedidoInvitado(pedido) {
+	return pedido?.invitado != null;
+}
+
+function obtenerNombreCliente(pedido) {
+	if (esPedidoInvitado(pedido)) {
+		return pedido.invitado?.nombre_invitado ?? 'Invitado';
+	}
+
+	return pedido.cliente?.nombre_completo ?? 'Cliente no disponible';
+}
+
+function obtenerCorreoCliente(pedido) {
+	if (esPedidoInvitado(pedido)) {
+		return pedido.invitado?.correo_contacto ?? 'Sin correo';
+	}
+
+	return pedido.cliente?.correo ?? 'Sin correo';
+}
+
+function obtenerTipoCliente(pedido) {
+	return esPedidoInvitado(pedido) ? 'Invitado' : 'Registrado';
 }
 
 function obtenerClaseBadgeEstatus(descripcion) {
@@ -354,19 +442,24 @@ function obtenerTopClientes(pedidos) {
 	const mapa = {};
 
 	pedidos.forEach((pedido) => {
-		const idCliente = pedido.id_cliente ?? 0;
-		const nombre = pedido.cliente?.nombre_completo ?? 'Cliente no disponible';
+		const llaveCliente = esPedidoInvitado(pedido)
+			? `invitado_${pedido.id_invitado ?? pedido.invitado?.id_invitado ?? 'sin_id'}`
+			: `cliente_${pedido.id_cliente ?? pedido.cliente?.id_usuario ?? 'sin_id'}`;
 
-		if (!mapa[idCliente]) {
-			mapa[idCliente] = {
+		const nombre = obtenerNombreCliente(pedido);
+		const tipoCliente = obtenerTipoCliente(pedido);
+
+		if (!mapa[llaveCliente]) {
+			mapa[llaveCliente] = {
 				nombre,
+				tipoCliente,
 				cantidadPedidos: 0,
 				totalGastado: 0
 			};
 		}
 
-		mapa[idCliente].cantidadPedidos += 1;
-		mapa[idCliente].totalGastado += Number(pedido.total_pagar ?? 0);
+		mapa[llaveCliente].cantidadPedidos += 1;
+		mapa[llaveCliente].totalGastado += Number(pedido.total_pagar ?? 0);
 	});
 
 	return Object.values(mapa)
@@ -390,7 +483,9 @@ function renderizarTopClientes(pedidos) {
 					<div class="rank-number">${index + 1}</div>
 					<div class="rank-info">
 						<div class="rank-title">${item.nombre}</div>
-						<div class="rank-subtitle">Total comprado: ${formatearMoneda(item.totalGastado)}</div>
+						<div class="rank-subtitle">
+							${item.tipoCliente} · Total comprado: ${formatearMoneda(item.totalGastado)}
+						</div>
 					</div>
 				</div>
 
@@ -419,16 +514,18 @@ function renderizarPedidosRecientes(pedidos) {
 
 	tablaPedidosRecientes.innerHTML = recientes.map((pedido) => {
 		const estatus = pedido.estatus?.descripcion ?? 'Sin estatus';
+		const nombreCliente = obtenerNombreCliente(pedido);
+		const tipoCliente = obtenerTipoCliente(pedido);
 
 		return `
 			<tr>
-				<td>#${pedido.id_pedido}</td>
-				<td>${pedido.cliente?.nombre_completo ?? 'Cliente no disponible'}</td>
-				<td>${formatearFecha(pedido.fecha_pedido)}</td>
-				<td>
+				<td data-label="Pedido">#${pedido.id_pedido}</td>
+				<td data-label="Cliente">${nombreCliente} (${tipoCliente})</td>
+				<td data-label="Fecha">${formatearFecha(pedido.fecha_pedido)}</td>
+				<td data-label="Estatus">
 					<span class="${obtenerClaseBadgeEstatus(estatus)}">${estatus}</span>
 				</td>
-				<td>${formatearMoneda(pedido.total_pagar)}</td>
+				<td data-label="Total">${formatearMoneda(pedido.total_pagar)}</td>
 			</tr>
 		`;
 	}).join('');
@@ -592,6 +689,7 @@ async function cargarPedidos() {
 		.select(`
 			id_pedido,
 			id_cliente,
+			id_invitado,
 			id_repartidor,
 			fecha_pedido,
 			total_pagar,
@@ -600,6 +698,13 @@ async function cargarPedidos() {
 				id_usuario,
 				nombre_completo,
 				correo
+			),
+			invitado:invitado!pedido_id_invitado_fkey (
+				id_invitado,
+				nombre_invitado,
+				correo_contacto,
+				telefono_contacto,
+				direccion_contacto
 			),
 			estatus:estatuspedido!pedido_id_estatus_fkey (
 				id_estatus,
@@ -652,10 +757,17 @@ btnLimpiarFiltros.addEventListener('click', () => {
 	renderizarReporte();
 });
 
+document.addEventListener('keydown', (event) => {
+	if (event.key === 'Escape' && sidebar.classList.contains('sidebar-open')) {
+		cerrarMenuMovil();
+	}
+});
+
 async function inicializarPantalla() {
 	try {
 		asignarRangoInicial();
 		await cargarPedidos();
+		vincularCierreMenuEnSidebar();
 	} catch (error) {
 		console.error('Error al inicializar reportes:', error);
 		mostrarMensaje('error', 'Ocurrió un error al inicializar la pantalla de reportes.');
