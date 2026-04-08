@@ -79,7 +79,12 @@
 				</div>
 
 				<div class="right-column">
-					<section class="card cart-card">
+					<section
+						class="card cart-card"
+						id="cartCard"
+						tabindex="-1"
+						aria-label="Carrito de compra"
+					>
 						<div class="section-header">
 							<div>
 								<h2>Mi pedido</h2>
@@ -155,6 +160,15 @@
 			</section>
 		</main>
 	</div>
+
+	<button
+		id="btnIrCarritoMovil"
+		class="mobile-cart-button hidden"
+		type="button"
+		aria-label="Ir al carrito"
+	>
+		Ver carrito (<span id="mobileCartCount">0</span>)
+	</button>
 
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 	<script src="/conexion.js"></script>

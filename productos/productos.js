@@ -23,6 +23,10 @@ const btnMenu = document.getElementById('btnMenu');
 const sidebar = document.getElementById('sidebarContainer');
 const mobileOverlay = document.getElementById('mobileOverlay');
 
+const cartCard = document.getElementById('cartCard');
+const btnIrCarritoMovil = document.getElementById('btnIrCarritoMovil');
+const mobileCartCount = document.getElementById('mobileCartCount');
+
 const usuarioGuardado =
 	sessionStorage.getItem('microventa_usuario') ||
 	localStorage.getItem('microventa_usuario');
@@ -202,6 +206,8 @@ window.addEventListener('resize', () => {
 	if (window.innerWidth > 900) {
 		cerrarMenuMovil();
 	}
+
+	actualizarBotonCarritoMovil();
 });
 
 function obtenerClaveCarrito() {
@@ -269,6 +275,75 @@ function obtenerTelefonoCapturado() {
 
 function tieneTelefonoRegistrado() {
 	return obtenerTelefonoCapturado() !== '';
+}
+
+function esVistaMovilCarrito() {
+	return window.matchMedia('(max-width: 900px), (max-height: 500px)').matches;
+}
+
+function obtenerCantidadTotalCarrito() {
+	return carrito.reduce((total, item) => total + Number(item.cantidad ?? 0), 0);
+}
+
+function resaltarCarrito() {
+	if (!cartCard) {
+		return;
+	}
+
+	cartCard.classList.remove('cart-highlight');
+	void cartCard.offsetWidth;
+	cartCard.classList.add('cart-highlight');
+
+	window.clearTimeout(resaltarCarrito._timer);
+	resaltarCarrito._timer = window.setTimeout(() => {
+		cartCard.classList.remove('cart-highlight');
+	}, 1400);
+}
+
+function resaltarBotonCarritoMovil() {
+	if (!btnIrCarritoMovil || btnIrCarritoMovil.classList.contains('hidden')) {
+		return;
+	}
+
+	btnIrCarritoMovil.classList.remove('mobile-cart-button-highlight');
+	void btnIrCarritoMovil.offsetWidth;
+	btnIrCarritoMovil.classList.add('mobile-cart-button-highlight');
+
+	window.clearTimeout(resaltarBotonCarritoMovil._timer);
+	resaltarBotonCarritoMovil._timer = window.setTimeout(() => {
+		btnIrCarritoMovil.classList.remove('mobile-cart-button-highlight');
+	}, 700);
+}
+
+function enfocarCarrito() {
+	if (!cartCard) {
+		return;
+	}
+
+	cartCard.scrollIntoView({
+		behavior: 'smooth',
+		block: 'start'
+	});
+
+	window.setTimeout(() => {
+		cartCard.focus({ preventScroll: true });
+		resaltarCarrito();
+	}, 350);
+}
+
+function actualizarBotonCarritoMovil() {
+	if (!btnIrCarritoMovil || !mobileCartCount) {
+		return;
+	}
+
+	const cantidadTotal = obtenerCantidadTotalCarrito();
+	mobileCartCount.textContent = cantidadTotal.toString();
+
+	if (esVistaMovilCarrito() && cantidadTotal > 0) {
+		btnIrCarritoMovil.classList.remove('hidden');
+	} else {
+		btnIrCarritoMovil.classList.add('hidden');
+	}
 }
 
 function actualizarInfoTelefono() {
@@ -419,6 +494,12 @@ function agregarAlCarrito(idProducto) {
 	guardarCarrito();
 	renderizarCarrito();
 	renderizarProductos(aplicarFiltrosInterno());
+
+	if (esVistaMovilCarrito()) {
+		resaltarBotonCarritoMovil();
+	} else {
+		resaltarCarrito();
+	}
 }
 
 function disminuirCantidad(idProducto) {
@@ -493,6 +574,7 @@ function renderizarCarrito() {
 			carritoTotal.textContent = '$0.00';
 		}
 
+		actualizarBotonCarritoMovil();
 		return;
 	}
 
@@ -566,6 +648,8 @@ function renderizarCarrito() {
 	if (carritoTotal) {
 		carritoTotal.textContent = formatearMoneda(total);
 	}
+
+	actualizarBotonCarritoMovil();
 
 	const botonesCarrito = carritoLista.querySelectorAll('[data-action]');
 
@@ -958,6 +1042,10 @@ if (usarDireccionPerfil) {
 	usarDireccionPerfil.addEventListener('change', actualizarEstadoLugarEntrega);
 }
 
+if (btnIrCarritoMovil) {
+	btnIrCarritoMovil.addEventListener('click', enfocarCarrito);
+}
+
 (async function init() {
 	cargarCarrito();
 	renderizarCarrito();
@@ -966,4 +1054,5 @@ if (usarDireccionPerfil) {
 	cargarCategorias();
 	cargarProductos();
 	vincularCierreMenuEnSidebar();
+	actualizarBotonCarritoMovil();
 })();

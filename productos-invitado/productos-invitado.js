@@ -15,6 +15,10 @@ const correoPedido = document.getElementById('correoPedido');
 const telefonoPedido = document.getElementById('telefonoPedido');
 const lugarEntrega = document.getElementById('lugarEntrega');
 
+const cartCard = document.getElementById('cartCard');
+const btnIrCarritoMovil = document.getElementById('btnIrCarritoMovil');
+const mobileCartCount = document.getElementById('mobileCartCount');
+
 const modalConfirmacion = document.getElementById('modalConfirmacion');
 const btnCerrarModal = document.getElementById('btnCerrarModal');
 
@@ -147,6 +151,75 @@ function cargarCarrito() {
 	}
 }
 
+function esVistaMovilCarrito() {
+	return window.matchMedia('(max-width: 900px), (max-height: 500px)').matches;
+}
+
+function obtenerCantidadTotalCarrito() {
+	return carrito.reduce((total, item) => total + Number(item.cantidad ?? 0), 0);
+}
+
+function resaltarCarrito() {
+	if (!cartCard) {
+		return;
+	}
+
+	cartCard.classList.remove('cart-highlight');
+	void cartCard.offsetWidth;
+	cartCard.classList.add('cart-highlight');
+
+	window.clearTimeout(resaltarCarrito._timer);
+	resaltarCarrito._timer = window.setTimeout(() => {
+		cartCard.classList.remove('cart-highlight');
+	}, 1400);
+}
+
+function resaltarBotonCarritoMovil() {
+	if (!btnIrCarritoMovil || btnIrCarritoMovil.classList.contains('hidden')) {
+		return;
+	}
+
+	btnIrCarritoMovil.classList.remove('mobile-cart-button-highlight');
+	void btnIrCarritoMovil.offsetWidth;
+	btnIrCarritoMovil.classList.add('mobile-cart-button-highlight');
+
+	window.clearTimeout(resaltarBotonCarritoMovil._timer);
+	resaltarBotonCarritoMovil._timer = window.setTimeout(() => {
+		btnIrCarritoMovil.classList.remove('mobile-cart-button-highlight');
+	}, 700);
+}
+
+function enfocarCarrito() {
+	if (!cartCard) {
+		return;
+	}
+
+	cartCard.scrollIntoView({
+		behavior: 'smooth',
+		block: 'start'
+	});
+
+	window.setTimeout(() => {
+		cartCard.focus({ preventScroll: true });
+		resaltarCarrito();
+	}, 350);
+}
+
+function actualizarBotonCarritoMovil() {
+	if (!btnIrCarritoMovil || !mobileCartCount) {
+		return;
+	}
+
+	const cantidadTotal = obtenerCantidadTotalCarrito();
+	mobileCartCount.textContent = cantidadTotal.toString();
+
+	if (esVistaMovilCarrito() && cantidadTotal > 0) {
+		btnIrCarritoMovil.classList.remove('hidden');
+	} else {
+		btnIrCarritoMovil.classList.add('hidden');
+	}
+}
+
 function obtenerStockProducto(producto) {
 	return Number(producto.stock_actual ?? 0);
 }
@@ -207,6 +280,12 @@ function agregarAlCarrito(idProducto) {
 	guardarCarrito();
 	renderizarCarrito();
 	renderizarProductos(aplicarFiltrosInterno());
+
+	if (esVistaMovilCarrito()) {
+		resaltarBotonCarritoMovil();
+	} else {
+		resaltarCarrito();
+	}
 }
 
 function disminuirCantidad(idProducto) {
@@ -275,6 +354,7 @@ function renderizarCarrito() {
 
 		carritoCantidad.textContent = '0';
 		carritoTotal.textContent = '$0.00';
+		actualizarBotonCarritoMovil();
 		return;
 	}
 
@@ -343,6 +423,7 @@ function renderizarCarrito() {
 
 	carritoCantidad.textContent = cantidadTotal.toString();
 	carritoTotal.textContent = formatearMoneda(total);
+	actualizarBotonCarritoMovil();
 
 	const botonesCarrito = carritoLista.querySelectorAll('[data-action]');
 
@@ -875,6 +956,10 @@ async function registrarUsuarioDesdeModal(event) {
 	}
 }
 
+window.addEventListener('resize', () => {
+	actualizarBotonCarritoMovil();
+});
+
 buscarProducto?.addEventListener('input', aplicarFiltros);
 filtroCategoria?.addEventListener('change', aplicarFiltros);
 btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
@@ -886,6 +971,7 @@ btnAbrirRegistroSecundario?.addEventListener('click', abrirModalRegistro);
 btnCerrarRegistro?.addEventListener('click', cerrarModalRegistro);
 btnCancelarRegistro?.addEventListener('click', cerrarModalRegistro);
 formRegistroModal?.addEventListener('submit', registrarUsuarioDesdeModal);
+btnIrCarritoMovil?.addEventListener('click', enfocarCarrito);
 
 modalConfirmacion?.addEventListener('click', (event) => {
 	if (event.target === modalConfirmacion) {
@@ -904,4 +990,5 @@ modalRegistro?.addEventListener('click', (event) => {
 	renderizarCarrito();
 	await cargarCategorias();
 	await cargarProductos();
+	actualizarBotonCarritoMovil();
 })();

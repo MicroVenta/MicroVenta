@@ -36,6 +36,7 @@ const btnOrigenActual = document.getElementById('btnOrigenActual');
 const btnMenu = document.getElementById('btnMenu');
 const sidebar = document.getElementById('sidebarContainer');
 const mobileOverlay = document.getElementById('mobileOverlay');
+const mapCard = document.getElementById('mapCard');
 
 const usuarioGuardado =
 	sessionStorage.getItem('microventa_usuario') ||
@@ -160,6 +161,44 @@ window.addEventListener('resize', () => {
 		cerrarMenuMovil();
 	}
 });
+
+function esVistaMovilMapa() {
+	return window.matchMedia('(max-width: 900px), (max-height: 500px)').matches;
+}
+
+function resaltarMapa() {
+	if (!mapCard) {
+		return;
+	}
+
+	mapCard.classList.remove('map-highlight');
+	void mapCard.offsetWidth;
+	mapCard.classList.add('map-highlight');
+
+	window.clearTimeout(resaltarMapa._timer);
+	resaltarMapa._timer = window.setTimeout(() => {
+		mapCard.classList.remove('map-highlight');
+	}, 1400);
+}
+
+function enfocarMapaEnMovil() {
+	if (!mapCard || !esVistaMovilMapa()) {
+		return;
+	}
+
+	mapCard.scrollIntoView({
+		behavior: 'smooth',
+		block: 'start'
+	});
+
+	window.setTimeout(() => {
+		mapCard.focus({ preventScroll: true });
+		resaltarMapa();
+		if (mapaRuta) {
+			mapaRuta.invalidateSize();
+		}
+	}, 350);
+}
 
 function mostrarMensaje(texto, tipo = 'success') {
 	if (!mensajePedidos) {
@@ -1015,6 +1054,12 @@ async function mostrarRutaPedido(pedido) {
 
 		if (btnAbrirRutaExterna) {
 			btnAbrirRutaExterna.disabled = false;
+		}
+
+		if (esVistaMovilMapa()) {
+			enfocarMapaEnMovil();
+		} else {
+			resaltarMapa();
 		}
 	} catch (error) {
 		console.error('Error al mostrar la ruta del pedido:', error);
