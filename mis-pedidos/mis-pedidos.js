@@ -19,6 +19,10 @@ const mensajePedidos = document.getElementById('mensajePedidos');
 
 const revealCards = document.querySelectorAll('.reveal-card');
 
+const btnMenu = document.getElementById('btnMenu');
+const sidebar = document.getElementById('sidebarContainer');
+const mobileOverlay = document.getElementById('mobileOverlay');
+
 const usuarioGuardado =
 	sessionStorage.getItem('microventa_usuario') ||
 	localStorage.getItem('microventa_usuario');
@@ -87,6 +91,66 @@ if (btnCerrarSesion) {
 if (btnCerrarSesionSidebar) {
 	btnCerrarSesionSidebar.addEventListener('click', cerrarSesion);
 }
+
+/* =========================
+	MENÚ MÓVIL
+========================= */
+
+function abrirMenuMovil() {
+	if (!sidebar || !mobileOverlay) {
+		return;
+	}
+
+	sidebar.classList.add('sidebar-open');
+	mobileOverlay.classList.remove('hidden');
+	document.body.style.overflow = 'hidden';
+}
+
+function cerrarMenuMovil() {
+	if (!sidebar || !mobileOverlay) {
+		return;
+	}
+
+	sidebar.classList.remove('sidebar-open');
+	mobileOverlay.classList.add('hidden');
+	document.body.style.overflow = '';
+}
+
+function vincularCierreMenuEnSidebar() {
+	if (!sidebar) {
+		return;
+	}
+
+	const enlacesSidebar = sidebar.querySelectorAll('a, button');
+
+	enlacesSidebar.forEach((elemento) => {
+		elemento.addEventListener('click', () => {
+			if (window.innerWidth <= 900) {
+				cerrarMenuMovil();
+			}
+		});
+	});
+}
+
+if (btnMenu) {
+	btnMenu.addEventListener('click', () => {
+		if (sidebar.classList.contains('sidebar-open')) {
+			cerrarMenuMovil();
+		} else {
+			abrirMenuMovil();
+		}
+	});
+}
+
+if (mobileOverlay) {
+	mobileOverlay.addEventListener('click', cerrarMenuMovil);
+}
+
+window.addEventListener('resize', () => {
+	if (window.innerWidth > 900) {
+		cerrarMenuMovil();
+	}
+});
 
 function animarTarjetas() {
 	revealCards.forEach((card, index) => {
@@ -684,6 +748,7 @@ async function inicializarPantalla() {
 	animarTarjetas();
 	await cargarEstatus();
 	await cargarPedidosCliente();
+	vincularCierreMenuEnSidebar();
 }
 
 inicializarPantalla();

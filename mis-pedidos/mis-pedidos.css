@@ -50,6 +50,7 @@ body {
 	flex-direction: column;
 	gap: 28px;
 	backdrop-filter: blur(10px);
+	z-index: 1001;
 }
 
 .sidebar-brand {
@@ -125,6 +126,7 @@ body {
 
 .main-content {
 	padding: 28px;
+	min-width: 0;
 }
 
 .topbar {
@@ -134,6 +136,14 @@ body {
 	gap: 18px;
 	flex-wrap: wrap;
 	margin-bottom: 24px;
+}
+
+.topbar-left {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	flex-wrap: wrap;
+	min-width: 0;
 }
 
 .topbar h1 {
@@ -279,6 +289,7 @@ body {
 .banner-mini-card strong {
 	color: var(--cafe-oscuro);
 	font-size: 1rem;
+	word-break: break-word;
 }
 
 .stats-grid {
@@ -313,6 +324,7 @@ body {
 	font-size: 1.5rem;
 	color: var(--cafe-oscuro);
 	margin-bottom: 6px;
+	word-break: break-word;
 }
 
 .stat-box p {
@@ -331,6 +343,7 @@ body {
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
+	min-width: 0;
 }
 
 .form-group label {
@@ -368,6 +381,7 @@ body {
 	font-weight: 600;
 	line-height: 1.5;
 	margin-bottom: 16px;
+	word-break: break-word;
 }
 
 .message.error {
@@ -383,7 +397,7 @@ body {
 }
 
 .hidden {
-	display: none;
+	display: none !important;
 }
 
 .orders-list {
@@ -421,6 +435,7 @@ body {
 	color: var(--cafe-oscuro);
 	font-size: 1.15rem;
 	margin-bottom: 6px;
+	word-break: break-word;
 }
 
 .order-head p {
@@ -486,6 +501,7 @@ body {
 	border: 1px solid rgba(217, 108, 138, 0.12);
 	border-radius: 18px;
 	padding: 14px;
+	min-width: 0;
 }
 
 .summary-chip span {
@@ -589,23 +605,31 @@ body {
 	flex-wrap: wrap;
 }
 
+.product-main,
+.history-main {
+	min-width: 0;
+}
+
 .product-main strong,
 .history-main strong {
 	display: block;
 	color: var(--cafe-oscuro);
 	margin-bottom: 4px;
+	word-break: break-word;
 }
 
 .product-main span,
 .history-main span {
 	color: var(--gris-texto);
 	font-size: 0.94rem;
+	word-break: break-word;
 }
 
 .product-subtotal,
 .history-date {
 	font-weight: 700;
 	color: var(--rosa-oscuro);
+	word-break: break-word;
 }
 
 .empty-orders {
@@ -630,6 +654,38 @@ body {
 	transform: translateY(0);
 }
 
+.menu-toggle {
+	display: none;
+	width: 48px;
+	height: 48px;
+	border: 1px solid rgba(217, 108, 138, 0.14);
+	border-radius: 14px;
+	background: rgba(255, 255, 255, 0.96);
+	cursor: pointer;
+	padding: 0;
+	align-items: center;
+	justify-content: center;
+	flex-direction: column;
+	gap: 5px;
+	box-shadow: 0 8px 18px rgba(120, 72, 92, 0.08);
+}
+
+.menu-toggle span {
+	display: block;
+	width: 20px;
+	height: 2px;
+	border-radius: 999px;
+	background: var(--cafe-oscuro);
+}
+
+.mobile-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(44, 28, 18, 0.35);
+	backdrop-filter: blur(2px);
+	z-index: 1000;
+}
+
 @media (max-width: 1200px) {
 	.stats-grid {
 		grid-template-columns: repeat(2, minmax(180px, 1fr));
@@ -640,18 +696,52 @@ body {
 	}
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 900px) {
 	.dashboard {
 		grid-template-columns: 1fr;
 	}
 
+	.menu-toggle {
+		display: inline-flex;
+	}
+
 	.sidebar {
-		border-right: none;
-		border-bottom: 1px solid rgba(217, 108, 138, 0.12);
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: min(320px, 84vw);
+		height: 100vh;
+		border-right: 1px solid rgba(217, 108, 138, 0.12);
+		border-bottom: none;
+		transform: translateX(-100%);
+		transition: transform 0.28s ease;
+		overflow-y: auto;
+		box-shadow: 18px 0 40px rgba(0, 0, 0, 0.14);
+	}
+
+	.sidebar.sidebar-open {
+		transform: translateX(0);
 	}
 
 	.filters-grid {
 		grid-template-columns: 1fr;
+	}
+
+	.topbar {
+		align-items: flex-start;
+	}
+
+	.topbar-left,
+	.topbar-actions {
+		width: 100%;
+	}
+
+	.topbar-actions {
+		justify-content: flex-start;
+	}
+
+	.client-user {
+		max-width: 100%;
 	}
 }
 
@@ -660,12 +750,18 @@ body {
 		padding: 18px;
 	}
 
+	.topbar {
+		gap: 14px;
+		margin-bottom: 18px;
+	}
+
 	.topbar h1 {
 		font-size: 1.6rem;
 	}
 
 	.card {
 		padding: 20px;
+		border-radius: 20px;
 	}
 
 	.stats-grid,
@@ -675,10 +771,20 @@ body {
 
 	.client-user {
 		max-width: 100%;
+		width: 100%;
 	}
 
 	.banner-content h2 {
 		font-size: 1.55rem;
+	}
+
+	.banner-mini-card {
+		min-width: 100%;
+		width: 100%;
+	}
+
+	.banner-side {
+		width: 100%;
 	}
 
 	.order-actions {
@@ -689,6 +795,23 @@ body {
 	.btn-toggle,
 	.btn-cancel-order {
 		width: 100%;
+		text-align: center;
+	}
+
+	.order-status {
+		width: 100%;
+	}
+
+	.product-row,
+	.history-row {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.product-subtotal,
+	.history-date {
+		width: 100%;
+		text-align: left;
 	}
 }
 

@@ -31,6 +31,10 @@ const sugerenciasDireccion = document.getElementById('sugerenciasDireccion');
 const btnUbicacionActual = document.getElementById('btnUbicacionActual');
 const estadoDireccion = document.getElementById('estadoDireccion');
 
+const btnMenu = document.getElementById('btnMenu');
+const sidebar = document.getElementById('sidebarContainer');
+const mobileOverlay = document.getElementById('mobileOverlay');
+
 const usuarioGuardado =
 	sessionStorage.getItem('microventa_usuario') ||
 	localStorage.getItem('microventa_usuario');
@@ -134,6 +138,66 @@ function cerrarSesion() {
 if (btnCerrarSesion) {
 	btnCerrarSesion.addEventListener('click', cerrarSesion);
 }
+
+/* =========================
+	MENÚ MÓVIL
+========================= */
+
+function abrirMenuMovil() {
+	if (!sidebar || !mobileOverlay) {
+		return;
+	}
+
+	sidebar.classList.add('sidebar-open');
+	mobileOverlay.classList.remove('hidden');
+	document.body.style.overflow = 'hidden';
+}
+
+function cerrarMenuMovil() {
+	if (!sidebar || !mobileOverlay) {
+		return;
+	}
+
+	sidebar.classList.remove('sidebar-open');
+	mobileOverlay.classList.add('hidden');
+	document.body.style.overflow = '';
+}
+
+function vincularCierreMenuEnSidebar() {
+	if (!sidebar) {
+		return;
+	}
+
+	const enlacesSidebar = sidebar.querySelectorAll('a, button');
+
+	enlacesSidebar.forEach((elemento) => {
+		elemento.addEventListener('click', () => {
+			if (window.innerWidth <= 900) {
+				cerrarMenuMovil();
+			}
+		});
+	});
+}
+
+if (btnMenu) {
+	btnMenu.addEventListener('click', () => {
+		if (sidebar.classList.contains('sidebar-open')) {
+			cerrarMenuMovil();
+		} else {
+			abrirMenuMovil();
+		}
+	});
+}
+
+if (mobileOverlay) {
+	mobileOverlay.addEventListener('click', cerrarMenuMovil);
+}
+
+window.addEventListener('resize', () => {
+	if (window.innerWidth > 900) {
+		cerrarMenuMovil();
+	}
+});
 
 function obtenerInicial(nombre) {
 	if (!nombre || typeof nombre !== 'string') {
@@ -308,6 +372,16 @@ function ocultarSugerenciasDireccion() {
 	sugerenciasDireccion.classList.add('hidden');
 }
 
+function partsPushUnico(lista, valor) {
+	if (!valor) {
+		return;
+	}
+
+	if (!lista.includes(valor)) {
+		lista.push(valor);
+	}
+}
+
 function construirTextoSecundarioDireccion(item) {
 	const partes = [];
 
@@ -318,16 +392,6 @@ function construirTextoSecundarioDireccion(item) {
 	if (item.address?.postcode) partsPushUnico(partes, item.address.postcode);
 
 	return partes.join(', ');
-}
-
-function partsPushUnico(lista, valor) {
-	if (!valor) {
-		return;
-	}
-
-	if (!lista.includes(valor)) {
-		lista.push(valor);
-	}
 }
 
 function obtenerTituloDireccion(item) {
@@ -637,6 +701,7 @@ async function cargarPerfil() {
 		guardarEnStorage(usuario);
 		llenarVista(usuario);
 		llenarFormulario(usuario);
+		vincularCierreMenuEnSidebar();
 	} catch (err) {
 		console.error('Error general al cargar perfil:', err);
 		mostrarMensaje('Ocurrió un error al consultar tus datos.', 'error');

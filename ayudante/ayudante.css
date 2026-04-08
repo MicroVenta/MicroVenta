@@ -149,6 +149,13 @@ body {
 	margin-bottom: 24px;
 }
 
+.topbar-left {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	flex-wrap: wrap;
+}
+
 .topbar h1 {
 	font-size: 2rem;
 	color: var(--cafe-oscuro);
@@ -209,6 +216,42 @@ body {
 	box-shadow: var(--sombra);
 	margin-bottom: 24px;
 	backdrop-filter: blur(12px);
+}
+
+.menu-toggle {
+	display: none;
+	width: 46px;
+	height: 46px;
+	border: 1px solid rgba(217, 108, 138, 0.16);
+	background: rgba(255, 255, 255, 0.95);
+	border-radius: 14px;
+	cursor: pointer;
+	padding: 10px;
+	align-items: center;
+	justify-content: center;
+	flex-direction: column;
+	gap: 5px;
+	box-shadow: 0 8px 20px rgba(120, 72, 92, 0.08);
+}
+
+.menu-toggle span {
+	display: block;
+	width: 100%;
+	height: 3px;
+	border-radius: 999px;
+	background: var(--cafe-oscuro);
+}
+
+.mobile-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(60, 35, 45, 0.35);
+	backdrop-filter: blur(2px);
+	z-index: 999;
+}
+
+.hidden {
+	display: none;
 }
 
 .hero-banner {
@@ -648,15 +691,62 @@ body {
 		grid-template-columns: 1fr;
 	}
 
+	.menu-toggle {
+		display: inline-flex;
+	}
+
 	.sidebar {
-		border-right: none;
-		border-bottom: 1px solid rgba(217, 108, 138, 0.12);
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: min(82vw, 320px);
+		height: 100vh;
+		z-index: 1000;
+		border-right: 1px solid rgba(217, 108, 138, 0.12);
+		border-bottom: none;
+		transform: translateX(-100%);
+		transition: transform 0.28s ease;
+		overflow-y: auto;
+		box-shadow: 0 20px 40px rgba(120, 72, 92, 0.18);
+	}
+
+	.sidebar.sidebar-open {
+		transform: translateX(0);
+	}
+
+	.main-content {
+		padding: 22px;
 	}
 }
 
 @media (max-width: 700px) {
 	.main-content {
 		padding: 18px;
+	}
+
+	.topbar {
+		align-items: flex-start;
+	}
+
+	.topbar-left {
+		width: 100%;
+		align-items: flex-start;
+	}
+
+	.topbar-actions {
+		width: 100%;
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.topbar-actions .btn,
+	.admin-user {
+		width: 100%;
+		max-width: 100%;
+	}
+
+	.topbar h1 {
+		font-size: 1.6rem;
 	}
 
 	.hero-banner {
@@ -688,6 +778,14 @@ body {
 		line-height: 1.7;
 	}
 
+	.hero-buttons {
+		flex-direction: column;
+	}
+
+	.hero-btn {
+		width: 100%;
+	}
+
 	.hero-image-card {
 		max-width: 100%;
 		transform: none;
@@ -707,13 +805,5 @@ body {
 		position: static;
 		display: inline-flex;
 		margin-top: 10px;
-	}
-
-	.topbar {
-		align-items: flex-start;
-	}
-
-	.topbar h1 {
-		font-size: 1.6rem;
 	}
 }

@@ -8,14 +8,24 @@
 	<link rel="stylesheet" href="/productos/productos.css">
 </head>
 <body>
+	<div class="mobile-overlay hidden" id="mobileOverlay"></div>
+
 	<div class="dashboard">
 		<aside class="sidebar" id="sidebarContainer"></aside>
 
 		<main class="main-content">
 			<header class="topbar">
-				<div>
-					<h1>Catálogo de productos</h1>
-					<p>Selecciona tus favoritos y arma tu pedido.</p>
+				<div class="topbar-left">
+					<button class="menu-toggle" id="btnMenu" type="button" aria-label="Abrir menú">
+						<span></span>
+						<span></span>
+						<span></span>
+					</button>
+
+					<div>
+						<h1>Catálogo de productos</h1>
+						<p>Selecciona tus favoritos y arma tu pedido.</p>
+					</div>
 				</div>
 
 				<div class="topbar-actions">

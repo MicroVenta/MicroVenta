@@ -8,14 +8,24 @@
 	<link rel="stylesheet" href="/cliente/cliente.css">
 </head>
 <body>
+	<div class="mobile-overlay hidden" id="mobileOverlay"></div>
+
 	<div class="dashboard">
 		<aside class="sidebar" id="sidebarContainer"></aside>
 
 		<main class="main-content">
 			<header class="topbar">
-				<div>
-					<h1>Bienvenido a Dulce Mordisco</h1>
-					<p>Disfruta tus postres favoritos desde MicroVenta.</p>
+				<div class="topbar-left">
+					<button class="menu-toggle" id="btnMenu" type="button" aria-label="Abrir menú">
+						<span></span>
+						<span></span>
+						<span></span>
+					</button>
+
+					<div>
+						<h1>Bienvenido a Dulce Mordisco</h1>
+						<p>Disfruta tus postres favoritos desde MicroVenta.</p>
+					</div>
 				</div>
 
 				<div class="topbar-actions">

@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
 	<meta charset="UTF-8">
 	<link rel="icon" type="image/svg+xml" href="/grafico/Logo_DM.png" />
@@ -8,16 +7,25 @@
 	<title>MicroVenta | Administración de productos</title>
 	<link rel="stylesheet" href="/productos-admin/productos-admin.css">
 </head>
-
 <body>
+	<div class="mobile-overlay hidden" id="mobileOverlay"></div>
+
 	<div class="dashboard">
 		<aside class="sidebar" id="sidebarContainer"></aside>
 
 		<main class="main-content">
 			<header class="topbar">
-				<div>
-					<h1>Administración de productos</h1>
-					<p>Agrega, edita, muestra u oculta productos del catálogo.</p>
+				<div class="topbar-left">
+					<button class="menu-toggle" id="btnMenu" type="button" aria-label="Abrir menú">
+						<span></span>
+						<span></span>
+						<span></span>
+					</button>
+
+					<div>
+						<h1>Administración de productos</h1>
+						<p>Agrega, edita, muestra u oculta productos del catálogo.</p>
+					</div>
 				</div>
 
 				<div class="topbar-actions">
@@ -164,5 +172,4 @@
 	<script src="/sidebar.js"></script>
 	<script src="/productos-admin/productos-admin.js"></script>
 </body>
-
 </html>

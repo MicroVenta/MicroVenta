@@ -8,14 +8,24 @@
 	<link rel="stylesheet" href="/perfil/perfil.css">
 </head>
 <body>
+	<div class="mobile-overlay hidden" id="mobileOverlay"></div>
+
 	<div class="dashboard">
 		<aside class="sidebar" id="sidebarContainer"></aside>
 
 		<main class="main-content">
 			<header class="topbar">
-				<div>
-					<h1>Mi perfil</h1>
-					<p>Consulta y actualiza tus datos personales y de entrega.</p>
+				<div class="topbar-left">
+					<button class="menu-toggle" id="btnMenu" type="button" aria-label="Abrir menú">
+						<span></span>
+						<span></span>
+						<span></span>
+					</button>
+
+					<div>
+						<h1>Mi perfil</h1>
+						<p>Consulta y actualiza tus datos personales y de entrega.</p>
+					</div>
 				</div>
 
 				<div class="topbar-actions">

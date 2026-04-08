@@ -15,6 +15,10 @@ const ultimoPedidoTexto = document.getElementById('ultimoPedidoTexto');
 const estadoPedido = document.getElementById('estadoPedido');
 const listaPedidos = document.getElementById('listaPedidos');
 
+const btnMenu = document.getElementById('btnMenu');
+const sidebar = document.getElementById('sidebarContainer');
+const mobileOverlay = document.getElementById('mobileOverlay');
+
 const usuarioGuardado =
 	sessionStorage.getItem('microventa_usuario') ||
 	localStorage.getItem('microventa_usuario');
@@ -63,6 +67,66 @@ function cerrarSesion() {
 if (btnCerrarSesion) {
 	btnCerrarSesion.addEventListener('click', cerrarSesion);
 }
+
+/* =========================
+	MENÚ MÓVIL
+========================= */
+
+function abrirMenuMovil() {
+	if (!sidebar || !mobileOverlay) {
+		return;
+	}
+
+	sidebar.classList.add('sidebar-open');
+	mobileOverlay.classList.remove('hidden');
+	document.body.style.overflow = 'hidden';
+}
+
+function cerrarMenuMovil() {
+	if (!sidebar || !mobileOverlay) {
+		return;
+	}
+
+	sidebar.classList.remove('sidebar-open');
+	mobileOverlay.classList.add('hidden');
+	document.body.style.overflow = '';
+}
+
+function vincularCierreMenuEnSidebar() {
+	if (!sidebar) {
+		return;
+	}
+
+	const enlacesSidebar = sidebar.querySelectorAll('a, button');
+
+	enlacesSidebar.forEach((elemento) => {
+		elemento.addEventListener('click', () => {
+			if (window.innerWidth <= 900) {
+				cerrarMenuMovil();
+			}
+		});
+	});
+}
+
+if (btnMenu) {
+	btnMenu.addEventListener('click', () => {
+		if (sidebar.classList.contains('sidebar-open')) {
+			cerrarMenuMovil();
+		} else {
+			abrirMenuMovil();
+		}
+	});
+}
+
+if (mobileOverlay) {
+	mobileOverlay.addEventListener('click', cerrarMenuMovil);
+}
+
+window.addEventListener('resize', () => {
+	if (window.innerWidth > 900) {
+		cerrarMenuMovil();
+	}
+});
 
 function animarTextoPorPalabras(elemento, delayBase = 0, paso = 0.12) {
 	if (!elemento) {
@@ -382,3 +446,4 @@ animarTextoPorPalabras(heroTitle, 0, 0.10);
 animarTextoPorPalabras(heroText, 0.65, 0.05);
 animarTarjetas();
 cargarPedidosRepartidor();
+vincularCierreMenuEnSidebar();
