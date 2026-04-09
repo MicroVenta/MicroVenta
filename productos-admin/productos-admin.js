@@ -16,6 +16,9 @@ const btnCancelarEdicion = document.getElementById('btnCancelarEdicion');
 const btnGuardarProducto = document.getElementById('btnGuardarProducto');
 const tituloFormulario = document.getElementById('tituloFormulario');
 const subtituloFormulario = document.getElementById('subtituloFormulario');
+const estadoSinSeleccion = document.getElementById('estadoSinSeleccion');
+const contenedorFormularioEdicion = document.getElementById('contenedorFormularioEdicion');
+const btnMostrarAgregar = document.getElementById('btnMostrarAgregar');
 
 const buscarProducto = document.getElementById('buscarProducto');
 const filtroCategoria = document.getElementById('filtroCategoria');
@@ -38,7 +41,8 @@ const usuarioGuardado =
 let usuario = null;
 let productosOriginales = [];
 let categoriasOriginales = [];
-let modoEdicion = false;
+let modoFormulario = null;
+let productoSeleccionadoId = null;
 
 function cerrarSesion() {
 	sessionStorage.removeItem('microventa_usuario');
@@ -148,21 +152,63 @@ function mostrarMensajeFormulario(tipo, texto) {
 	}
 }
 
-function limpiarFormulario() {
-	productoForm.reset();
-	idProducto.value = '';
-	visibleProducto.checked = true;
-	stockMinimoProducto.value = 5;
-	modoEdicion = false;
-	btnCancelarEdicion.classList.add('hidden');
-	btnGuardarProducto.textContent = 'Guardar producto';
-	tituloFormulario.textContent = 'Agregar producto';
-	subtituloFormulario.textContent = 'Completa la información del nuevo producto.';
+function limpiarMensajeFormulario() {
 	mostrarMensajeFormulario('', '');
 }
 
+function mostrarFormulario() {
+	estadoSinSeleccion.classList.add('hidden');
+	contenedorFormularioEdicion.classList.remove('hidden');
+}
+
+function ocultarFormulario() {
+	estadoSinSeleccion.classList.remove('hidden');
+	contenedorFormularioEdicion.classList.add('hidden');
+}
+
+function abrirModoAgregar() {
+	productoForm.reset();
+	idProducto.value = '';
+	productoSeleccionadoId = null;
+	modoFormulario = 'agregar';
+	visibleProducto.checked = true;
+	stockMinimoProducto.value = 5;
+
+	tituloFormulario.textContent = 'Agregar producto';
+	subtituloFormulario.textContent = 'Completa la información del nuevo producto.';
+	btnGuardarProducto.textContent = 'Guardar producto';
+
+	limpiarMensajeFormulario();
+	mostrarFormulario();
+	renderizarProductos(aplicarFiltrosInterno());
+
+	window.scrollTo({
+		top: 0,
+		behavior: 'smooth'
+	});
+}
+
+function limpiarFormulario() {
+	productoForm.reset();
+	idProducto.value = '';
+	productoSeleccionadoId = null;
+	modoFormulario = null;
+	visibleProducto.checked = true;
+	stockMinimoProducto.value = 5;
+
+	tituloFormulario.textContent = 'Gestión de productos';
+	subtituloFormulario.textContent = 'Selecciona una acción para comenzar.';
+	btnGuardarProducto.textContent = 'Guardar producto';
+
+	limpiarMensajeFormulario();
+	ocultarFormulario();
+	renderizarProductos(aplicarFiltrosInterno());
+}
+
 function activarModoEdicion(producto) {
-	modoEdicion = true;
+	modoFormulario = 'editar';
+	productoSeleccionadoId = Number(producto.id_producto);
+
 	idProducto.value = producto.id_producto;
 	nombreProducto.value = producto.nombre_producto ?? '';
 	categoriaProducto.value = producto.id_categoria ?? '';
@@ -173,11 +219,13 @@ function activarModoEdicion(producto) {
 	imagenProducto.value = producto.imagen ?? '';
 	visibleProducto.checked = Boolean(producto.visible);
 
-	btnCancelarEdicion.classList.remove('hidden');
-	btnGuardarProducto.textContent = 'Actualizar producto';
-	tituloFormulario.textContent = 'Editar producto';
+	tituloFormulario.textContent = `Editar producto #${producto.id_producto}`;
 	subtituloFormulario.textContent = 'Modifica la información del producto seleccionado.';
-	mostrarMensajeFormulario('', '');
+	btnGuardarProducto.textContent = 'Actualizar producto';
+
+	limpiarMensajeFormulario();
+	mostrarFormulario();
+	renderizarProductos(aplicarFiltrosInterno());
 
 	window.scrollTo({
 		top: 0,
@@ -223,7 +271,7 @@ function obtenerClaseStock(producto) {
 	const stockActual = Number(producto.stock_actual ?? 0);
 	const stockMinimo = Number(producto.stock_minimo ?? 5);
 
-	return stockActual <= stockMinimo ? 'status-hidden' : 'status-visible';
+	return stockActual <= stockMinimo ? 'status-stock-low' : 'status-stock-ok';
 }
 
 function obtenerTextoStock(producto) {
@@ -276,9 +324,12 @@ function renderizarProductos(productos) {
 		const stockActual = Number(producto.stock_actual ?? 0);
 		const stockMinimo = Number(producto.stock_minimo ?? 5);
 		const visible = producto.visible === true;
+		const seleccionado =
+			modoFormulario === 'editar' &&
+			Number(productoSeleccionadoId) === Number(producto.id_producto);
 
 		return `
-			<article class="product-card ${visible ? '' : 'hidden-product'}">
+			<article class="product-card ${visible ? '' : 'hidden-product'} ${seleccionado ? 'selected' : ''}">
 				<img
 					src="${obtenerImagenProducto(producto)}"
 					alt="${producto.nombre_producto}"
@@ -453,6 +504,27 @@ async function cargarProductos() {
 
 		productosOriginales = data ?? [];
 		actualizarContadores(productosOriginales);
+
+		if (modoFormulario === 'editar' && productoSeleccionadoId !== null) {
+			const productoActualizado = productosOriginales.find(
+				(producto) => Number(producto.id_producto) === Number(productoSeleccionadoId)
+			);
+
+			if (productoActualizado) {
+				idProducto.value = productoActualizado.id_producto;
+				nombreProducto.value = productoActualizado.nombre_producto ?? '';
+				categoriaProducto.value = productoActualizado.id_categoria ?? '';
+				precioProducto.value = productoActualizado.precio_unitario ?? '';
+				stockProducto.value = productoActualizado.stock_actual ?? 0;
+				stockMinimoProducto.value = productoActualizado.stock_minimo ?? 5;
+				descripcionProducto.value = productoActualizado.descripcion_producto ?? '';
+				imagenProducto.value = productoActualizado.imagen ?? '';
+				visibleProducto.checked = Boolean(productoActualizado.visible);
+			} else {
+				limpiarFormulario();
+			}
+		}
+
 		aplicarFiltros();
 	} catch (error) {
 		console.error('Error general al cargar productos:', error);
@@ -520,17 +592,20 @@ async function cambiarVisibilidadProducto(productoId, visible) {
 
 		actualizarContadores(productosOriginales);
 		aplicarFiltros();
+
+		if (
+			modoFormulario === 'editar' &&
+			Number(productoSeleccionadoId) === Number(productoId)
+		) {
+			visibleProducto.checked = visible;
+		}
 	} catch (error) {
 		console.error('Error general al cambiar visibilidad:', error);
 		alert('Ocurrió un error al actualizar el producto.');
 	}
 }
 
-productoForm.addEventListener('submit', async (e) => {
-	e.preventDefault();
-
-	mostrarMensajeFormulario('', '');
-
+function obtenerDatosFormulario() {
 	const nombre = nombreProducto.value.trim();
 	const categoria = categoriaProducto.value;
 	const precio = Number(precioProducto.value);
@@ -550,51 +625,74 @@ productoForm.addEventListener('submit', async (e) => {
 		Number.isNaN(stockMinimo) ||
 		stockMinimo < 0
 	) {
-		mostrarMensajeFormulario('error', 'Completa correctamente los campos obligatorios.');
-		return;
+		throw new Error('Completa correctamente los campos obligatorios.');
 	}
 
-	const datosProducto = {
-		nombre_producto: nombre,
-		precio_unitario: precio,
-		id_categoria: Number(categoria),
-		descripcion_producto: descripcion,
-		imagen: imagen,
-		visible: visible
+	return {
+		datosProducto: {
+			nombre_producto: nombre,
+			precio_unitario: precio,
+			id_categoria: Number(categoria),
+			descripcion_producto: descripcion,
+			imagen: imagen,
+			visible: visible
+		},
+		stock,
+		stockMinimo
 	};
+}
 
-	btnGuardarProducto.disabled = true;
-	btnGuardarProducto.textContent = modoEdicion ? 'Actualizando...' : 'Guardando...';
+productoForm.addEventListener('submit', async (e) => {
+	e.preventDefault();
+
+	limpiarMensajeFormulario();
 
 	try {
-		if (modoEdicion) {
+		const { datosProducto, stock, stockMinimo } = obtenerDatosFormulario();
+
+		btnGuardarProducto.disabled = true;
+		btnGuardarProducto.textContent =
+			modoFormulario === 'editar' ? 'Actualizando...' : 'Guardando...';
+
+		if (modoFormulario === 'editar') {
+			if (!idProducto.value) {
+				throw new Error('Selecciona un producto para editar.');
+			}
+
 			await actualizarProducto(datosProducto, stock, stockMinimo);
 			await cargarProductos();
-			limpiarFormulario();
 			mostrarMensajeFormulario('success', 'Producto actualizado correctamente.');
-		} else {
+		} else if (modoFormulario === 'agregar') {
 			await crearProducto(datosProducto, stock, stockMinimo);
 			await cargarProductos();
-			limpiarFormulario();
+			abrirModoAgregar();
 			mostrarMensajeFormulario('success', 'Producto creado correctamente.');
+		} else {
+			throw new Error('Selecciona una acción para continuar.');
 		}
 	} catch (error) {
 		console.error('Error al guardar producto:', error);
 		mostrarMensajeFormulario('error', error.message || 'No se pudo guardar el producto.');
 	} finally {
 		btnGuardarProducto.disabled = false;
-		btnGuardarProducto.textContent = 'Guardar producto';
+		btnGuardarProducto.textContent =
+			modoFormulario === 'editar' ? 'Actualizar producto' : 'Guardar producto';
 	}
 });
 
-btnCancelarEdicion.addEventListener('click', () => {
-	limpiarFormulario();
-});
+if (btnCancelarEdicion) {
+	btnCancelarEdicion.addEventListener('click', limpiarFormulario);
+}
+
+if (btnMostrarAgregar) {
+	btnMostrarAgregar.addEventListener('click', abrirModoAgregar);
+}
 
 buscarProducto.addEventListener('input', aplicarFiltros);
 filtroCategoria.addEventListener('change', aplicarFiltros);
 verOcultos.addEventListener('change', aplicarFiltros);
 
+limpiarFormulario();
 cargarCategorias();
 cargarProductos();
 vincularCierreMenuEnSidebar();
