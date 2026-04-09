@@ -456,6 +456,9 @@ body {
 	outline: none;
 	scroll-margin-top: 20px;
 	transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+	max-height: calc(100vh - 40px);
+	overflow-y: auto;
+	padding-right: 18px;
 }
 
 .cart-card.cart-highlight {
@@ -471,8 +474,6 @@ body {
 	flex-direction: column;
 	gap: 14px;
 	margin-bottom: 18px;
-	max-height: 420px;
-	overflow-y: auto;
 	padding-right: 4px;
 }
 
@@ -732,6 +733,15 @@ body {
 	grid-column: 1 / -1;
 }
 
+.cart-card::-webkit-scrollbar {
+	width: 6px;
+}
+
+.cart-card::-webkit-scrollbar-thumb {
+	background: rgba(217, 108, 138, 0.4);
+	border-radius: 10px;
+}
+
 @keyframes pulseCartButton {
 	0% {
 		transform: scale(1);
@@ -810,6 +820,12 @@ body {
 	.right-column {
 		position: static;
 		top: auto;
+	}
+
+	.cart-card {
+		max-height: none;
+		overflow-y: visible;
+		padding-right: 26px;
 	}
 }
 
@@ -901,6 +917,10 @@ body {
 		max-width: 100%;
 		width: 100%;
 	}
+
+	.cart-card {
+		padding-right: 20px;
+	}
 }
 
 .sidebar-group {
@@ -918,4 +938,14 @@ body {
 	color: var(--gris-texto);
 	opacity: 0.8;
 	padding: 4px 14px 2px 14px;
+}
+
+.cart-card {
+	/* ocultar scrollbar en Firefox */
+	scrollbar-width: none;
+}
+
+/* ocultar scrollbar en Chrome, Edge, Safari */
+.cart-card::-webkit-scrollbar {
+	display: none;
 }

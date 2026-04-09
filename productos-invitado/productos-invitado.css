@@ -353,6 +353,14 @@ body {
 	outline: none;
 	scroll-margin-top: 20px;
 	transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+	max-height: calc(100vh - 40px);
+	overflow-y: auto;
+	padding-right: 18px;
+	scrollbar-width: none;
+}
+
+.cart-card::-webkit-scrollbar {
+	display: none;
 }
 
 .cart-card.cart-highlight {
@@ -368,8 +376,6 @@ body {
 	flex-direction: column;
 	gap: 14px;
 	margin-bottom: 18px;
-	max-height: 420px;
-	overflow-y: auto;
 	padding-right: 4px;
 }
 
@@ -825,6 +831,12 @@ body {
 	.btn-register-submit {
 		width: 100%;
 	}
+
+	.cart-card {
+		max-height: none;
+		overflow-y: visible;
+		padding-right: 20px;
+	}
 }
 
 @media (max-width: 900px) {
@@ -835,5 +847,11 @@ body {
 	.right-column {
 		position: static;
 		top: auto;
+	}
+
+	.cart-card {
+		max-height: none;
+		overflow-y: visible;
+		padding-right: 20px;
 	}
 }
