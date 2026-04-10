@@ -1,10 +1,5 @@
 const DIRECCION_NEGOCIO = '21.478741236697257, -104.86570974660742';
 const NOMBRE_NEGOCIO = 'Dulce Mordisco';
-const OSRM_ENDPOINTS = [
-	'/api/ruta-osrm',
-	'https://router.project-osrm.org/route/v1/driving',
-	'https://routing.openstreetmap.de/routed-car/route/v1/driving'
-];
 
 const nombreRepartidor = document.getElementById('nombreRepartidor');
 const btnCerrarSesion = document.getElementById('btnCerrarSesion');
@@ -928,41 +923,26 @@ async function geocodificarDireccion(direccion, etiquetaSiEsCoordenada = 'Ubicac
 
 async function consultarRuta(origen, destino) {
 	const coordenadas = `${origen.lon},${origen.lat};${destino.lon},${destino.lat}`;
-	let ultimoError = null;
+	const url = `https://router.project-osrm.org/route/v1/driving/${coordenadas}?overview=full&geometries=geojson&steps=false`;
 
-	for (const endpoint of OSRM_ENDPOINTS) {
-		const esProxy = endpoint.startsWith('/api/');
-		const url = esProxy
-			? `${endpoint}?coordinates=${encodeURIComponent(coordenadas)}`
-			: `${endpoint}/${coordenadas}?overview=full&geometries=geojson&steps=false`;
-
-		try {
-			const respuesta = await fetch(url, {
-				method: 'GET',
-				headers: {
-					'Accept': 'application/json'
-				}
-			});
-
-			if (!respuesta.ok) {
-				ultimoError = `No se pudo calcular la ruta con ${endpoint}.`;
-				continue;
-			}
-
-			const data = await respuesta.json();
-
-			if (!data.routes || !data.routes.length) {
-				ultimoError = `No se encontro una ruta disponible con ${endpoint}.`;
-				continue;
-			}
-
-			return data.routes[0];
-		} catch (error) {
-			ultimoError = error.message;
+	const respuesta = await fetch(url, {
+		method: 'GET',
+		headers: {
+			'Accept': 'application/json'
 		}
+	});
+
+	if (!respuesta.ok) {
+		throw new Error('No se pudo calcular la ruta.');
 	}
 
-	throw new Error(ultimoError || 'No se pudo calcular la ruta.');
+	const data = await respuesta.json();
+
+	if (!data.routes || !data.routes.length) {
+		throw new Error('No se encontró una ruta disponible entre los puntos.');
+	}
+
+	return data.routes[0];
 }
 
 function dibujarRutaEnMapa(origen, destino, ruta) {

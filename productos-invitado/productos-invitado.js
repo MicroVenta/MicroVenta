@@ -13,7 +13,6 @@ const pedidoMensaje = document.getElementById('pedidoMensaje');
 const nombreInvitado = document.getElementById('nombreInvitado');
 const correoPedido = document.getElementById('correoPedido');
 const telefonoPedido = document.getElementById('telefonoPedido');
-const metodoEntrega = document.getElementById('metodoEntrega');
 const lugarEntrega = document.getElementById('lugarEntrega');
 
 const cartCard = document.getElementById('cartCard');
@@ -40,10 +39,6 @@ const registroConfirmarContrasena = document.getElementById('registroConfirmarCo
 let productosOriginales = [];
 let categoriasOriginales = [];
 let carrito = [];
-
-const METODO_ENTREGA_PUNTO = 'entrega';
-const METODO_ENTREGA_RECOGER_TIENDA = 'recoger_tienda';
-const DIRECCION_TIENDA = 'Pasaran a recogerlo en tienda: Dulce Mordisco - 21.478741236697257, -104.86570974660742';
 
 function obtenerClaveCarrito() {
 	return 'microventa_carrito_invitado';
@@ -162,26 +157,6 @@ function esVistaMovilCarrito() {
 
 function obtenerCantidadTotalCarrito() {
 	return carrito.reduce((total, item) => total + Number(item.cantidad ?? 0), 0);
-}
-
-function esPedidoParaRecogerEnTienda() {
-	return metodoEntrega?.value === METODO_ENTREGA_RECOGER_TIENDA;
-}
-
-function actualizarEstadoLugarEntrega() {
-	if (!lugarEntrega) {
-		return;
-	}
-
-	if (esPedidoParaRecogerEnTienda()) {
-		lugarEntrega.value = DIRECCION_TIENDA;
-		lugarEntrega.disabled = true;
-		limpiarMensaje();
-		return;
-	}
-
-	lugarEntrega.disabled = false;
-	lugarEntrega.value = '';
 }
 
 function resaltarCarrito() {
@@ -684,9 +659,7 @@ function validarFormularioInvitado() {
 	const nombre = String(nombreInvitado?.value ?? '').trim();
 	const correo = String(correoPedido?.value ?? '').trim();
 	const telefono = String(telefonoPedido?.value ?? '').trim();
-	const direccion = esPedidoParaRecogerEnTienda()
-		? DIRECCION_TIENDA
-		: String(lugarEntrega?.value ?? '').trim();
+	const direccion = String(lugarEntrega?.value ?? '').trim();
 
 	if (nombre === '') {
 		mostrarMensaje('error', 'Debes escribir tu nombre.');
@@ -784,8 +757,6 @@ async function realizarPedidoInvitado() {
 		nombreInvitado.value = '';
 		correoPedido.value = '';
 		telefonoPedido.value = '';
-		metodoEntrega.value = METODO_ENTREGA_PUNTO;
-		lugarEntrega.disabled = false;
 		lugarEntrega.value = '';
 
 		if (huboPersonalizacion) {
@@ -993,7 +964,6 @@ buscarProducto?.addEventListener('input', aplicarFiltros);
 filtroCategoria?.addEventListener('change', aplicarFiltros);
 btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
 btnRealizarPedido?.addEventListener('click', realizarPedidoInvitado);
-metodoEntrega?.addEventListener('change', actualizarEstadoLugarEntrega);
 btnCerrarModal?.addEventListener('click', cerrarModalConfirmacion);
 
 btnAbrirRegistro?.addEventListener('click', abrirModalRegistro);
