@@ -246,6 +246,10 @@ function obtenerTipoCliente(pedido) {
 }
 
 function obtenerNombreRepartidor(pedido) {
+	if (esPedidoParaRecogerEnTienda(pedido)) {
+		return 'No aplica';
+	}
+
 	return pedido.repartidor?.nombre_completo ?? 'Sin asignar';
 }
 
@@ -289,6 +293,26 @@ function requiereLogisticaPorEstatus(valor) {
 	}
 
 	return texto !== 'rechazado' && texto !== 'cancelado' && texto !== 'pendiente';
+}
+
+function esPedidoParaRecogerEnTienda(pedido) {
+	return normalizarTexto(pedido?.lugar_entrega).startsWith('pasaran a recogerlo en tienda');
+}
+
+function requiereRepartidorPedido(pedido, descripcionEstatus) {
+	if (esPedidoParaRecogerEnTienda(pedido)) {
+		return false;
+	}
+
+	return requiereLogisticaPorEstatus(descripcionEstatus);
+}
+
+function requiereFechaEntregaPedido(pedido, descripcionEstatus) {
+	if (!requiereLogisticaPorEstatus(descripcionEstatus)) {
+		return false;
+	}
+
+	return !esPedidoParaRecogerEnTienda(pedido) || Boolean(pedido?.personalizado);
 }
 
 function cargarOpcionesEstatus() {
@@ -352,12 +376,16 @@ function actualizarCamposSegunEstatus() {
 		? optionSeleccionada.textContent
 		: '';
 
-	const necesitaLogistica = requiereLogisticaPorEstatus(descripcionSeleccionada);
+	const necesitaRepartidor = requiereRepartidorPedido(pedidoSeleccionado, descripcionSeleccionada);
+	const necesitaFechaEntrega = requiereFechaEntregaPedido(pedidoSeleccionado, descripcionSeleccionada);
 
-	selectRepartidorModal.disabled = !necesitaLogistica;
+	selectRepartidorModal.disabled = !necesitaRepartidor;
 
-	if (!necesitaLogistica) {
+	if (!necesitaRepartidor) {
 		selectRepartidorModal.value = '';
+	}
+
+	if (!necesitaFechaEntrega) {
 		inputFechaEntregaModal.value = '';
 		grupoFechaEntrega.classList.add('hidden');
 		inputFechaEntregaModal.disabled = true;
@@ -387,9 +415,15 @@ function renderizarPedidos(pedidos) {
 		const nombreEstatus = obtenerDescripcionEstatus(pedido);
 		const cantidadProductos = Array.isArray(pedido.detalles) ? pedido.detalles.length : 0;
 		const lugarEntrega = pedido.lugar_entrega ?? 'Sin lugar registrado';
-		const fechaEntrega = pedido.fecha_entrega_aproximada
-			? formatearFecha(pedido.fecha_entrega_aproximada)
-			: 'Sin definir';
+		let fechaEntrega = 'Sin definir';
+
+		if (esPedidoParaRecogerEnTienda(pedido)) {
+			fechaEntrega = pedido.fecha_entrega_aproximada
+				? formatearFecha(pedido.fecha_entrega_aproximada)
+				: 'Recoge en tienda';
+		} else if (pedido.fecha_entrega_aproximada) {
+			fechaEntrega = formatearFecha(pedido.fecha_entrega_aproximada);
+		}
 		const etiquetaTipoCliente = esPedidoInvitado(pedido)
 			? '<div class="order-subtext">Invitado</div>'
 			: '';
@@ -579,9 +613,15 @@ function abrirModalPedido(pedido) {
 	detalleCorreo.textContent = obtenerCorreoCliente(pedido);
 	detalleTelefono.textContent = obtenerTelefonoCliente(pedido);
 	detalleFecha.textContent = formatearFecha(pedido.fecha_pedido);
-	detalleFechaEntrega.textContent = pedido.fecha_entrega_aproximada
-		? formatearFecha(pedido.fecha_entrega_aproximada)
-		: 'Sin definir';
+	if (esPedidoParaRecogerEnTienda(pedido)) {
+		detalleFechaEntrega.textContent = pedido.fecha_entrega_aproximada
+			? formatearFecha(pedido.fecha_entrega_aproximada)
+			: 'Recoge en tienda';
+	} else {
+		detalleFechaEntrega.textContent = pedido.fecha_entrega_aproximada
+			? formatearFecha(pedido.fecha_entrega_aproximada)
+			: 'Sin definir';
+	}
 	detalleTipoPedido.innerHTML = pedido.personalizado
 		? '<span class="badge badge-personalizado">Pedido personalizado</span>'
 		: '<span class="badge badge-entregado">Pedido normal</span>';
@@ -752,14 +792,17 @@ btnGuardarCambiosPedido.addEventListener('click', async () => {
 		return;
 	}
 
-	const requiereLogistica = requiereLogisticaPorEstatus(nuevaDescripcionEstatus);
+	const requiereRepartidor = requiereRepartidorPedido(pedidoSeleccionado, nuevaDescripcionEstatus);
+	const requiereFechaEntrega = requiereFechaEntregaPedido(pedidoSeleccionado, nuevaDescripcionEstatus);
 
-	if (requiereLogistica) {
+	if (requiereRepartidor) {
 		if (nuevoRepartidor === '') {
 			mostrarMensajeAccion('error', 'Debes asignar un repartidor para ese estatus.');
 			return;
 		}
+	}
 
+	if (requiereFechaEntrega) {
 		if (nuevaFechaEntrega === '') {
 			mostrarMensajeAccion('error', 'Debes indicar la fecha y hora de entrega.');
 			return;
@@ -767,9 +810,9 @@ btnGuardarCambiosPedido.addEventListener('click', async () => {
 	}
 
 	const sinCambios =
-		String(pedidoSeleccionado.id_repartidor ?? '') === String(requiereLogistica ? nuevoRepartidor : '') &&
+		String(pedidoSeleccionado.id_repartidor ?? '') === String(requiereRepartidor ? nuevoRepartidor : '') &&
 		String(pedidoSeleccionado.id_estatus ?? '') === String(nuevoEstatus) &&
-		String(formatearFechaParaInput(pedidoSeleccionado.fecha_entrega_aproximada) ?? '') === String(requiereLogistica ? nuevaFechaEntrega : '');
+		String(formatearFechaParaInput(pedidoSeleccionado.fecha_entrega_aproximada) ?? '') === String(requiereFechaEntrega ? nuevaFechaEntrega : '');
 
 	if (sinCambios) {
 		mostrarMensajeAccion('error', 'No hay cambios para guardar.');
@@ -785,8 +828,8 @@ btnGuardarCambiosPedido.addEventListener('click', async () => {
 			pedidoSeleccionado.id_pedido,
 			{
 				id_estatus: Number(nuevoEstatus),
-				id_repartidor: requiereLogistica ? Number(nuevoRepartidor) : null,
-				fecha_entrega_aproximada: requiereLogistica ? convertirFechaLocalParaBD(nuevaFechaEntrega) : null
+				id_repartidor: requiereRepartidor ? Number(nuevoRepartidor) : null,
+				fecha_entrega_aproximada: requiereFechaEntrega ? convertirFechaLocalParaBD(nuevaFechaEntrega) : null
 			}
 		);
 

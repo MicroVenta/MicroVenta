@@ -17,6 +17,7 @@ const usarDireccionPerfil = document.getElementById('usarDireccionPerfil');
 const direccionPerfilInfo = document.getElementById('direccionPerfilInfo');
 const telefonoInfo = document.getElementById('telefonoInfo');
 const telefonoPedido = document.getElementById('telefonoPedido');
+const metodoEntrega = document.getElementById('metodoEntrega');
 const lugarEntrega = document.getElementById('lugarEntrega');
 
 const btnMenu = document.getElementById('btnMenu');
@@ -35,6 +36,10 @@ let usuario = null;
 let productosOriginales = [];
 let categoriasOriginales = [];
 let carrito = [];
+
+const METODO_ENTREGA_PUNTO = 'entrega';
+const METODO_ENTREGA_RECOGER_TIENDA = 'recoger_tienda';
+const DIRECCION_TIENDA = 'Pasaran a recogerlo en tienda: Dulce Mordisco - 21.478741236697257, -104.86570974660742';
 
 function normalizarRol(nombreRol) {
 	return (nombreRol ?? '').toString().trim().toLowerCase();
@@ -277,6 +282,10 @@ function tieneTelefonoRegistrado() {
 	return obtenerTelefonoCapturado() !== '';
 }
 
+function esPedidoParaRecogerEnTienda() {
+	return metodoEntrega?.value === METODO_ENTREGA_RECOGER_TIENDA;
+}
+
 function esVistaMovilCarrito() {
 	return window.matchMedia('(max-width: 900px), (max-height: 500px)').matches;
 }
@@ -381,6 +390,11 @@ function inicializarEntrega() {
 
 	if (usarDireccionPerfil) {
 		usarDireccionPerfil.checked = false;
+		usarDireccionPerfil.disabled = false;
+	}
+
+	if (metodoEntrega) {
+		metodoEntrega.value = METODO_ENTREGA_PUNTO;
 	}
 
 	if (lugarEntrega) {
@@ -393,6 +407,17 @@ function actualizarEstadoLugarEntrega() {
 	if (!usarDireccionPerfil || !lugarEntrega) {
 		return;
 	}
+
+	if (esPedidoParaRecogerEnTienda()) {
+		usarDireccionPerfil.checked = false;
+		usarDireccionPerfil.disabled = true;
+		lugarEntrega.value = DIRECCION_TIENDA;
+		lugarEntrega.disabled = true;
+		limpiarMensaje();
+		return;
+	}
+
+	usarDireccionPerfil.disabled = false;
 
 	const direccionGuardada = (usuario?.direccion ?? '').trim();
 	const usarPerfil = usarDireccionPerfil.checked;
@@ -922,6 +947,10 @@ async function guardarTelefonoSiCambio() {
 }
 
 function validarLugarEntrega() {
+	if (esPedidoParaRecogerEnTienda()) {
+		return DIRECCION_TIENDA;
+	}
+
 	const lugar = lugarEntrega?.value.trim() ?? '';
 
 	if (lugar === '') {
@@ -995,6 +1024,11 @@ async function realizarPedido() {
 
 		if (usarDireccionPerfil) {
 			usarDireccionPerfil.checked = false;
+			usarDireccionPerfil.disabled = false;
+		}
+
+		if (metodoEntrega) {
+			metodoEntrega.value = METODO_ENTREGA_PUNTO;
 		}
 
 		if (lugarEntrega) {
@@ -1040,6 +1074,10 @@ if (btnRealizarPedido) {
 
 if (usarDireccionPerfil) {
 	usarDireccionPerfil.addEventListener('change', actualizarEstadoLugarEntrega);
+}
+
+if (metodoEntrega) {
+	metodoEntrega.addEventListener('change', actualizarEstadoLugarEntrega);
 }
 
 if (btnIrCarritoMovil) {

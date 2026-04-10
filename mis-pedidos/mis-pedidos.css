@@ -632,6 +632,124 @@ body {
 	word-break: break-word;
 }
 
+.pickup-route-box {
+	background: rgba(237, 245, 255, 0.76);
+	border: 1px solid rgba(53, 106, 154, 0.16);
+	border-radius: 18px;
+	padding: 16px;
+}
+
+.pickup-route-head {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 14px;
+	flex-wrap: wrap;
+	margin-bottom: 14px;
+}
+
+.pickup-route-head h5 {
+	color: var(--cafe-oscuro);
+	font-size: 1rem;
+	margin-bottom: 4px;
+}
+
+.pickup-route-head p {
+	color: var(--gris-texto);
+	font-size: 0.94rem;
+	line-height: 1.5;
+}
+
+.pickup-route-actions {
+	display: flex;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.btn-route-store {
+	background: var(--azul-texto);
+	color: #fff;
+	border: 1px solid rgba(53, 106, 154, 0.24);
+	padding: 10px 14px;
+	border-radius: 8px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: 0.25s ease;
+}
+
+.btn-route-store-light {
+	background: rgba(255, 255, 255, 0.96);
+	color: var(--azul-texto);
+}
+
+.btn-route-store:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 10px 20px rgba(53, 106, 154, 0.14);
+}
+
+.btn-route-store:disabled {
+	opacity: 0.7;
+	cursor: not-allowed;
+	transform: none;
+	box-shadow: none;
+}
+
+.pickup-route-summary {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(150px, 1fr));
+	gap: 12px;
+	margin-bottom: 12px;
+}
+
+.pickup-route-summary div {
+	background: rgba(255, 255, 255, 0.94);
+	border: 1px solid rgba(53, 106, 154, 0.12);
+	border-radius: 14px;
+	padding: 12px;
+	min-width: 0;
+}
+
+.pickup-route-summary span {
+	display: block;
+	color: var(--gris-texto);
+	font-size: 0.86rem;
+	margin-bottom: 5px;
+}
+
+.pickup-route-summary strong {
+	color: var(--cafe-oscuro);
+	word-break: break-word;
+}
+
+.route-message {
+	padding: 11px 12px;
+	border-radius: 12px;
+	font-weight: 600;
+	line-height: 1.45;
+	margin-bottom: 12px;
+}
+
+.route-message.success {
+	background: var(--verde-suave);
+	color: var(--verde-texto);
+	border: 1px solid rgba(47, 122, 78, 0.16);
+}
+
+.route-message.error {
+	background: var(--rojo-suave);
+	color: var(--rojo-texto);
+	border: 1px solid rgba(177, 77, 87, 0.16);
+}
+
+.pickup-route-map {
+	width: 100%;
+	min-height: 280px;
+	border-radius: 12px;
+	border: 1px solid rgba(53, 106, 154, 0.16);
+	overflow: hidden;
+	background: rgba(255, 255, 255, 0.92);
+}
+
 .empty-orders {
 	background: rgba(255, 255, 255, 0.96);
 	border: 1px dashed rgba(217, 108, 138, 0.22);
@@ -806,6 +924,19 @@ body {
 	.history-row {
 		flex-direction: column;
 		align-items: flex-start;
+	}
+
+	.pickup-route-actions {
+		width: 100%;
+		flex-direction: column;
+	}
+
+	.btn-route-store {
+		width: 100%;
+	}
+
+	.pickup-route-summary {
+		grid-template-columns: 1fr;
 	}
 
 	.product-subtotal,

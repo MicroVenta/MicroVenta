@@ -31,6 +31,19 @@ let usuario = null;
 let pedidosOriginales = [];
 let pedidosFiltrados = [];
 let estatusCatalogo = [];
+let mapasRecogida = new Map();
+let rutasRecogida = new Map();
+
+const NOMBRE_TIENDA = 'Dulce Mordisco';
+const COORDENADAS_TIENDA = {
+	lat: 21.478741236697257,
+	lon: -104.86570974660742
+};
+const OSRM_ENDPOINTS = [
+	'/api/ruta-osrm',
+	'https://router.project-osrm.org/route/v1/driving',
+	'https://routing.openstreetmap.de/routed-car/route/v1/driving'
+];
 
 function normalizarTexto(texto) {
 	return String(texto ?? '').trim().toLowerCase();
@@ -213,6 +226,48 @@ function formatearDinero(cantidad) {
 	return `$${Number(cantidad || 0).toFixed(2)}`;
 }
 
+function formatearDistancia(metros) {
+	if (!Number.isFinite(metros)) {
+		return '-';
+	}
+
+	if (metros < 1000) {
+		return `${Math.round(metros)} m`;
+	}
+
+	return `${(metros / 1000).toFixed(1)} km`;
+}
+
+function formatearDuracion(segundos) {
+	if (!Number.isFinite(segundos)) {
+		return '-';
+	}
+
+	const minutosTotales = Math.round(segundos / 60);
+	const horas = Math.floor(minutosTotales / 60);
+	const minutos = minutosTotales % 60;
+
+	if (horas <= 0) {
+		return `${minutos} min`;
+	}
+
+	return `${horas} h ${minutos} min`;
+}
+
+function esPedidoParaRecogerEnTienda(pedido) {
+	return normalizarTexto(pedido?.lugar_entrega).startsWith('pasaran a recogerlo en tienda');
+}
+
+function construirUrlGoogleMapsTienda(origen) {
+	const destino = `${COORDENADAS_TIENDA.lat},${COORDENADAS_TIENDA.lon}`;
+
+	if (!origen) {
+		return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(destino)}`;
+	}
+
+	return `https://www.google.com/maps/dir/?api=1&origin=${origen.lat},${origen.lon}&destination=${destino}&travelmode=driving`;
+}
+
 function obtenerEstatusActual(historial, pedido) {
 	const historialNormalizado = Array.isArray(historial) ? historial : [];
 
@@ -377,6 +432,67 @@ function renderizarHistorial(historial) {
 	`;
 }
 
+function renderizarRutaTienda(pedido) {
+	if (!esPedidoParaRecogerEnTienda(pedido)) {
+		return '';
+	}
+
+	const mapaId = `mapa-recogida-${pedido.id_pedido}`;
+	const mensajeId = `mensaje-ruta-recogida-${pedido.id_pedido}`;
+	const distanciaId = `distancia-ruta-recogida-${pedido.id_pedido}`;
+	const duracionId = `duracion-ruta-recogida-${pedido.id_pedido}`;
+	const botonExternoId = `ruta-externa-recogida-${pedido.id_pedido}`;
+	const fechaRecogida = pedido.fecha_entrega_aproximada
+		? formatearFechaHora(pedido.fecha_entrega_aproximada)
+		: 'Pendiente de confirmar';
+
+	return `
+		<div class="pickup-route-box">
+			<div class="pickup-route-head">
+				<div>
+					<h5>Ruta para recoger en tienda</h5>
+					<p>Fecha para pasar: ${fechaRecogida}</p>
+				</div>
+
+				<div class="pickup-route-actions">
+					<button class="btn-route-store" type="button" data-ruta-tienda="${pedido.id_pedido}">
+						Ver ruta
+					</button>
+
+					<button
+						id="${botonExternoId}"
+						class="btn-route-store btn-route-store-light"
+						type="button"
+						data-ruta-externa="${pedido.id_pedido}"
+					>
+						Abrir en Maps
+					</button>
+				</div>
+			</div>
+
+			<div class="pickup-route-summary">
+				<div>
+					<span>Destino</span>
+					<strong>${NOMBRE_TIENDA}</strong>
+				</div>
+
+				<div>
+					<span>Distancia</span>
+					<strong id="${distanciaId}">-</strong>
+				</div>
+
+				<div>
+					<span>Tiempo aproximado</span>
+					<strong id="${duracionId}">-</strong>
+				</div>
+			</div>
+
+			<div id="${mensajeId}" class="route-message hidden"></div>
+			<div id="${mapaId}" class="pickup-route-map"></div>
+		</div>
+	`;
+}
+
 function puedeCancelarPedido(pedido) {
 	const estatusActual = normalizarTexto(obtenerEstatusActual(pedido.historialestatus, pedido));
 
@@ -455,6 +571,8 @@ function renderizarPedidos(pedidos) {
 		return;
 	}
 
+	limpiarMapasRecogida();
+
 	if (!pedidos || pedidos.length === 0) {
 		listaPedidos.innerHTML = `
 			<div class="empty-orders">
@@ -479,7 +597,10 @@ function renderizarPedidos(pedidos) {
 		const totalProductos = contarProductos(pedido.detallepedido);
 		const detalleId = `detalle-pedido-${pedido.id_pedido}`;
 		const puedeCancelar = puedeCancelarPedido(pedido);
-		const repartidorTexto = pedido.repartidor?.nombre_completo ?? 'Pendiente';
+		const esRecogidaTienda = esPedidoParaRecogerEnTienda(pedido);
+		const repartidorTexto = esRecogidaTienda
+			? 'No aplica'
+			: pedido.repartidor?.nombre_completo ?? 'Pendiente';
 
 		return `
 			<article class="order-item">
@@ -538,6 +659,8 @@ function renderizarPedidos(pedidos) {
 						<h4>Historial del pedido</h4>
 						${renderizarHistorial(pedido.historialestatus)}
 					</div>
+
+					${renderizarRutaTienda(pedido)}
 				</div>
 			</article>
 		`;
@@ -545,6 +668,7 @@ function renderizarPedidos(pedidos) {
 
 	asignarEventosDetalle();
 	asignarEventosCancelacion();
+	asignarEventosRutaTienda();
 }
 
 function asignarEventosDetalle() {
@@ -588,6 +712,239 @@ function asignarEventosCancelacion() {
 				boton.disabled = false;
 				boton.textContent = 'Cancelar pedido';
 			}
+		});
+	});
+}
+
+function limpiarMapasRecogida() {
+	mapasRecogida.forEach((mapa) => {
+		mapa.remove();
+	});
+
+	mapasRecogida = new Map();
+	rutasRecogida = new Map();
+}
+
+function mostrarMensajeRuta(idPedido, texto, tipo = 'error') {
+	const mensaje = document.getElementById(`mensaje-ruta-recogida-${idPedido}`);
+
+	if (!mensaje) {
+		return;
+	}
+
+	mensaje.textContent = texto;
+	mensaje.className = `route-message ${tipo}`;
+	mensaje.classList.remove('hidden');
+}
+
+function ocultarMensajeRuta(idPedido) {
+	const mensaje = document.getElementById(`mensaje-ruta-recogida-${idPedido}`);
+
+	if (!mensaje) {
+		return;
+	}
+
+	mensaje.textContent = '';
+	mensaje.className = 'route-message hidden';
+}
+
+function obtenerUbicacionActual() {
+	return new Promise((resolve, reject) => {
+		if (!navigator.geolocation) {
+			reject(new Error('Tu navegador no soporta geolocalizacion.'));
+			return;
+		}
+
+		navigator.geolocation.getCurrentPosition(
+			(posicion) => {
+				resolve({
+					lat: posicion.coords.latitude,
+					lon: posicion.coords.longitude
+				});
+			},
+			(error) => {
+				let mensaje = 'No se pudo obtener tu ubicacion actual.';
+
+				if (error.code === 1) {
+					mensaje = 'Debes permitir el acceso a tu ubicacion para calcular la ruta.';
+				} else if (error.code === 2) {
+					mensaje = 'No fue posible determinar tu ubicacion actual.';
+				} else if (error.code === 3) {
+					mensaje = 'La solicitud de ubicacion tardo demasiado.';
+				}
+
+				reject(new Error(mensaje));
+			},
+			{
+				enableHighAccuracy: true,
+				timeout: 12000,
+				maximumAge: 0
+			}
+		);
+	});
+}
+
+async function consultarRutaTienda(origen) {
+	const destino = COORDENADAS_TIENDA;
+	const coordenadas = `${origen.lon},${origen.lat};${destino.lon},${destino.lat}`;
+	let ultimoError = null;
+
+	for (const endpoint of OSRM_ENDPOINTS) {
+		const esProxy = endpoint.startsWith('/api/');
+		const url = esProxy
+			? `${endpoint}?coordinates=${encodeURIComponent(coordenadas)}`
+			: `${endpoint}/${coordenadas}?overview=full&geometries=geojson&steps=false`;
+
+		try {
+			const respuesta = await fetch(url, {
+				method: 'GET',
+				headers: {
+					'Accept': 'application/json'
+				}
+			});
+
+			if (!respuesta.ok) {
+				ultimoError = `No se pudo calcular la ruta con ${endpoint}.`;
+				continue;
+			}
+
+			const data = await respuesta.json();
+
+			if (!data.routes || !data.routes.length) {
+				ultimoError = `No se encontro una ruta disponible con ${endpoint}.`;
+				continue;
+			}
+
+			return data.routes[0];
+		} catch (error) {
+			ultimoError = error.message;
+		}
+	}
+
+	throw new Error(ultimoError || 'No se pudo calcular la ruta a la tienda.');
+}
+
+function obtenerMapaRecogida(idPedido) {
+	if (mapasRecogida.has(idPedido)) {
+		const mapaExistente = mapasRecogida.get(idPedido);
+		mapaExistente.invalidateSize();
+		return mapaExistente;
+	}
+
+	const mapa = L.map(`mapa-recogida-${idPedido}`, {
+		zoomControl: true
+	}).setView([COORDENADAS_TIENDA.lat, COORDENADAS_TIENDA.lon], 14);
+
+	L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+		maxZoom: 19,
+		attribution: '&copy; OpenStreetMap'
+	}).addTo(mapa);
+
+	mapasRecogida.set(idPedido, mapa);
+
+	return mapa;
+}
+
+function limpiarCapasMapaRecogida(mapa) {
+	mapa.eachLayer((layer) => {
+		if (layer.options?.attribution) {
+			return;
+		}
+
+		mapa.removeLayer(layer);
+	});
+}
+
+function dibujarRutaTienda(idPedido, origen, ruta) {
+	const mapa = obtenerMapaRecogida(idPedido);
+	const destino = COORDENADAS_TIENDA;
+
+	limpiarCapasMapaRecogida(mapa);
+
+	const marcadorOrigen = L.marker([origen.lat, origen.lon]).addTo(mapa);
+	marcadorOrigen.bindPopup('Tu ubicacion');
+
+	const marcadorDestino = L.marker([destino.lat, destino.lon]).addTo(mapa);
+	marcadorDestino.bindPopup(NOMBRE_TIENDA);
+
+	const capaRuta = L.geoJSON(ruta.geometry, {
+		style: {
+			color: '#356a9a',
+			weight: 6,
+			opacity: 0.9
+		}
+	}).addTo(mapa);
+
+	const grupo = L.featureGroup([marcadorOrigen, marcadorDestino, capaRuta]);
+	mapa.fitBounds(grupo.getBounds(), {
+		padding: [28, 28]
+	});
+
+	window.setTimeout(() => {
+		mapa.invalidateSize();
+	}, 160);
+}
+
+async function mostrarRutaTienda(idPedido, boton) {
+	ocultarMensajeRuta(idPedido);
+
+	if (typeof L === 'undefined') {
+		mostrarMensajeRuta(idPedido, 'No se pudo cargar el mapa. Intenta abrir la ruta en Maps.');
+		return;
+	}
+
+	if (boton) {
+		boton.disabled = true;
+		boton.textContent = 'Calculando...';
+	}
+
+	try {
+		const origen = await obtenerUbicacionActual();
+		const ruta = await consultarRutaTienda(origen);
+
+		rutasRecogida.set(idPedido, construirUrlGoogleMapsTienda(origen));
+		dibujarRutaTienda(idPedido, origen, ruta);
+
+		const distancia = document.getElementById(`distancia-ruta-recogida-${idPedido}`);
+		const duracion = document.getElementById(`duracion-ruta-recogida-${idPedido}`);
+
+		if (distancia) {
+			distancia.textContent = formatearDistancia(ruta.distance);
+		}
+
+		if (duracion) {
+			duracion.textContent = formatearDuracion(ruta.duration);
+		}
+
+		mostrarMensajeRuta(idPedido, 'Ruta calculada desde tu ubicacion actual.', 'success');
+	} catch (error) {
+		console.error('Error al mostrar ruta a tienda:', error);
+		rutasRecogida.set(idPedido, construirUrlGoogleMapsTienda());
+		mostrarMensajeRuta(error.idPedido ?? idPedido, error.message || 'No se pudo calcular la ruta a la tienda.');
+	} finally {
+		if (boton) {
+			boton.disabled = false;
+			boton.textContent = 'Ver ruta';
+		}
+	}
+}
+
+function asignarEventosRutaTienda() {
+	const botonesRuta = document.querySelectorAll('[data-ruta-tienda]');
+	const botonesRutaExterna = document.querySelectorAll('[data-ruta-externa]');
+
+	botonesRuta.forEach((boton) => {
+		boton.addEventListener('click', async () => {
+			const idPedido = Number(boton.getAttribute('data-ruta-tienda'));
+			await mostrarRutaTienda(idPedido, boton);
+		});
+	});
+
+	botonesRutaExterna.forEach((boton) => {
+		boton.addEventListener('click', () => {
+			const idPedido = Number(boton.getAttribute('data-ruta-externa'));
+			const url = rutasRecogida.get(idPedido) ?? construirUrlGoogleMapsTienda();
+			window.open(url, '_blank');
 		});
 	});
 }
