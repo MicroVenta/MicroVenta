@@ -971,6 +971,13 @@ function renderizarPedidos(pedidos) {
 					</div>
 
 					<div class="detail-section">
+						<h4>Comentarios o instrucciones</h4>
+						<div class="empty-orders">
+							${escaparHtml(pedido.comentario_pedido?.trim() || 'Sin comentarios registrados.')}
+						</div>
+					</div>
+
+					<div class="detail-section">
 						<h4>Historial del pedido</h4>
 						${renderizarHistorial(pedido.historialestatus)}
 					</div>
@@ -1135,6 +1142,7 @@ async function cargarPedidosCliente() {
 				total_pagar,
 				fecha_entrega_aproximada,
 				lugar_entrega,
+				comentario_pedido,
 				tipo_entrega,
 				estatuspedido (
 					id_estatus,

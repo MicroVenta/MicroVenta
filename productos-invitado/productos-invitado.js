@@ -15,6 +15,7 @@ const correoPedido = document.getElementById('correoPedido');
 const telefonoPedido = document.getElementById('telefonoPedido');
 const tipoEntregaPedido = document.getElementById('tipoEntregaPedido');
 const lugarEntrega = document.getElementById('lugarEntrega');
+const comentarioPedido = document.getElementById('comentarioPedido');
 
 const cartCard = document.getElementById('cartCard');
 const btnIrCarritoMovil = document.getElementById('btnIrCarritoMovil');
@@ -727,6 +728,11 @@ function pedidoTienePersonalizacion() {
 	return carrito.some((item) => Boolean(item.es_personalizado));
 }
 
+function obtenerComentarioPedido() {
+	const comentario = String(comentarioPedido?.value ?? '').trim();
+	return comentario === '' ? null : comentario;
+}
+
 async function realizarPedidoInvitado() {
 	limpiarMensaje();
 
@@ -766,6 +772,7 @@ async function realizarPedidoInvitado() {
 			p_total: Number(total),
 			p_lugar_entrega: datosInvitado.direccion,
 			p_tipo_entrega: datosInvitado.tipoEntrega,
+			p_comentario_pedido: obtenerComentarioPedido(),
 			p_detalles: detallesPedido
 		});
 
@@ -786,6 +793,9 @@ async function realizarPedidoInvitado() {
 			tipoEntregaPedido.value = 'domicilio';
 		}
 		lugarEntrega.value = '';
+		if (comentarioPedido) {
+			comentarioPedido.value = '';
+		}
 		actualizarEstadoLugarEntrega();
 
 		if (huboPersonalizacion) {

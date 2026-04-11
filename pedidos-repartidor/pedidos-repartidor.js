@@ -1254,6 +1254,7 @@ function renderizarListaPedidos(pedidos) {
 		const cliente = obtenerNombreCliente(pedido);
 		const tipoCliente = obtenerTipoCliente(pedido);
 		const direccion = obtenerLugarEntregaPedido(pedido) || 'Lugar de entrega no registrado';
+		const comentarioPedido = String(pedido.comentario_pedido ?? '').trim();
 		const telefono = obtenerTelefonoCliente(pedido);
 		const fechaEntrega = pedido.fecha_entrega_aproximada
 			? formatearFechaCorta(pedido.fecha_entrega_aproximada)
@@ -1273,6 +1274,7 @@ function renderizarListaPedidos(pedidos) {
 					<p><strong>Fecha pedido:</strong> ${formatearFecha(pedido.fecha_pedido)}</p>
 					<p><strong>Entrega:</strong> ${fechaEntrega}</p>
 					<p><strong>Lugar de entrega:</strong> ${escaparHtml(direccion)}</p>
+					<p><strong>Comentarios:</strong> ${comentarioPedido ? escaparHtml(comentarioPedido) : 'Sin comentarios'}</p>
 					<p><strong>Teléfono:</strong> ${escaparHtml(telefono)}</p>
 					<p><strong>Total:</strong> ${formatearMoneda(pedido.total_pagar || 0)}</p>
 				</div>
@@ -1349,6 +1351,7 @@ function aplicarFiltros() {
 			const idPedido = String(pedido.id_pedido ?? '').toLowerCase();
 			const cliente = obtenerNombreCliente(pedido).toLowerCase();
 			const direccion = obtenerLugarEntregaPedido(pedido).toLowerCase();
+			const comentario = String(pedido.comentario_pedido ?? '').toLowerCase();
 			const telefono = obtenerTelefonoCliente(pedido).toLowerCase();
 			const estatus = obtenerDescripcionEstatus(pedido).toLowerCase();
 			const tipoCliente = obtenerTipoCliente(pedido).toLowerCase();
@@ -1357,6 +1360,7 @@ function aplicarFiltros() {
 				idPedido.includes(textoBusqueda) ||
 				cliente.includes(textoBusqueda) ||
 				direccion.includes(textoBusqueda) ||
+				comentario.includes(textoBusqueda) ||
 				telefono.includes(textoBusqueda) ||
 				estatus.includes(textoBusqueda) ||
 				tipoCliente.includes(textoBusqueda)
@@ -1392,6 +1396,7 @@ async function cargarPedidosRepartidor() {
 				fecha_pedido,
 				fecha_entrega_aproximada,
 				lugar_entrega,
+				comentario_pedido,
 				total_pagar,
 				id_estatus,
 				id_repartidor,

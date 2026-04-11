@@ -26,6 +26,7 @@ const detalleFecha = document.getElementById('detalleFecha');
 const detalleFechaEntrega = document.getElementById('detalleFechaEntrega');
 const detalleTipoPedido = document.getElementById('detalleTipoPedido');
 const detalleLugarEntrega = document.getElementById('detalleLugarEntrega');
+const detalleComentarioPedido = document.getElementById('detalleComentarioPedido');
 const detalleTotal = document.getElementById('detalleTotal');
 const detalleRepartidor = document.getElementById('detalleRepartidor');
 const detalleEstatus = document.getElementById('detalleEstatus');
@@ -508,6 +509,7 @@ function aplicarFiltrosInterno() {
 				obtenerNombreRepartidor(pedido),
 				obtenerDescripcionEstatus(pedido),
 				pedido.lugar_entrega ?? '',
+				pedido.comentario_pedido ?? '',
 				obtenerTipoEntrega(pedido),
 				pedido.fecha_entrega_aproximada ?? '',
 				pedido.personalizado ? 'personalizado' : 'normal',
@@ -629,6 +631,9 @@ function abrirModalPedido(pedido) {
 	detalleLugarEntrega.textContent = esPedidoParaRecoger(pedido)
 		? 'El cliente pasara por el pedido a la tienda'
 		: (pedido.lugar_entrega ?? 'Sin lugar registrado');
+	if (detalleComentarioPedido) {
+		detalleComentarioPedido.textContent = pedido.comentario_pedido?.trim() || 'Sin comentarios';
+	}
 	detalleTotal.textContent = formatearMoneda(pedido.total_pagar);
 	detalleRepartidor.textContent = obtenerNombreRepartidor(pedido);
 	detalleEstatus.innerHTML = `
@@ -699,6 +704,7 @@ async function cargarPedidos() {
 			fecha_pedido,
 			fecha_entrega_aproximada,
 			lugar_entrega,
+			comentario_pedido,
 			tipo_entrega,
 			total_pagar,
 			id_estatus,
