@@ -1,4 +1,4 @@
-const DIRECCION_NEGOCIO = '21.478741236697257, -104.86570974660742';
+const DIRECCION_NEGOCIO = '21.478761147795492, -104.86575261965632';
 const NOMBRE_NEGOCIO = 'Dulce Mordisco';
 
 const nombreRepartidor = document.getElementById('nombreRepartidor');
@@ -160,6 +160,12 @@ window.addEventListener('resize', () => {
 	if (window.innerWidth > 900) {
 		cerrarMenuMovil();
 	}
+
+	if (mapaRuta) {
+		setTimeout(() => {
+			mapaRuta.invalidateSize();
+		}, 150);
+	}
 });
 
 function esVistaMovilMapa() {
@@ -194,6 +200,7 @@ function enfocarMapaEnMovil() {
 	window.setTimeout(() => {
 		mapCard.focus({ preventScroll: true });
 		resaltarMapa();
+
 		if (mapaRuta) {
 			mapaRuta.invalidateSize();
 		}
@@ -386,14 +393,6 @@ function obtenerTelefonoCliente(pedido) {
 	return pedido.cliente?.telefono ?? 'Sin teléfono';
 }
 
-function obtenerCorreoCliente(pedido) {
-	if (esPedidoInvitado(pedido)) {
-		return pedido.invitado?.correo_contacto ?? 'Sin correo';
-	}
-
-	return 'Sin correo';
-}
-
 function obtenerTipoCliente(pedido) {
 	return esPedidoInvitado(pedido) ? 'Invitado' : 'Registrado';
 }
@@ -523,9 +522,560 @@ function convertirCoordenadas(texto, etiqueta = 'Ubicación') {
 
 function normalizarTextoDireccion(texto) {
 	return String(texto ?? '')
-		.replace(/\s+/g, ' ')
 		.replace(/\n/g, ' ')
+		.replace(/\s+/g, ' ')
 		.trim();
+}
+
+function obtenerLugarEntregaPedido(pedido) {
+	return normalizarTextoDireccion(pedido?.lugar_entrega ?? '');
+}
+
+function actualizarBotonRutaExterna(url) {
+	ultimaRutaExterna = url || '';
+
+	if (btnAbrirRutaExterna) {
+		btnAbrirRutaExterna.disabled = !ultimaRutaExterna;
+	}
+}
+
+function calcularDistanciaLinealMetros(origen, destino) {
+	const radioTierra = 6371000;
+	const lat1 = (origen.lat * Math.PI) / 180;
+	const lat2 = (destino.lat * Math.PI) / 180;
+	const deltaLat = ((destino.lat - origen.lat) * Math.PI) / 180;
+	const deltaLon = ((destino.lon - origen.lon) * Math.PI) / 180;
+
+	const a =
+		(Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2)) +
+		(Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2));
+
+	const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+	return radioTierra * c;
+}
+
+function estimarDuracionLinealSegundos(distanciaMetros) {
+	const velocidadPromedioMps = 8.33;
+	return distanciaMetros / velocidadPromedioMps;
+}
+
+function renderizarMapaConPuntos(origen, destino) {
+	limpiarMapaRuta();
+
+	marcadorOrigen = L.marker([origen.lat, origen.lon]).addTo(mapaRuta);
+	marcadorOrigen.bindPopup('Origen');
+
+	marcadorDestino = L.marker([destino.lat, destino.lon]).addTo(mapaRuta);
+	marcadorDestino.bindPopup('Destino');
+
+	capaRuta = L.polyline(
+		[
+			[origen.lat, origen.lon],
+			[destino.lat, destino.lon]
+		],
+		{
+			color: '#2563eb',
+			weight: 4,
+			opacity: 0.8,
+			dashArray: '8, 10'
+		}
+	).addTo(mapaRuta);
+
+	const grupo = L.featureGroup([marcadorOrigen, marcadorDestino, capaRuta]);
+	mapaRuta.fitBounds(grupo.getBounds(), {
+		padding: [30, 30]
+	});
+
+	setTimeout(() => {
+		if (mapaRuta) {
+			mapaRuta.invalidateSize();
+		}
+	}, 150);
+}
+
+function renderizarRutaReal(origen, destino, ruta) {
+	limpiarMapaRuta();
+
+	marcadorOrigen = L.marker([origen.lat, origen.lon]).addTo(mapaRuta);
+	marcadorOrigen.bindPopup('Origen');
+
+	marcadorDestino = L.marker([destino.lat, destino.lon]).addTo(mapaRuta);
+	marcadorDestino.bindPopup('Destino');
+
+	capaRuta = L.geoJSON(ruta.geometry, {
+		style: {
+			color: '#2563eb',
+			weight: 6,
+			opacity: 0.9
+		}
+	}).addTo(mapaRuta);
+
+	const grupo = L.featureGroup([marcadorOrigen, marcadorDestino, capaRuta]);
+	mapaRuta.fitBounds(grupo.getBounds(), {
+		padding: [30, 30]
+	});
+
+	setTimeout(() => {
+		if (mapaRuta) {
+			mapaRuta.invalidateSize();
+		}
+	}, 150);
+}
+
+function actualizarResumenRuta(origen, destino, distancia, duracion) {
+	if (rutaOrigenTexto) {
+		rutaOrigenTexto.textContent = origen.texto ?? `${origen.lat}, ${origen.lon}`;
+	}
+
+	if (rutaDestinoTexto) {
+		rutaDestinoTexto.textContent = destino.texto ?? `${destino.lat}, ${destino.lon}`;
+	}
+
+	if (rutaDistancia) {
+		rutaDistancia.textContent = formatearDistancia(distancia);
+	}
+
+	if (rutaDuracion) {
+		rutaDuracion.textContent = formatearDuracion(duracion);
+	}
+}
+
+function renderizarFallbackRuta(origen, destino) {
+	const distancia = calcularDistanciaLinealMetros(origen, destino);
+	const duracion = estimarDuracionLinealSegundos(distancia);
+
+	renderizarMapaConPuntos(origen, destino);
+	actualizarResumenRuta(origen, destino, distancia, duracion);
+	actualizarBotonRutaExterna(
+		construirUrlGoogleMapsRuta(origen.lat, origen.lon, destino.lat, destino.lon)
+	);
+
+	mostrarMensajeRuta(
+		'No se pudo dibujar la ruta detallada. Se mostró una ruta aproximada y puedes abrir la navegación en Google Maps.',
+		'error'
+	);
+}
+
+function obtenerTimeoutFetch(ms = 12000) {
+	const controller = new AbortController();
+	const timeoutId = window.setTimeout(() => {
+		controller.abort();
+	}, ms);
+
+	return {
+		signal: controller.signal,
+		clear: () => window.clearTimeout(timeoutId)
+	};
+}
+
+async function obtenerUbicacionActual() {
+	return new Promise((resolve, reject) => {
+		if (!navigator.geolocation) {
+			reject(new Error('Tu navegador no soporta geolocalización.'));
+			return;
+		}
+
+		navigator.geolocation.getCurrentPosition(
+			(posicion) => {
+				resolve({
+					lat: posicion.coords.latitude,
+					lon: posicion.coords.longitude,
+					texto: 'Ubicación actual del repartidor'
+				});
+			},
+			(error) => {
+				let mensaje = 'No se pudo obtener tu ubicación actual.';
+
+				if (error.code === 1) {
+					mensaje = 'Debes permitir el acceso a tu ubicación para calcular la ruta.';
+				} else if (error.code === 2) {
+					mensaje = 'No fue posible determinar tu ubicación actual.';
+				} else if (error.code === 3) {
+					mensaje = 'La solicitud de ubicación tardó demasiado.';
+				}
+
+				reject(new Error(mensaje));
+			},
+			{
+				enableHighAccuracy: true,
+				timeout: 12000,
+				maximumAge: 0
+			}
+		);
+	});
+}
+
+async function geocodificarDireccion(direccion, etiquetaSiEsCoordenada = 'Ubicación') {
+	const texto = normalizarTextoDireccion(direccion);
+
+	if (!texto) {
+		throw new Error('No hay un lugar de entrega válido para calcular la ruta.');
+	}
+
+	const coordenadasDirectas = convertirCoordenadas(texto, etiquetaSiEsCoordenada);
+
+	if (coordenadasDirectas) {
+		return coordenadasDirectas;
+	}
+
+	const intentos = [
+		texto,
+		`${texto}, Tepic, Nayarit, México`,
+		`${texto}, Nayarit, México`,
+		`${texto}, México`
+	];
+
+	for (const intento of intentos) {
+		const url = new URL('https://nominatim.openstreetmap.org/search');
+		url.searchParams.set('q', intento);
+		url.searchParams.set('format', 'jsonv2');
+		url.searchParams.set('addressdetails', '1');
+		url.searchParams.set('limit', '1');
+		url.searchParams.set('countrycodes', 'mx');
+		url.searchParams.set('accept-language', 'es');
+
+		const timeout = obtenerTimeoutFetch(10000);
+
+		try {
+			const respuesta = await fetch(url.toString(), {
+				method: 'GET',
+				headers: {
+					'Accept': 'application/json'
+				},
+				signal: timeout.signal
+			});
+
+			if (!respuesta.ok) {
+				continue;
+			}
+
+			const data = await respuesta.json();
+
+			if (Array.isArray(data) && data.length > 0) {
+				return {
+					lat: Number(data[0].lat),
+					lon: Number(data[0].lon),
+					texto: data[0].display_name ?? intento
+				};
+			}
+		} catch (error) {
+			console.error('Error geocodificando dirección:', intento, error);
+		} finally {
+			timeout.clear();
+		}
+	}
+
+	throw new Error(`No se encontró una ubicación válida para el lugar de entrega: "${texto}".`);
+}
+
+async function consultarRuta(origen, destino) {
+	const url = new URL('/api/ruta', window.location.origin);
+
+	url.searchParams.set('origenLat', origen.lat);
+	url.searchParams.set('origenLon', origen.lon);
+	url.searchParams.set('destinoLat', destino.lat);
+	url.searchParams.set('destinoLon', destino.lon);
+
+	const respuesta = await fetch(url.toString(), {
+		method: 'GET',
+		headers: {
+			'Accept': 'application/json'
+		}
+	});
+
+	const data = await respuesta.json();
+
+	if (!respuesta.ok) {
+		throw new Error(data.error || 'No se pudo calcular la ruta.');
+	}
+
+	return data;
+}
+
+async function obtenerOrigenRuta() {
+	if (modoOrigenRuta === 'actual') {
+		return obtenerUbicacionActual();
+	}
+
+	return geocodificarDireccion(DIRECCION_NEGOCIO, NOMBRE_NEGOCIO);
+}
+
+function inicializarMapaRuta() {
+	if (mapaRuta) {
+		return;
+	}
+
+	const coordenadasNegocio = convertirCoordenadas(DIRECCION_NEGOCIO, NOMBRE_NEGOCIO);
+	const vistaInicial = coordenadasNegocio
+		? [coordenadasNegocio.lat, coordenadasNegocio.lon]
+		: [23.2494, -106.4111];
+
+	mapaRuta = L.map('mapaRuta', {
+		zoomControl: true
+	}).setView(vistaInicial, 13);
+
+	L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+		maxZoom: 19,
+		attribution: '&copy; OpenStreetMap'
+	}).addTo(mapaRuta);
+
+	setTimeout(() => {
+		if (mapaRuta) {
+			mapaRuta.invalidateSize();
+		}
+	}, 200);
+}
+
+function limpiarMapaRuta() {
+	if (!mapaRuta) {
+		return;
+	}
+
+	if (capaRuta) {
+		mapaRuta.removeLayer(capaRuta);
+		capaRuta = null;
+	}
+
+	if (marcadorOrigen) {
+		mapaRuta.removeLayer(marcadorOrigen);
+		marcadorOrigen = null;
+	}
+
+	if (marcadorDestino) {
+		mapaRuta.removeLayer(marcadorDestino);
+		marcadorDestino = null;
+	}
+}
+
+function limpiarResumenRuta() {
+	if (rutaPedidoId) {
+		rutaPedidoId.textContent = '-';
+	}
+
+	if (rutaClienteNombre) {
+		rutaClienteNombre.textContent = '-';
+	}
+
+	if (rutaDistancia) {
+		rutaDistancia.textContent = '-';
+	}
+
+	if (rutaDuracion) {
+		rutaDuracion.textContent = '-';
+	}
+
+	if (rutaOrigenTexto) {
+		rutaOrigenTexto.textContent = modoOrigenRuta === 'negocio'
+			? NOMBRE_NEGOCIO
+			: 'Ubicación actual del repartidor';
+	}
+
+	if (rutaDestinoTexto) {
+		rutaDestinoTexto.textContent = 'Selecciona un pedido.';
+	}
+
+	actualizarBotonRutaExterna('');
+}
+
+async function mostrarRutaPedido(pedido) {
+	if (!pedido) {
+		return;
+	}
+
+	inicializarMapaRuta();
+	ocultarMensajeRuta();
+
+	pedidoRutaActual = pedido;
+	ultimoPedidoSeleccionadoId = Number(pedido.id_pedido);
+	marcarPedidoSeleccionado();
+
+	if (btnRecalcularRuta) {
+		btnRecalcularRuta.disabled = true;
+		btnRecalcularRuta.textContent = 'Calculando...';
+	}
+
+	actualizarBotonRutaExterna('');
+
+	if (rutaPedidoId) {
+		rutaPedidoId.textContent = `#${pedido.id_pedido}`;
+	}
+
+	if (rutaClienteNombre) {
+		rutaClienteNombre.textContent = obtenerNombreCliente(pedido);
+	}
+
+	if (rutaDistancia) {
+		rutaDistancia.textContent = '-';
+	}
+
+	if (rutaDuracion) {
+		rutaDuracion.textContent = '-';
+	}
+
+	const destinoTextoOriginal = obtenerLugarEntregaPedido(pedido);
+
+	if (rutaDestinoTexto) {
+		rutaDestinoTexto.textContent = destinoTextoOriginal || 'Lugar de entrega no registrado';
+	}
+
+	try {
+		if (!destinoTextoOriginal) {
+			throw new Error('Este pedido no tiene un lugar de entrega registrado.');
+		}
+
+		console.log('Pedido seleccionado para ruta:', pedido);
+		console.log('Lugar de entrega enviado a geocodificación:', destinoTextoOriginal);
+
+		const origen = await obtenerOrigenRuta();
+		const destino = await geocodificarDireccion(destinoTextoOriginal, 'Destino del pedido');
+
+		console.log('Origen calculado:', origen);
+		console.log('Destino calculado:', destino);
+
+		actualizarBotonRutaExterna(
+			construirUrlGoogleMapsRuta(origen.lat, origen.lon, destino.lat, destino.lon)
+		);
+
+		try {
+			const ruta = await consultarRuta(origen, destino);
+
+			console.log('Ruta calculada:', ruta);
+
+			renderizarRutaReal(origen, destino, ruta);
+			actualizarResumenRuta(origen, destino, ruta.distance, ruta.duration);
+
+			if (esVistaMovilMapa()) {
+				enfocarMapaEnMovil();
+			} else {
+				resaltarMapa();
+
+				setTimeout(() => {
+					if (mapaRuta) {
+						mapaRuta.invalidateSize();
+					}
+				}, 250);
+			}
+		} catch (errorRuta) {
+			console.error('Fallo la ruta detallada, se usará fallback visual:', errorRuta);
+			renderizarFallbackRuta(origen, destino);
+
+			if (esVistaMovilMapa()) {
+				enfocarMapaEnMovil();
+			} else {
+				resaltarMapa();
+
+				setTimeout(() => {
+					if (mapaRuta) {
+						mapaRuta.invalidateSize();
+					}
+				}, 250);
+			}
+		}
+	} catch (error) {
+		console.error('Error al mostrar la ruta del pedido:', error);
+		limpiarMapaRuta();
+		mostrarMensajeRuta(error.message || 'No se pudo calcular la ruta.', 'error');
+		actualizarBotonRutaExterna('');
+	} finally {
+		if (btnRecalcularRuta) {
+			btnRecalcularRuta.disabled = false;
+			btnRecalcularRuta.textContent = 'Recalcular ruta';
+		}
+	}
+}
+
+async function cargarCatalogoEstatus() {
+	try {
+		const { data, error } = await db
+			.from('estatuspedido')
+			.select('id_estatus, descripcion');
+
+		if (error) {
+			console.error('Error al consultar estatus:', error);
+			return;
+		}
+
+		mapaEstatus = {};
+
+		(data ?? []).forEach((estatus) => {
+			const clave = (estatus.descripcion ?? '').trim().toLowerCase();
+
+			if (clave) {
+				mapaEstatus[clave] = estatus.id_estatus;
+			}
+		});
+	} catch (err) {
+		console.error('Error general al cargar catálogo de estatus:', err);
+	}
+}
+
+function obtenerIdEstatusPorDescripcion(...descripciones) {
+	for (const descripcion of descripciones) {
+		const clave = descripcion.trim().toLowerCase();
+
+		if (mapaEstatus[clave]) {
+			return mapaEstatus[clave];
+		}
+	}
+
+	return null;
+}
+
+async function actualizarEstatusPedido(idPedido, accion, boton) {
+	if (!idPedido) {
+		return;
+	}
+
+	let nuevoIdEstatus = null;
+	let etiquetaAccion = '';
+
+	if (accion === 'ruta') {
+		nuevoIdEstatus = obtenerIdEstatusPorDescripcion('en ruta', 'enviando', 'en camino');
+		etiquetaAccion = 'en ruta';
+	} else if (accion === 'entregado') {
+		nuevoIdEstatus = obtenerIdEstatusPorDescripcion('entregado', 'completado');
+		etiquetaAccion = 'entregado';
+	}
+
+	if (!nuevoIdEstatus) {
+		mostrarMensaje(`No se encontró un estatus válido para marcar el pedido como ${etiquetaAccion}.`, 'error');
+		return;
+	}
+
+	try {
+		ocultarMensaje();
+
+		if (boton) {
+			boton.disabled = true;
+			boton.textContent = 'Actualizando...';
+		}
+
+		const { error } = await db
+			.from('pedido')
+			.update({
+				id_estatus: nuevoIdEstatus
+			})
+			.eq('id_pedido', idPedido)
+			.eq('id_repartidor', usuario.id_usuario);
+
+		if (error) {
+			console.error('Error al actualizar estatus del pedido:', error);
+			mostrarMensaje('No se pudo actualizar el estatus del pedido.', 'error');
+			return;
+		}
+
+		mostrarMensaje(`Pedido #${idPedido} actualizado correctamente a ${etiquetaAccion}.`, 'success');
+		await cargarPedidosRepartidor();
+	} catch (err) {
+		console.error('Error general al actualizar el pedido:', err);
+		mostrarMensaje('Ocurrió un error al actualizar la entrega.', 'error');
+	} finally {
+		if (boton) {
+			boton.disabled = false;
+			boton.textContent = accion === 'ruta' ? 'Marcar en ruta' : 'Marcar entregado';
+		}
+	}
 }
 
 function renderizarListaPedidos(pedidos) {
@@ -547,7 +1097,7 @@ function renderizarListaPedidos(pedidos) {
 		const productos = obtenerProductosPedido(pedido.detallepedido);
 		const cliente = obtenerNombreCliente(pedido);
 		const tipoCliente = obtenerTipoCliente(pedido);
-		const direccion = pedido.lugar_entrega ?? 'Lugar de entrega no registrado';
+		const direccion = obtenerLugarEntregaPedido(pedido) || 'Lugar de entrega no registrado';
 		const telefono = obtenerTelefonoCliente(pedido);
 		const fechaEntrega = pedido.fecha_entrega_aproximada
 			? formatearFechaCorta(pedido.fecha_entrega_aproximada)
@@ -642,7 +1192,7 @@ function aplicarFiltros() {
 		pedidosFiltrados = pedidosFiltrados.filter((pedido) => {
 			const idPedido = String(pedido.id_pedido ?? '').toLowerCase();
 			const cliente = obtenerNombreCliente(pedido).toLowerCase();
-			const direccion = String(pedido.lugar_entrega ?? '').toLowerCase();
+			const direccion = obtenerLugarEntregaPedido(pedido).toLowerCase();
 			const telefono = obtenerTelefonoCliente(pedido).toLowerCase();
 			const estatus = obtenerDescripcionEstatus(pedido).toLowerCase();
 			const tipoCliente = obtenerTipoCliente(pedido).toLowerCase();
@@ -667,411 +1217,6 @@ function aplicarFiltros() {
 
 	actualizarTextoResultados(pedidosFiltrados.length, pedidosOriginales.length);
 	renderizarListaPedidos(pedidosFiltrados);
-}
-
-function obtenerIdEstatusPorDescripcion(...descripciones) {
-	for (const descripcion of descripciones) {
-		const clave = descripcion.trim().toLowerCase();
-
-		if (mapaEstatus[clave]) {
-			return mapaEstatus[clave];
-		}
-	}
-
-	return null;
-}
-
-async function cargarCatalogoEstatus() {
-	try {
-		const { data, error } = await db
-			.from('estatuspedido')
-			.select('id_estatus, descripcion');
-
-		if (error) {
-			console.error('Error al consultar estatus:', error);
-			return;
-		}
-
-		mapaEstatus = {};
-
-		(data ?? []).forEach((estatus) => {
-			const clave = (estatus.descripcion ?? '').trim().toLowerCase();
-
-			if (clave) {
-				mapaEstatus[clave] = estatus.id_estatus;
-			}
-		});
-	} catch (err) {
-		console.error('Error general al cargar catálogo de estatus:', err);
-	}
-}
-
-async function actualizarEstatusPedido(idPedido, accion, boton) {
-	if (!idPedido) {
-		return;
-	}
-
-	let nuevoIdEstatus = null;
-	let etiquetaAccion = '';
-
-	if (accion === 'ruta') {
-		nuevoIdEstatus = obtenerIdEstatusPorDescripcion('en ruta', 'enviando', 'en camino');
-		etiquetaAccion = 'en ruta';
-	} else if (accion === 'entregado') {
-		nuevoIdEstatus = obtenerIdEstatusPorDescripcion('entregado', 'completado');
-		etiquetaAccion = 'entregado';
-	}
-
-	if (!nuevoIdEstatus) {
-		mostrarMensaje(`No se encontró un estatus válido para marcar el pedido como ${etiquetaAccion}.`, 'error');
-		return;
-	}
-
-	try {
-		ocultarMensaje();
-
-		if (boton) {
-			boton.disabled = true;
-			boton.textContent = 'Actualizando...';
-		}
-
-		const { error } = await db
-			.from('pedido')
-			.update({
-				id_estatus: nuevoIdEstatus
-			})
-			.eq('id_pedido', idPedido)
-			.eq('id_repartidor', usuario.id_usuario);
-
-		if (error) {
-			console.error('Error al actualizar estatus del pedido:', error);
-			mostrarMensaje('No se pudo actualizar el estatus del pedido.', 'error');
-			return;
-		}
-
-		mostrarMensaje(`Pedido #${idPedido} actualizado correctamente a ${etiquetaAccion}.`, 'success');
-		await cargarPedidosRepartidor();
-	} catch (err) {
-		console.error('Error general al actualizar el pedido:', err);
-		mostrarMensaje('Ocurrió un error al actualizar la entrega.', 'error');
-	} finally {
-		if (boton) {
-			boton.disabled = false;
-			boton.textContent = accion === 'ruta' ? 'Marcar en ruta' : 'Marcar entregado';
-		}
-	}
-}
-
-function inicializarMapaRuta() {
-	if (mapaRuta) {
-		return;
-	}
-
-	const coordenadasNegocio = convertirCoordenadas(DIRECCION_NEGOCIO, NOMBRE_NEGOCIO);
-	const vistaInicial = coordenadasNegocio
-		? [coordenadasNegocio.lat, coordenadasNegocio.lon]
-		: [23.2494, -106.4111];
-
-	mapaRuta = L.map('mapaRuta', {
-		zoomControl: true
-	}).setView(vistaInicial, 13);
-
-	L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-		maxZoom: 19,
-		attribution: '&copy; OpenStreetMap'
-	}).addTo(mapaRuta);
-
-	setTimeout(() => {
-		mapaRuta.invalidateSize();
-	}, 200);
-}
-
-function limpiarMapaRuta() {
-	if (!mapaRuta) {
-		return;
-	}
-
-	if (capaRuta) {
-		mapaRuta.removeLayer(capaRuta);
-		capaRuta = null;
-	}
-
-	if (marcadorOrigen) {
-		mapaRuta.removeLayer(marcadorOrigen);
-		marcadorOrigen = null;
-	}
-
-	if (marcadorDestino) {
-		mapaRuta.removeLayer(marcadorDestino);
-		marcadorDestino = null;
-	}
-}
-
-function limpiarResumenRuta() {
-	if (rutaPedidoId) {
-		rutaPedidoId.textContent = '-';
-	}
-
-	if (rutaClienteNombre) {
-		rutaClienteNombre.textContent = '-';
-	}
-
-	if (rutaDistancia) {
-		rutaDistancia.textContent = '-';
-	}
-
-	if (rutaDuracion) {
-		rutaDuracion.textContent = '-';
-	}
-
-	if (rutaOrigenTexto) {
-		rutaOrigenTexto.textContent = modoOrigenRuta === 'negocio'
-			? NOMBRE_NEGOCIO
-			: 'Ubicación actual del repartidor';
-	}
-
-	if (rutaDestinoTexto) {
-		rutaDestinoTexto.textContent = 'Selecciona un pedido.';
-	}
-
-	if (btnAbrirRutaExterna) {
-		btnAbrirRutaExterna.disabled = true;
-	}
-}
-
-async function obtenerUbicacionActual() {
-	return new Promise((resolve, reject) => {
-		if (!navigator.geolocation) {
-			reject(new Error('Tu navegador no soporta geolocalización.'));
-			return;
-		}
-
-		navigator.geolocation.getCurrentPosition(
-			(posicion) => {
-				resolve({
-					lat: posicion.coords.latitude,
-					lon: posicion.coords.longitude,
-					texto: 'Ubicación actual del repartidor'
-				});
-			},
-			(error) => {
-				let mensaje = 'No se pudo obtener tu ubicación actual.';
-
-				if (error.code === 1) {
-					mensaje = 'Debes permitir el acceso a tu ubicación para calcular la ruta.';
-				} else if (error.code === 2) {
-					mensaje = 'No fue posible determinar tu ubicación actual.';
-				} else if (error.code === 3) {
-					mensaje = 'La solicitud de ubicación tardó demasiado.';
-				}
-
-				reject(new Error(mensaje));
-			},
-			{
-				enableHighAccuracy: true,
-				timeout: 12000,
-				maximumAge: 0
-			}
-		);
-	});
-}
-
-async function geocodificarDireccion(direccion, etiquetaSiEsCoordenada = 'Ubicación') {
-	const texto = normalizarTextoDireccion(direccion);
-
-	if (!texto) {
-		throw new Error('No hay una dirección válida para calcular la ruta.');
-	}
-
-	const coordenadasDirectas = convertirCoordenadas(texto, etiquetaSiEsCoordenada);
-
-	if (coordenadasDirectas) {
-		return coordenadasDirectas;
-	}
-
-	const url = new URL('https://nominatim.openstreetmap.org/search');
-	url.searchParams.set('q', texto);
-	url.searchParams.set('format', 'jsonv2');
-	url.searchParams.set('addressdetails', '1');
-	url.searchParams.set('limit', '1');
-	url.searchParams.set('countrycodes', 'mx');
-	url.searchParams.set('accept-language', 'es');
-
-	const respuesta = await fetch(url.toString(), {
-		method: 'GET',
-		headers: {
-			'Accept': 'application/json'
-		}
-	});
-
-	if (!respuesta.ok) {
-		throw new Error('No se pudo interpretar una de las direcciones.');
-	}
-
-	const data = await respuesta.json();
-
-	if (!Array.isArray(data) || data.length === 0) {
-		throw new Error('No se encontró una ubicación válida para una de las direcciones.');
-	}
-
-	return {
-		lat: Number(data[0].lat),
-		lon: Number(data[0].lon),
-		texto: data[0].display_name ?? texto
-	};
-}
-
-async function consultarRuta(origen, destino) {
-	const coordenadas = `${origen.lon},${origen.lat};${destino.lon},${destino.lat}`;
-	const url = `https://router.project-osrm.org/route/v1/driving/${coordenadas}?overview=full&geometries=geojson&steps=false`;
-
-	const respuesta = await fetch(url, {
-		method: 'GET',
-		headers: {
-			'Accept': 'application/json'
-		}
-	});
-
-	if (!respuesta.ok) {
-		throw new Error('No se pudo calcular la ruta.');
-	}
-
-	const data = await respuesta.json();
-
-	if (!data.routes || !data.routes.length) {
-		throw new Error('No se encontró una ruta disponible entre los puntos.');
-	}
-
-	return data.routes[0];
-}
-
-function dibujarRutaEnMapa(origen, destino, ruta) {
-	limpiarMapaRuta();
-
-	marcadorOrigen = L.marker([origen.lat, origen.lon]).addTo(mapaRuta);
-	marcadorOrigen.bindPopup('Origen');
-
-	marcadorDestino = L.marker([destino.lat, destino.lon]).addTo(mapaRuta);
-	marcadorDestino.bindPopup('Destino');
-
-	capaRuta = L.geoJSON(ruta.geometry, {
-		style: {
-			color: '#2563eb',
-			weight: 6,
-			opacity: 0.9
-		}
-	}).addTo(mapaRuta);
-
-	const grupo = L.featureGroup([marcadorOrigen, marcadorDestino, capaRuta]);
-	mapaRuta.fitBounds(grupo.getBounds(), {
-		padding: [30, 30]
-	});
-
-	setTimeout(() => {
-		mapaRuta.invalidateSize();
-	}, 150);
-}
-
-async function obtenerOrigenRuta() {
-	if (modoOrigenRuta === 'actual') {
-		return obtenerUbicacionActual();
-	}
-
-	return geocodificarDireccion(DIRECCION_NEGOCIO, NOMBRE_NEGOCIO);
-}
-
-async function mostrarRutaPedido(pedido) {
-	if (!pedido) {
-		return;
-	}
-
-	inicializarMapaRuta();
-	ocultarMensajeRuta();
-
-	pedidoRutaActual = pedido;
-	ultimoPedidoSeleccionadoId = Number(pedido.id_pedido);
-	marcarPedidoSeleccionado();
-
-	if (btnRecalcularRuta) {
-		btnRecalcularRuta.disabled = true;
-		btnRecalcularRuta.textContent = 'Calculando...';
-	}
-
-	if (btnAbrirRutaExterna) {
-		btnAbrirRutaExterna.disabled = true;
-	}
-
-	if (rutaPedidoId) {
-		rutaPedidoId.textContent = `#${pedido.id_pedido}`;
-	}
-
-	if (rutaClienteNombre) {
-		rutaClienteNombre.textContent = obtenerNombreCliente(pedido);
-	}
-
-	if (rutaDistancia) {
-		rutaDistancia.textContent = '-';
-	}
-
-	if (rutaDuracion) {
-		rutaDuracion.textContent = '-';
-	}
-
-	if (rutaDestinoTexto) {
-		rutaDestinoTexto.textContent = pedido.lugar_entrega ?? 'Lugar de entrega no registrado';
-	}
-
-	try {
-		const destinoTextoOriginal = normalizarTextoDireccion(pedido.lugar_entrega ?? '');
-
-		if (!destinoTextoOriginal) {
-			throw new Error('Este pedido no tiene un lugar de entrega registrado.');
-		}
-
-		const origen = await obtenerOrigenRuta();
-		const destino = await geocodificarDireccion(destinoTextoOriginal, 'Destino del pedido');
-		const ruta = await consultarRuta(origen, destino);
-
-		dibujarRutaEnMapa(origen, destino, ruta);
-
-		if (rutaOrigenTexto) {
-			rutaOrigenTexto.textContent = origen.texto ?? `${origen.lat}, ${origen.lon}`;
-		}
-
-		if (rutaDestinoTexto) {
-			rutaDestinoTexto.textContent = destino.texto;
-		}
-
-		if (rutaDistancia) {
-			rutaDistancia.textContent = formatearDistancia(ruta.distance);
-		}
-
-		if (rutaDuracion) {
-			rutaDuracion.textContent = formatearDuracion(ruta.duration);
-		}
-
-		ultimaRutaExterna = construirUrlGoogleMapsRuta(origen.lat, origen.lon, destino.lat, destino.lon);
-
-		if (btnAbrirRutaExterna) {
-			btnAbrirRutaExterna.disabled = false;
-		}
-
-		if (esVistaMovilMapa()) {
-			enfocarMapaEnMovil();
-		} else {
-			resaltarMapa();
-		}
-	} catch (error) {
-		console.error('Error al mostrar la ruta del pedido:', error);
-		limpiarMapaRuta();
-		mostrarMensajeRuta(error.message || 'No se pudo calcular la ruta.', 'error');
-		ultimaRutaExterna = '';
-	} finally {
-		if (btnRecalcularRuta) {
-			btnRecalcularRuta.disabled = false;
-			btnRecalcularRuta.textContent = 'Recalcular ruta';
-		}
-	}
 }
 
 async function cargarPedidosRepartidor() {
@@ -1303,4 +1448,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 	await cargarCatalogoEstatus();
 	await cargarPedidosRepartidor();
 	vincularCierreMenuEnSidebar();
+
+	setTimeout(() => {
+		if (mapaRuta) {
+			mapaRuta.invalidateSize();
+		}
+	}, 300);
 });
