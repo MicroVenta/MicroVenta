@@ -13,6 +13,7 @@ const pedidoMensaje = document.getElementById('pedidoMensaje');
 const nombreInvitado = document.getElementById('nombreInvitado');
 const correoPedido = document.getElementById('correoPedido');
 const telefonoPedido = document.getElementById('telefonoPedido');
+const tipoEntregaPedido = document.getElementById('tipoEntregaPedido');
 const lugarEntrega = document.getElementById('lugarEntrega');
 
 const cartCard = document.getElementById('cartCard');
@@ -655,11 +656,33 @@ function esCorreoValido(correo) {
 	return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo);
 }
 
+function esPedidoParaRecoger() {
+	return tipoEntregaPedido?.value === 'recoger';
+}
+
+function actualizarEstadoLugarEntrega() {
+	if (!lugarEntrega) {
+		return;
+	}
+
+	if (esPedidoParaRecoger()) {
+		lugarEntrega.value = '';
+		lugarEntrega.disabled = true;
+		lugarEntrega.placeholder = 'No se necesita direccion porque pasaras por el pedido a la tienda.';
+		limpiarMensaje();
+		return;
+	}
+
+	lugarEntrega.disabled = false;
+	lugarEntrega.placeholder = 'Escribe tu direccion completa de entrega';
+}
+
 function validarFormularioInvitado() {
 	const nombre = String(nombreInvitado?.value ?? '').trim();
 	const correo = String(correoPedido?.value ?? '').trim();
 	const telefono = String(telefonoPedido?.value ?? '').trim();
 	const direccion = String(lugarEntrega?.value ?? '').trim();
+	const paraRecoger = esPedidoParaRecoger();
 
 	if (nombre === '') {
 		mostrarMensaje('error', 'Debes escribir tu nombre.');
@@ -685,7 +708,7 @@ function validarFormularioInvitado() {
 		return null;
 	}
 
-	if (direccion === '') {
+	if (!paraRecoger && direccion === '') {
 		mostrarMensaje('error', 'Debes escribir la dirección de entrega.');
 		lugarEntrega?.focus();
 		return null;
@@ -695,7 +718,8 @@ function validarFormularioInvitado() {
 		nombre,
 		correo,
 		telefono,
-		direccion
+		direccion: paraRecoger ? 'Recoger en tienda' : direccion,
+		tipoEntrega: paraRecoger ? 'recoger' : 'domicilio'
 	};
 }
 
@@ -741,6 +765,7 @@ async function realizarPedidoInvitado() {
 			p_direccion_contacto: datosInvitado.direccion,
 			p_total: Number(total),
 			p_lugar_entrega: datosInvitado.direccion,
+			p_tipo_entrega: datosInvitado.tipoEntrega,
 			p_detalles: detallesPedido
 		});
 
@@ -757,7 +782,11 @@ async function realizarPedidoInvitado() {
 		nombreInvitado.value = '';
 		correoPedido.value = '';
 		telefonoPedido.value = '';
+		if (tipoEntregaPedido) {
+			tipoEntregaPedido.value = 'domicilio';
+		}
 		lugarEntrega.value = '';
+		actualizarEstadoLugarEntrega();
 
 		if (huboPersonalizacion) {
 			mostrarMensaje(
@@ -965,6 +994,7 @@ filtroCategoria?.addEventListener('change', aplicarFiltros);
 btnVaciarCarrito?.addEventListener('click', vaciarCarrito);
 btnRealizarPedido?.addEventListener('click', realizarPedidoInvitado);
 btnCerrarModal?.addEventListener('click', cerrarModalConfirmacion);
+tipoEntregaPedido?.addEventListener('change', actualizarEstadoLugarEntrega);
 
 btnAbrirRegistro?.addEventListener('click', abrirModalRegistro);
 btnAbrirRegistroSecundario?.addEventListener('click', abrirModalRegistro);
@@ -990,5 +1020,6 @@ modalRegistro?.addEventListener('click', (event) => {
 	renderizarCarrito();
 	await cargarCategorias();
 	await cargarProductos();
+	actualizarEstadoLugarEntrega();
 	actualizarBotonCarritoMovil();
 })();

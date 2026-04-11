@@ -17,6 +17,7 @@ const usarDireccionPerfil = document.getElementById('usarDireccionPerfil');
 const direccionPerfilInfo = document.getElementById('direccionPerfilInfo');
 const telefonoInfo = document.getElementById('telefonoInfo');
 const telefonoPedido = document.getElementById('telefonoPedido');
+const tipoEntregaPedido = document.getElementById('tipoEntregaPedido');
 const lugarEntrega = document.getElementById('lugarEntrega');
 
 const btnMenu = document.getElementById('btnMenu');
@@ -383,16 +384,39 @@ function inicializarEntrega() {
 		usarDireccionPerfil.checked = false;
 	}
 
+	if (tipoEntregaPedido) {
+		tipoEntregaPedido.value = 'domicilio';
+	}
+
 	if (lugarEntrega) {
 		lugarEntrega.value = '';
 		lugarEntrega.disabled = false;
 	}
+
+	actualizarEstadoLugarEntrega();
+}
+
+function esPedidoParaRecoger() {
+	return tipoEntregaPedido?.value === 'recoger';
 }
 
 function actualizarEstadoLugarEntrega() {
 	if (!usarDireccionPerfil || !lugarEntrega) {
 		return;
 	}
+
+	if (esPedidoParaRecoger()) {
+		usarDireccionPerfil.checked = false;
+		usarDireccionPerfil.disabled = true;
+		lugarEntrega.value = '';
+		lugarEntrega.disabled = true;
+		lugarEntrega.placeholder = 'No se necesita direccion porque pasaras por el pedido a la tienda.';
+		limpiarMensaje();
+		return;
+	}
+
+	usarDireccionPerfil.disabled = false;
+	lugarEntrega.placeholder = 'Escribe el lugar de entrega';
 
 	const direccionGuardada = (usuario?.direccion ?? '').trim();
 	const usarPerfil = usarDireccionPerfil.checked;
@@ -922,6 +946,10 @@ async function guardarTelefonoSiCambio() {
 }
 
 function validarLugarEntrega() {
+	if (esPedidoParaRecoger()) {
+		return 'Recoger en tienda';
+	}
+
 	const lugar = lugarEntrega?.value.trim() ?? '';
 
 	if (lugar === '') {
@@ -980,6 +1008,7 @@ async function realizarPedido() {
 			p_id_cliente: Number(usuario.id_usuario),
 			p_total: Number(total),
 			p_lugar_entrega: lugarEntregaFinal,
+			p_tipo_entrega: esPedidoParaRecoger() ? 'recoger' : 'domicilio',
 			p_detalles: detallesPedido
 		});
 
@@ -997,10 +1026,16 @@ async function realizarPedido() {
 			usarDireccionPerfil.checked = false;
 		}
 
+		if (tipoEntregaPedido) {
+			tipoEntregaPedido.value = 'domicilio';
+		}
+
 		if (lugarEntrega) {
 			lugarEntrega.disabled = false;
 			lugarEntrega.value = '';
 		}
+
+		actualizarEstadoLugarEntrega();
 
 		if (huboPersonalizacion) {
 			mostrarMensaje(
@@ -1040,6 +1075,10 @@ if (btnRealizarPedido) {
 
 if (usarDireccionPerfil) {
 	usarDireccionPerfil.addEventListener('change', actualizarEstadoLugarEntrega);
+}
+
+if (tipoEntregaPedido) {
+	tipoEntregaPedido.addEventListener('change', actualizarEstadoLugarEntrega);
 }
 
 if (btnIrCarritoMovil) {

@@ -389,6 +389,14 @@ textarea {
 	transition: background 0.2s ease;
 }
 
+.order-row-pendiente {
+	background: rgba(245, 159, 0, 0.06);
+}
+
+.order-row-pendiente:hover {
+	background: rgba(245, 159, 0, 0.10);
+}
+
 .order-row:focus {
 	outline: 2px solid rgba(217, 108, 138, 0.35);
 	outline-offset: -2px;
@@ -403,6 +411,13 @@ textarea {
 	font-size: 0.85rem;
 	color: var(--gris-texto);
 	margin-top: 4px;
+}
+
+.client-badges {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 8px;
 }
 
 .badge {
@@ -449,6 +464,18 @@ textarea {
 	background: rgba(230, 126, 34, 0.16);
 	color: var(--naranja);
 	margin-top: 6px;
+}
+
+.badge-invitado {
+	background: rgba(245, 159, 0, 0.16);
+	color: #9a6700;
+	border: 1px solid rgba(245, 159, 0, 0.20);
+}
+
+.badge-registrado {
+	background: rgba(59, 130, 246, 0.12);
+	color: var(--azul);
+	border: 1px solid rgba(59, 130, 246, 0.16);
 }
 
 .modal {

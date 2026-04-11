@@ -5,6 +5,9 @@ const heroText = document.getElementById('heroText');
 const revealCards = document.querySelectorAll('.reveal-card');
 const stockAlertasResumen = document.getElementById('stockAlertasResumen');
 const listaAlertasStock = document.getElementById('listaAlertasStock');
+const alertaPedidosInvitados = document.getElementById('alertaPedidosInvitados');
+const pedidosInvitadosTitulo = document.getElementById('pedidosInvitadosTitulo');
+const pedidosInvitadosTexto = document.getElementById('pedidosInvitadosTexto');
 
 const btnMenu = document.getElementById('btnMenu');
 const sidebar = document.getElementById('sidebarContainer');
@@ -177,6 +180,62 @@ function renderizarAlertasStock(productos) {
 	}).join('');
 }
 
+function mostrarAlertaPedidosInvitados(pedidos) {
+	if (!alertaPedidosInvitados || !pedidosInvitadosTitulo || !pedidosInvitadosTexto) {
+		return;
+	}
+
+	const total = pedidos.length;
+
+	if (total <= 0) {
+		alertaPedidosInvitados.classList.add('hidden');
+		return;
+	}
+
+	pedidosInvitadosTitulo.textContent = total === 1
+		? 'Hay 1 pedido de invitado sin aceptar'
+		: `Hay ${total} pedidos de invitado sin aceptar`;
+	pedidosInvitadosTexto.textContent = 'Revisa los pedidos pendientes para aceptarlos o darles seguimiento.';
+	alertaPedidosInvitados.classList.remove('hidden');
+}
+
+async function cargarPedidosInvitadosSinAceptar() {
+	if (!alertaPedidosInvitados) {
+		return;
+	}
+
+	try {
+		const { data, error } = await db
+			.from('pedido')
+			.select(`
+				id_pedido,
+				id_invitado,
+				id_estatus,
+				estatuspedido (
+					id_estatus,
+					descripcion
+				)
+			`)
+			.not('id_invitado', 'is', null);
+
+		if (error) {
+			console.error('Error al cargar pedidos de invitado sin aceptar:', error);
+			alertaPedidosInvitados.classList.add('hidden');
+			return;
+		}
+
+		const pedidosPendientesInvitado = (data ?? []).filter((pedido) => {
+			const estatus = String(pedido.estatuspedido?.descripcion ?? '').trim().toLowerCase();
+			return estatus === 'pendiente';
+		});
+
+		mostrarAlertaPedidosInvitados(pedidosPendientesInvitado);
+	} catch (error) {
+		console.error('Error general al cargar pedidos de invitado sin aceptar:', error);
+		alertaPedidosInvitados.classList.add('hidden');
+	}
+}
+
 async function cargarAlertasStock() {
 	if (!listaAlertasStock || !stockAlertasResumen) {
 		return;
@@ -230,4 +289,5 @@ animarTextoPorPalabras(heroTitle, 0, 0.10);
 animarTextoPorPalabras(heroText, 0.65, 0.05);
 animarTarjetas();
 cargarAlertasStock();
+cargarPedidosInvitadosSinAceptar();
 vincularCierreMenuEnSidebar();
