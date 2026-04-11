@@ -1,6 +1,8 @@
 const DIRECCION_NEGOCIO = '21.478761147795492, -104.86575261965632';
 const NOMBRE_NEGOCIO = 'Dulce Mordisco';
 
+const ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjFjZjIzZmE2NjMxNTRjYTg4Nzk2Mzc4OGM1ZTE2OWMzIiwiaCI6Im11cm11cjY0In0=';
+
 const nombreRepartidor = document.getElementById('nombreRepartidor');
 const btnCerrarSesion = document.getElementById('btnCerrarSesion');
 
@@ -560,14 +562,93 @@ function estimarDuracionLinealSegundos(distanciaMetros) {
 	return distanciaMetros / velocidadPromedioMps;
 }
 
+function crearIconoMapa(colorFondo, textoInterior) {
+	return L.divIcon({
+		className: 'custom-route-marker',
+		html: `
+			<div style="
+				position: relative;
+				width: 34px;
+				height: 46px;
+				display: flex;
+				align-items: flex-start;
+				justify-content: center;
+			">
+				<div style="
+					width: 34px;
+					height: 34px;
+					border-radius: 50% 50% 50% 0;
+					background: ${colorFondo};
+					transform: rotate(-45deg);
+					position: absolute;
+					top: 0;
+					left: 0;
+					box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+					border: 3px solid #ffffff;
+					box-sizing: border-box;
+				"></div>
+
+				<div style="
+					position: absolute;
+					top: 6px;
+					left: 6px;
+					width: 22px;
+					height: 22px;
+					border-radius: 50%;
+					background: #ffffff;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					font-size: 12px;
+					font-weight: 700;
+					color: ${colorFondo};
+					z-index: 2;
+				">
+					${escaparHtml(textoInterior)}
+				</div>
+			</div>
+		`,
+		iconSize: [34, 46],
+		iconAnchor: [17, 42],
+		popupAnchor: [0, -38]
+	});
+}
+
 function renderizarMapaConPuntos(origen, destino) {
 	limpiarMapaRuta();
 
-	marcadorOrigen = L.marker([origen.lat, origen.lon]).addTo(mapaRuta);
-	marcadorOrigen.bindPopup('Origen');
+	const iconoOrigen = crearIconoMapa('#d96c8a', 'O');
+	const iconoDestino = crearIconoMapa('#2563eb', 'D');
 
-	marcadorDestino = L.marker([destino.lat, destino.lon]).addTo(mapaRuta);
-	marcadorDestino.bindPopup('Destino');
+	marcadorOrigen = L.marker([origen.lat, origen.lon], {
+		icon: iconoOrigen
+	}).addTo(mapaRuta);
+
+	marcadorOrigen.bindPopup(`
+		<strong>Origen</strong><br>
+		${escaparHtml(origen.texto ?? 'Ubicación de origen')}
+	`);
+
+	marcadorDestino = L.marker([destino.lat, destino.lon], {
+		icon: iconoDestino
+	}).addTo(mapaRuta);
+
+	marcadorDestino.bindPopup(`
+		<strong>Destino</strong><br>
+		${escaparHtml(destino.texto ?? 'Ubicación de destino')}
+	`);
+
+	const capaBase = L.polyline(
+		[
+			[origen.lat, origen.lon],
+			[destino.lat, destino.lon]
+		],
+		{
+			color: '#ffffff',
+			weight: 8,
+			opacity: 0.9
+		}
+	).addTo(mapaRuta);
 
 	capaRuta = L.polyline(
 		[
@@ -577,14 +658,14 @@ function renderizarMapaConPuntos(origen, destino) {
 		{
 			color: '#2563eb',
 			weight: 4,
-			opacity: 0.8,
-			dashArray: '8, 10'
+			opacity: 0.85,
+			dashArray: '10, 10'
 		}
 	).addTo(mapaRuta);
 
-	const grupo = L.featureGroup([marcadorOrigen, marcadorDestino, capaRuta]);
+	const grupo = L.featureGroup([marcadorOrigen, marcadorDestino, capaBase, capaRuta]);
 	mapaRuta.fitBounds(grupo.getBounds(), {
-		padding: [30, 30]
+		padding: [50, 50]
 	});
 
 	setTimeout(() => {
@@ -597,23 +678,50 @@ function renderizarMapaConPuntos(origen, destino) {
 function renderizarRutaReal(origen, destino, ruta) {
 	limpiarMapaRuta();
 
-	marcadorOrigen = L.marker([origen.lat, origen.lon]).addTo(mapaRuta);
-	marcadorOrigen.bindPopup('Origen');
+	const iconoOrigen = crearIconoMapa('#d96c8a', 'O');
+	const iconoDestino = crearIconoMapa('#16a34a', 'D');
 
-	marcadorDestino = L.marker([destino.lat, destino.lon]).addTo(mapaRuta);
-	marcadorDestino.bindPopup('Destino');
+	marcadorOrigen = L.marker([origen.lat, origen.lon], {
+		icon: iconoOrigen
+	}).addTo(mapaRuta);
+
+	marcadorOrigen.bindPopup(`
+		<strong>Origen</strong><br>
+		${escaparHtml(origen.texto ?? 'Ubicación de origen')}
+	`);
+
+	marcadorDestino = L.marker([destino.lat, destino.lon], {
+		icon: iconoDestino
+	}).addTo(mapaRuta);
+
+	marcadorDestino.bindPopup(`
+		<strong>Destino</strong><br>
+		${escaparHtml(destino.texto ?? 'Ubicación de destino')}
+	`);
+
+	const capaBase = L.geoJSON(ruta.geometry, {
+		style: {
+			color: '#ffffff',
+			weight: 10,
+			opacity: 0.95,
+			lineCap: 'round',
+			lineJoin: 'round'
+		}
+	}).addTo(mapaRuta);
 
 	capaRuta = L.geoJSON(ruta.geometry, {
 		style: {
 			color: '#2563eb',
 			weight: 6,
-			opacity: 0.9
+			opacity: 0.95,
+			lineCap: 'round',
+			lineJoin: 'round'
 		}
 	}).addTo(mapaRuta);
 
-	const grupo = L.featureGroup([marcadorOrigen, marcadorDestino, capaRuta]);
+	const grupo = L.featureGroup([marcadorOrigen, marcadorDestino, capaBase, capaRuta]);
 	mapaRuta.fitBounds(grupo.getBounds(), {
-		padding: [30, 30]
+		padding: [50, 50]
 	});
 
 	setTimeout(() => {
@@ -770,27 +878,74 @@ async function geocodificarDireccion(direccion, etiquetaSiEsCoordenada = 'Ubicac
 }
 
 async function consultarRuta(origen, destino) {
-	const url = new URL('/api/ruta', window.location.origin);
-
-	url.searchParams.set('origenLat', origen.lat);
-	url.searchParams.set('origenLon', origen.lon);
-	url.searchParams.set('destinoLat', destino.lat);
-	url.searchParams.set('destinoLon', destino.lon);
-
-	const respuesta = await fetch(url.toString(), {
-		method: 'GET',
-		headers: {
-			'Accept': 'application/json'
-		}
-	});
-
-	const data = await respuesta.json();
-
-	if (!respuesta.ok) {
-		throw new Error(data.error || 'No se pudo calcular la ruta.');
+	if (!ORS_API_KEY || ORS_API_KEY === 'PEGA_AQUI_TU_API_KEY_DE_OPENROUTESERVICE') {
+		throw new Error('Debes colocar tu API key de OpenRouteService en ORS_API_KEY.');
 	}
 
-	return data;
+	const timeout = obtenerTimeoutFetch(20000);
+
+	try {
+		const respuesta = await fetch(
+			'https://api.openrouteservice.org/v2/directions/driving-car/geojson',
+			{
+				method: 'POST',
+				headers: {
+					'Authorization': ORS_API_KEY,
+					'Content-Type': 'application/json',
+					'Accept': 'application/json, application/geo+json'
+				},
+				body: JSON.stringify({
+					coordinates: [
+						[origen.lon, origen.lat],
+						[destino.lon, destino.lat]
+					]
+				}),
+				signal: timeout.signal
+			}
+		);
+
+		const contentType = respuesta.headers.get('content-type') || '';
+		const esJson =
+			contentType.includes('application/json') ||
+			contentType.includes('application/geo+json');
+
+		if (!esJson) {
+			const texto = await respuesta.text();
+			throw new Error(`ORS devolvió una respuesta no válida: ${texto.slice(0, 150)}`);
+		}
+
+		const data = await respuesta.json();
+
+		if (!respuesta.ok) {
+			const detalle =
+				data?.error?.message ||
+				data?.error ||
+				data?.message ||
+				`ORS respondió con estado ${respuesta.status}.`;
+
+			throw new Error(detalle);
+		}
+
+		if (
+			!data ||
+			data.type !== 'FeatureCollection' ||
+			!Array.isArray(data.features) ||
+			!data.features.length
+		) {
+			throw new Error('No se encontró una ruta disponible.');
+		}
+
+		const featureRuta = data.features[0];
+		const summary = featureRuta?.properties?.summary || {};
+
+		return {
+			geometry: featureRuta.geometry,
+			distance: Number(summary.distance || 0),
+			duration: Number(summary.duration || 0)
+		};
+	} finally {
+		timeout.clear();
+	}
 }
 
 async function obtenerOrigenRuta() {
@@ -944,6 +1099,7 @@ async function mostrarRutaPedido(pedido) {
 
 			renderizarRutaReal(origen, destino, ruta);
 			actualizarResumenRuta(origen, destino, ruta.distance, ruta.duration);
+			mostrarMensajeRuta('Ruta real calculada correctamente.', 'success');
 
 			if (esVistaMovilMapa()) {
 				enfocarMapaEnMovil();
