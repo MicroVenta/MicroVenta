@@ -681,7 +681,7 @@ async function cargarRepartidores() {
 		.from('usuario')
 		.select('id_usuario, nombre_completo')
 		.eq('id_rol', 3)
-		.eq('Estado', true)
+		.eq('estado', true)
 		.order('nombre_completo', { ascending: true });
 
 	if (error) {

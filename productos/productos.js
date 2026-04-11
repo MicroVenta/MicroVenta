@@ -1,6 +1,5 @@
 const nombreCliente = document.getElementById('nombreCliente');
 const btnCerrarSesion = document.getElementById('btnCerrarSesion');
-const btnCerrarSesionSidebar = document.getElementById('btnCerrarSesionSidebar');
 const buscarProducto = document.getElementById('buscarProducto');
 const filtroCategoria = document.getElementById('filtroCategoria');
 const listaProductos = document.getElementById('listaProductos');
@@ -40,6 +39,21 @@ let carrito = [];
 
 function normalizarRol(nombreRol) {
 	return (nombreRol ?? '').toString().trim().toLowerCase();
+}
+
+function obtenerNombreRolPorId(idRol) {
+	switch (Number(idRol)) {
+		case 1:
+			return 'administrador';
+		case 2:
+			return 'ayudante';
+		case 3:
+			return 'repartidor';
+		case 4:
+			return 'cliente';
+		default:
+			return '';
+	}
 }
 
 function puedeComprar(usuarioData) {
@@ -89,9 +103,23 @@ if (nombreCliente) {
 }
 
 function guardarUsuarioEnStorage() {
-	const usuarioSerializado = JSON.stringify(usuario);
-	sessionStorage.setItem('microventa_usuario', usuarioSerializado);
-	localStorage.setItem('microventa_usuario', usuarioSerializado);
+	const usuarioParaGuardar = {
+		...usuario,
+		id_rol: Number(usuario.id_rol),
+		nombre_rol: normalizarRol(
+			usuario.nombre_rol || obtenerNombreRolPorId(usuario.id_rol)
+		)
+	};
+
+	const usuarioSerializado = JSON.stringify(usuarioParaGuardar);
+
+	if (sessionStorage.getItem('microventa_usuario')) {
+		sessionStorage.setItem('microventa_usuario', usuarioSerializado);
+	}
+
+	if (localStorage.getItem('microventa_usuario')) {
+		localStorage.setItem('microventa_usuario', usuarioSerializado);
+	}
 }
 
 async function refrescarUsuarioDesdeBD() {
@@ -106,11 +134,7 @@ async function refrescarUsuarioDesdeBD() {
 				telefono,
 				direccion,
 				nombreuser,
-				Estado,
-				rol (
-					id_rol,
-					nombre_rol
-				)
+				estado
 			`)
 			.eq('id_usuario', usuario.id_usuario)
 			.single();
@@ -123,7 +147,10 @@ async function refrescarUsuarioDesdeBD() {
 		usuario = {
 			...usuario,
 			...data,
-			nombre_rol: data.rol?.nombre_rol ?? usuario.nombre_rol
+			id_rol: Number(data.id_rol),
+			nombre_rol: normalizarRol(
+				usuario?.nombre_rol || obtenerNombreRolPorId(data.id_rol)
+			)
 		};
 
 		guardarUsuarioEnStorage();
@@ -144,10 +171,6 @@ function cerrarSesion() {
 
 if (btnCerrarSesion) {
 	btnCerrarSesion.addEventListener('click', cerrarSesion);
-}
-
-if (btnCerrarSesionSidebar) {
-	btnCerrarSesionSidebar.addEventListener('click', cerrarSesion);
 }
 
 /* =========================
@@ -371,12 +394,14 @@ function actualizarInfoTelefono() {
 function inicializarEntrega() {
 	const direccionGuardada = (usuario?.direccion ?? '').trim();
 
-	if (direccionGuardada !== '') {
-		direccionPerfilInfo.textContent = `Dirección guardada: ${direccionGuardada}`;
-		direccionPerfilInfo.classList.remove('hidden');
-	} else {
-		direccionPerfilInfo.textContent = 'No tienes una dirección guardada en tu perfil.';
-		direccionPerfilInfo.classList.remove('hidden');
+	if (direccionPerfilInfo) {
+		if (direccionGuardada !== '') {
+			direccionPerfilInfo.textContent = `Dirección guardada: ${direccionGuardada}`;
+			direccionPerfilInfo.classList.remove('hidden');
+		} else {
+			direccionPerfilInfo.textContent = 'No tienes una dirección guardada en tu perfil.';
+			direccionPerfilInfo.classList.remove('hidden');
+		}
 	}
 
 	actualizarInfoTelefono();
