@@ -49,6 +49,21 @@ function obtenerRolNormalizado(nombreRol) {
 	return (nombreRol ?? '').toString().trim().toLowerCase();
 }
 
+function obtenerNombreRolPorId(idRol) {
+	switch (Number(idRol)) {
+		case ID_ROL_ADMINISTRADOR:
+			return 'administrador';
+		case ID_ROL_AYUDANTE:
+			return 'ayudante';
+		case ID_ROL_REPARTIDOR:
+			return 'repartidor';
+		case ID_ROL_CLIENTE:
+			return 'cliente';
+		default:
+			return '';
+	}
+}
+
 function esAdministrador(usuarioData) {
 	if (!usuarioData) {
 		return false;
@@ -241,7 +256,7 @@ function capitalizarRol(nombreRol) {
 }
 
 function obtenerEtiquetaEstadoCuenta(usuarioData) {
-	if (!usuarioData?.Estado) {
+	if (!usuarioData?.estado) {
 		return 'Cuenta inactiva';
 	}
 
@@ -300,7 +315,7 @@ function llenarVista(usuarioData) {
 	}
 
 	if (infoEstado) {
-		infoEstado.textContent = formatearEstado(usuarioData.Estado);
+		infoEstado.textContent = formatearEstado(usuarioData.estado);
 	}
 
 	if (infoCorreo) {
@@ -324,7 +339,9 @@ function guardarEnStorage(usuarioActualizado) {
 	const usuarioParaGuardar = {
 		...usuarioActualizado,
 		id_rol: Number(usuarioActualizado.id_rol),
-		nombre_rol: obtenerRolNormalizado(usuarioActualizado.nombre_rol)
+		nombre_rol: obtenerRolNormalizado(
+			usuarioActualizado.nombre_rol || obtenerNombreRolPorId(usuarioActualizado.id_rol)
+		)
 	};
 
 	const usuarioSerializado = JSON.stringify(usuarioParaGuardar);
@@ -647,6 +664,9 @@ async function cargarPerfil() {
 		return;
 	}
 
+	renderizarSidebar('perfil');
+	vincularCierreMenuEnSidebar();
+
 	try {
 		const { data, error } = await db
 			.from('usuario')
@@ -658,10 +678,7 @@ async function cargarPerfil() {
 				telefono,
 				direccion,
 				nombreuser,
-				Estado,
-				rol (
-					nombre_rol
-				)
+				estado
 			`)
 			.eq('id_usuario', usuario.id_usuario)
 			.single();
@@ -675,15 +692,15 @@ async function cargarPerfil() {
 		const usuarioData = {
 			...data,
 			id_rol: Number(data.id_rol),
-			nombre_rol: obtenerRolNormalizado(data.rol?.nombre_rol ?? usuario?.nombre_rol ?? '')
+			nombre_rol: obtenerRolNormalizado(
+				usuario?.nombre_rol || obtenerNombreRolPorId(data.id_rol)
+			)
 		};
 
 		if (!tieneAccesoPerfil(usuarioData)) {
 			window.location.href = '/login/login.html';
 			return;
 		}
-
-		renderizarSidebar('perfil');
 
 		datosOriginales = {
 			nombre_completo: usuarioData.nombre_completo ?? '',
@@ -701,7 +718,6 @@ async function cargarPerfil() {
 		guardarEnStorage(usuario);
 		llenarVista(usuario);
 		llenarFormulario(usuario);
-		vincularCierreMenuEnSidebar();
 	} catch (err) {
 		console.error('Error general al cargar perfil:', err);
 		mostrarMensaje('Ocurrió un error al consultar tus datos.', 'error');
@@ -836,10 +852,7 @@ if (formPerfil) {
 					telefono,
 					direccion,
 					nombreuser,
-					Estado,
-					rol (
-						nombre_rol
-					)
+					estado
 				`)
 				.single();
 
@@ -862,7 +875,9 @@ if (formPerfil) {
 				...usuario,
 				...data,
 				id_rol: Number(data.id_rol),
-				nombre_rol: obtenerRolNormalizado(data.rol?.nombre_rol ?? usuario?.nombre_rol ?? '')
+				nombre_rol: obtenerRolNormalizado(
+					usuario?.nombre_rol || obtenerNombreRolPorId(data.id_rol)
+				)
 			};
 
 			if (!tieneAccesoPerfil(usuarioActualizado)) {
