@@ -956,7 +956,7 @@ async function registrarUsuarioDesdeModal(event) {
 				contrasena: datosRegistro.contrasena,
 				id_rol: idRolCliente,
 				nombreuser: datosRegistro.nombreUsuario,
-				Estado: true
+				estado: true
 			})
 			.select(`
 				id_usuario,
@@ -966,7 +966,7 @@ async function registrarUsuarioDesdeModal(event) {
 				telefono,
 				direccion,
 				nombreuser,
-				Estado
+				estado
 			`)
 			.single();
 
