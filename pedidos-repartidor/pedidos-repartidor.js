@@ -814,6 +814,212 @@ async function obtenerUbicacionActual() {
 	});
 }
 
+function agregarIntentoUnico(lista, valor) {
+	const limpio = normalizarTextoDireccion(valor);
+
+	if (!limpio) {
+		return;
+	}
+
+	if (!lista.includes(limpio)) {
+		lista.push(limpio);
+	}
+}
+
+function limpiarSeparadoresDireccion(texto) {
+	return normalizarTextoDireccion(texto)
+		.replace(/\s*,\s*/g, ', ')
+		.replace(/\s+/g, ' ')
+		.trim();
+}
+
+function limpiarPrefijoCampoDireccion(valor) {
+	return String(valor ?? '')
+		.replace(/^(cp|c\.p\.|codigo postal|código postal|colonia|calle|numero|número)\s*/i, '')
+		.replace(/^:\s*/i, '')
+		.trim();
+}
+
+function extraerCampoDireccion(texto, etiqueta, siguienteEtiquetas = []) {
+	const etiquetasSiguientes = siguienteEtiquetas.length
+		? `(?=,\\s*(?:${siguienteEtiquetas.join('|')})\\b|$)`
+		: '(?=$)';
+
+	const regex = new RegExp(
+		`(?:^|,\\s*)${etiqueta}\\s*([^,]+?)\\s*${etiquetasSiguientes}`,
+		'i'
+	);
+
+	const match = String(texto ?? '').match(regex);
+
+	if (!match?.[1]) {
+		return '';
+	}
+
+	return limpiarPrefijoCampoDireccion(match[1]);
+}
+
+function extraerPartesDireccionEstructurada(texto) {
+	const direccion = limpiarSeparadoresDireccion(texto);
+
+	const cp = extraerCampoDireccion(direccion, '(?:cp|c\\.p\\.|codigo postal|código postal)', [
+		'colonia',
+		'calle',
+		'numero',
+		'número'
+	]);
+
+	const colonia = extraerCampoDireccion(direccion, 'colonia', [
+		'calle',
+		'numero',
+		'número'
+	]);
+
+	const calle = extraerCampoDireccion(direccion, 'calle', [
+		'numero',
+		'número'
+	]);
+
+	const numero = extraerCampoDireccion(direccion, '(?:numero|número)', []);
+
+	const restos = direccion
+		.replace(/(?:^|,\s*)(?:cp|c\.p\.|codigo postal|código postal)\s*[^,]+/ig, '')
+		.replace(/(?:^|,\s*)colonia\s*[^,]+/ig, '')
+		.replace(/(?:^|,\s*)calle\s*[^,]+/ig, '')
+		.replace(/(?:^|,\s*)(?:numero|número)\s*[^,]+/ig, '')
+		.replace(/^,\s*|\s*,\s*$/g, '')
+		.replace(/\s*,\s*,/g, ',')
+		.trim();
+
+	const partesResto = restos
+		.split(',')
+		.map((parte) => parte.trim())
+		.filter(Boolean);
+
+	let ciudad = '';
+	let estado = '';
+	let pais = '';
+
+	if (partesResto.length >= 1) {
+		estado = partesResto[0] ?? '';
+	}
+
+	if (partesResto.length >= 2) {
+		pais = partesResto[1] ?? '';
+	}
+
+	if (/tepic/i.test(direccion)) {
+		ciudad = 'Tepic';
+	}
+
+	if (/nayarit/i.test(direccion) && !estado) {
+		estado = 'Nayarit';
+	}
+
+	if (/mexic|méxico/i.test(direccion) && !pais) {
+		pais = 'México';
+	}
+
+	return {
+		cp: cp.replace(/\D/g, '').slice(0, 5),
+		colonia,
+		calle,
+		numero,
+		ciudad,
+		estado,
+		pais,
+		esEstructurada: Boolean(cp || colonia || calle || numero)
+	};
+}
+
+function construirDireccionesCandidatasDesdeEstructurada(partes) {
+	const intentos = [];
+	const calleNumero = [partes.calle, partes.numero].filter(Boolean).join(' ').trim();
+	const calleNumeroConComa = [partes.calle, partes.numero].filter(Boolean).join(', ').trim();
+	const colonia = partes.colonia;
+	const cp = partes.cp;
+	const ciudad = partes.ciudad || 'Tepic';
+	const estado = partes.estado || 'Nayarit';
+	const pais = partes.pais || 'México';
+
+	agregarIntentoUnico(intentos, [calleNumero, colonia, cp, ciudad, estado, pais].filter(Boolean).join(', '));
+	agregarIntentoUnico(intentos, [calleNumeroConComa, colonia, cp, ciudad, estado, pais].filter(Boolean).join(', '));
+	agregarIntentoUnico(intentos, [calleNumero, colonia, ciudad, estado, pais].filter(Boolean).join(', '));
+	agregarIntentoUnico(intentos, [calleNumeroConComa, colonia, ciudad, estado, pais].filter(Boolean).join(', '));
+	agregarIntentoUnico(intentos, [calleNumero, colonia, estado, pais].filter(Boolean).join(', '));
+	agregarIntentoUnico(intentos, [calleNumeroConComa, colonia, estado, pais].filter(Boolean).join(', '));
+	agregarIntentoUnico(intentos, [calleNumero, cp, ciudad, estado, pais].filter(Boolean).join(', '));
+	agregarIntentoUnico(intentos, [calleNumero, cp, estado, pais].filter(Boolean).join(', '));
+	agregarIntentoUnico(intentos, [colonia, cp, ciudad, estado, pais].filter(Boolean).join(', '));
+	agregarIntentoUnico(intentos, [colonia, ciudad, estado, pais].filter(Boolean).join(', '));
+	agregarIntentoUnico(intentos, [cp, ciudad, estado, pais].filter(Boolean).join(', '));
+	agregarIntentoUnico(intentos, [cp, estado, pais].filter(Boolean).join(', '));
+
+	return intentos;
+}
+
+function construirIntentosGeocodificacion(texto) {
+	const intentos = [];
+	const textoLimpio = limpiarSeparadoresDireccion(texto);
+	const partes = extraerPartesDireccionEstructurada(textoLimpio);
+
+	agregarIntentoUnico(intentos, textoLimpio);
+
+	if (partes.esEstructurada) {
+		const estructuradas = construirDireccionesCandidatasDesdeEstructurada(partes);
+		estructuradas.forEach((intento) => agregarIntentoUnico(intentos, intento));
+	}
+
+	agregarIntentoUnico(intentos, `${textoLimpio}, Tepic, Nayarit, México`);
+	agregarIntentoUnico(intentos, `${textoLimpio}, Nayarit, México`);
+	agregarIntentoUnico(intentos, `${textoLimpio}, México`);
+
+	return intentos;
+}
+
+async function buscarPrimeraCoincidenciaDireccion(intento) {
+	const url = new URL('https://nominatim.openstreetmap.org/search');
+	url.searchParams.set('q', intento);
+	url.searchParams.set('format', 'jsonv2');
+	url.searchParams.set('addressdetails', '1');
+	url.searchParams.set('limit', '1');
+	url.searchParams.set('countrycodes', 'mx');
+	url.searchParams.set('accept-language', 'es');
+
+	const timeout = obtenerTimeoutFetch(10000);
+
+	try {
+		const respuesta = await fetch(url.toString(), {
+			method: 'GET',
+			headers: {
+				'Accept': 'application/json'
+			},
+			signal: timeout.signal
+		});
+
+		if (!respuesta.ok) {
+			return null;
+		}
+
+		const data = await respuesta.json();
+
+		if (Array.isArray(data) && data.length > 0) {
+			return {
+				lat: Number(data[0].lat),
+				lon: Number(data[0].lon),
+				texto: data[0].display_name ?? intento
+			};
+		}
+
+		return null;
+	} catch (error) {
+		console.error('Error geocodificando dirección:', intento, error);
+		return null;
+	} finally {
+		timeout.clear();
+	}
+}
+
 async function geocodificarDireccion(direccion, etiquetaSiEsCoordenada = 'Ubicación') {
 	const texto = normalizarTextoDireccion(direccion);
 
@@ -827,50 +1033,13 @@ async function geocodificarDireccion(direccion, etiquetaSiEsCoordenada = 'Ubicac
 		return coordenadasDirectas;
 	}
 
-	const intentos = [
-		texto,
-		`${texto}, Tepic, Nayarit, México`,
-		`${texto}, Nayarit, México`,
-		`${texto}, México`
-	];
+	const intentos = construirIntentosGeocodificacion(texto);
 
 	for (const intento of intentos) {
-		const url = new URL('https://nominatim.openstreetmap.org/search');
-		url.searchParams.set('q', intento);
-		url.searchParams.set('format', 'jsonv2');
-		url.searchParams.set('addressdetails', '1');
-		url.searchParams.set('limit', '1');
-		url.searchParams.set('countrycodes', 'mx');
-		url.searchParams.set('accept-language', 'es');
+		const resultado = await buscarPrimeraCoincidenciaDireccion(intento);
 
-		const timeout = obtenerTimeoutFetch(10000);
-
-		try {
-			const respuesta = await fetch(url.toString(), {
-				method: 'GET',
-				headers: {
-					'Accept': 'application/json'
-				},
-				signal: timeout.signal
-			});
-
-			if (!respuesta.ok) {
-				continue;
-			}
-
-			const data = await respuesta.json();
-
-			if (Array.isArray(data) && data.length > 0) {
-				return {
-					lat: Number(data[0].lat),
-					lon: Number(data[0].lon),
-					texto: data[0].display_name ?? intento
-				};
-			}
-		} catch (error) {
-			console.error('Error geocodificando dirección:', intento, error);
-		} finally {
-			timeout.clear();
+		if (resultado) {
+			return resultado;
 		}
 	}
 
