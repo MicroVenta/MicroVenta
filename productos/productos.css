@@ -459,6 +459,7 @@ body {
 	max-height: calc(100vh - 40px);
 	overflow-y: auto;
 	padding-right: 18px;
+	scrollbar-width: none;
 }
 
 .cart-card.cart-highlight {
@@ -467,6 +468,10 @@ body {
 		0 0 0 4px rgba(217, 108, 138, 0.14),
 		0 18px 36px rgba(217, 108, 138, 0.18);
 	transform: translateY(-2px);
+}
+
+.cart-card::-webkit-scrollbar {
+	display: none;
 }
 
 .cart-list {
@@ -776,18 +781,6 @@ body {
 	margin-bottom: 6px;
 }
 
-.address-fields {
-	display: flex;
-	flex-direction: column;
-	gap: 14px;
-}
-
-.address-grid {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) minmax(120px, 0.45fr);
-	gap: 14px;
-}
-
 .split-order-actions {
 	display: flex;
 	justify-content: flex-end;
@@ -809,13 +802,229 @@ body {
 	grid-column: 1 / -1;
 }
 
-.cart-card::-webkit-scrollbar {
-	width: 6px;
+.sidebar-group {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-bottom: 18px;
 }
 
-.cart-card::-webkit-scrollbar-thumb {
-	background: rgba(217, 108, 138, 0.4);
-	border-radius: 10px;
+.sidebar-group-title {
+	font-size: 0.8rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--gris-texto);
+	opacity: 0.8;
+	padding: 4px 14px 2px 14px;
+}
+
+/* reseñas */
+
+.modal-content {
+	background: var(--blanco);
+	border-radius: 20px;
+	max-width: 650px;
+	width: 100%;
+	max-height: 85vh;
+	overflow-y: auto;
+	box-shadow: var(--sombra);
+	border: 1px solid rgba(217, 108, 138, 0.14);
+}
+
+.modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 20px 22px;
+	border-bottom: 1px solid var(--gris-borde);
+	gap: 12px;
+}
+
+.modal-header h2 {
+	margin: 0;
+	color: var(--rosa-principal);
+	font-size: 1.35rem;
+}
+
+.modal-close {
+	background: none;
+	border: none;
+	font-size: 24px;
+	cursor: pointer;
+	color: var(--gris-texto);
+	padding: 0;
+	width: 34px;
+	height: 34px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	transition: background 0.2s ease, color 0.2s ease;
+}
+
+.modal-close:hover {
+	background: rgba(255, 214, 220, 0.35);
+	color: var(--rosa-oscuro);
+}
+
+.modal-body {
+	padding: 20px 22px;
+}
+
+.reviews-list {
+	margin-bottom: 20px;
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.review-item {
+	border: 1px solid var(--gris-borde);
+	border-radius: 14px;
+	padding: 15px;
+	background: var(--crema);
+}
+
+.review-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 5px;
+	flex-wrap: wrap;
+}
+
+.review-author {
+	font-weight: 700;
+	color: var(--cafe-oscuro);
+}
+
+.review-rating {
+	color: var(--naranja);
+	font-size: 1.05rem;
+	font-weight: 700;
+}
+
+.review-date {
+	font-size: 0.85rem;
+	color: var(--gris-texto);
+	opacity: 0.7;
+	margin-bottom: 10px;
+}
+
+.review-comment {
+	line-height: 1.5;
+	color: var(--gris-texto);
+	word-break: break-word;
+}
+
+.no-reviews {
+	text-align: center;
+	color: var(--gris-texto);
+	font-style: italic;
+	padding: 20px;
+	background: rgba(255, 247, 239, 0.65);
+	border: 1px dashed var(--gris-borde);
+	border-radius: 14px;
+}
+
+.review-form {
+	border-top: 1px solid var(--gris-borde);
+	padding-top: 20px;
+}
+
+.review-form h3 {
+	margin-bottom: 15px;
+	color: var(--rosa-principal);
+	font-size: 1.1rem;
+}
+
+.product-actions {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+	flex-wrap: wrap;
+}
+
+.btn-reviews {
+	background: var(--rosa-suave);
+	color: var(--rosa-oscuro);
+	border: 1px solid var(--rosa-principal);
+	padding: 10px 12px;
+	border-radius: 12px;
+	cursor: pointer;
+	font-size: 0.9rem;
+	font-weight: 700;
+	transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.btn-reviews:hover {
+	background: var(--rosa-principal);
+	color: var(--blanco);
+	transform: translateY(-2px);
+}
+
+#mensajeResenaAcceso {
+	text-align: center;
+	color: var(--gris-texto);
+	font-style: italic;
+	margin-top: 15px;
+}
+
+/* autocompletado de dirección */
+
+.address-autocomplete {
+	position: relative;
+}
+
+.address-suggestions {
+	position: absolute;
+	top: calc(100% + 6px);
+	left: 0;
+	right: 0;
+	background: #fff;
+	border: 1px solid var(--gris-borde);
+	border-radius: 16px;
+	box-shadow: 0 14px 35px rgba(120, 72, 92, 0.16);
+	overflow: hidden;
+	z-index: 60;
+	max-height: 260px;
+	overflow-y: auto;
+}
+
+.address-suggestion-item {
+	width: 100%;
+	border: none;
+	background: #fff;
+	text-align: left;
+	padding: 12px 14px;
+	cursor: pointer;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	transition: background 0.2s ease;
+}
+
+.address-suggestion-item:hover {
+	background: rgba(255, 214, 220, 0.22);
+}
+
+.address-suggestion-main {
+	font-weight: 700;
+	color: var(--cafe-oscuro);
+	font-size: 0.95rem;
+}
+
+.address-suggestion-secondary {
+	font-size: 0.85rem;
+	color: var(--gris-texto);
+	line-height: 1.4;
+}
+
+.address-status {
+	font-size: 0.85rem;
+	color: var(--rosa-oscuro);
 }
 
 @keyframes pulseCartButton {
@@ -905,6 +1114,35 @@ body {
 	}
 }
 
+@media (max-width: 768px) {
+	.product-actions {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.btn-reviews,
+	.btn-add {
+		width: 100%;
+		text-align: center;
+	}
+
+	.modal-content {
+		width: 95%;
+		max-height: 88vh;
+		border-radius: 18px;
+	}
+
+	.modal-header,
+	.modal-body {
+		padding: 18px;
+	}
+
+	.review-header {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+}
+
 @media (max-width: 700px) {
 	body {
 		padding-bottom: 88px;
@@ -930,7 +1168,6 @@ body {
 	.filters-grid,
 	.products-grid,
 	.split-order-grid,
-	.address-grid,
 	.product-meta {
 		grid-template-columns: 1fr;
 	}
@@ -958,7 +1195,8 @@ body {
 	}
 
 	.stock-badge,
-	.btn-add {
+	.btn-add,
+	.btn-reviews {
 		width: 100%;
 		text-align: center;
 	}
@@ -1003,31 +1241,9 @@ body {
 	.split-order-actions {
 		flex-direction: column;
 	}
-}
 
-.sidebar-group {
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-	margin-bottom: 18px;
-}
-
-.sidebar-group-title {
-	font-size: 0.8rem;
-	font-weight: 700;
-	text-transform: uppercase;
-	letter-spacing: 0.08em;
-	color: var(--gris-texto);
-	opacity: 0.8;
-	padding: 4px 14px 2px 14px;
-}
-
-.cart-card {
-	/* ocultar scrollbar en Firefox */
-	scrollbar-width: none;
-}
-
-/* ocultar scrollbar en Chrome, Edge, Safari */
-.cart-card::-webkit-scrollbar {
-	display: none;
+	.address-suggestions {
+		position: static;
+		margin-top: 6px;
+	}
 }

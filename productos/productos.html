@@ -30,7 +30,7 @@
 
 				<div class="topbar-actions">
 					<span id="nombreCliente" class="client-user">Usuario</span>
-					<button id="btnCerrarSesion" class="btn btn-secondary">Cerrar sesión</button>
+					<button id="btnCerrarSesion" class="btn btn-secondary" type="button">Cerrar sesión</button>
 				</div>
 			</header>
 
@@ -183,6 +183,7 @@
 									</div>
 								</div>
 							</div>
+
 							<textarea id="lugarEntrega" class="hidden" aria-hidden="true"></textarea>
 
 							<div class="form-group">
@@ -279,6 +280,7 @@
 							</div>
 						</div>
 					</div>
+
 					<textarea id="splitNormalLugar" class="hidden" aria-hidden="true"></textarea>
 				</section>
 
@@ -326,6 +328,7 @@
 							</div>
 						</div>
 					</div>
+
 					<textarea id="splitPersonalizadoLugar" class="hidden" aria-hidden="true"></textarea>
 				</section>
 			</div>
@@ -339,6 +342,59 @@
 				<button id="btnConfirmarSeparacionPedido" class="btn btn-primary" type="button">
 					Crear pedidos
 				</button>
+			</div>
+		</div>
+	</div>
+
+	<div id="modalResenas" class="modal-overlay hidden">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h2>Reseñas del producto</h2>
+				<button
+					id="btnCerrarModalResenas"
+					class="modal-close"
+					type="button"
+					aria-label="Cerrar modal"
+				>
+					&times;
+				</button>
+			</div>
+
+			<div class="modal-body">
+				<div id="listaResenas" class="reviews-list">
+					<p class="no-reviews">Cargando reseñas...</p>
+				</div>
+
+				<div id="formularioResena" class="review-form">
+					<h3>Agregar tu opinión</h3>
+
+					<div class="form-group">
+						<label for="calificacionResena">Calificación (1-5 estrellas)</label>
+						<select id="calificacionResena" class="form-control" required>
+							<option value="">Selecciona</option>
+							<option value="5">★★★★★ (5)</option>
+							<option value="4">★★★★☆ (4)</option>
+							<option value="3">★★★☆☆ (3)</option>
+							<option value="2">★★☆☆☆ (2)</option>
+							<option value="1">★☆☆☆☆ (1)</option>
+						</select>
+					</div>
+
+					<div class="form-group">
+						<label for="comentarioResena">Comentario</label>
+						<textarea
+							id="comentarioResena"
+							class="form-control"
+							rows="3"
+							maxlength="500"
+							placeholder="Comparte tu experiencia con este producto"
+						></textarea>
+					</div>
+
+					<button id="btnEnviarResena" class="btn btn-primary" type="button">
+						Enviar reseña
+					</button>
+				</div>
 			</div>
 		</div>
 	</div>

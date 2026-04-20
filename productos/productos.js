@@ -19,6 +19,7 @@ const telefonoPedido = document.getElementById('telefonoPedido');
 const tipoEntregaPedido = document.getElementById('tipoEntregaPedido');
 const lugarEntrega = document.getElementById('lugarEntrega');
 const comentarioPedido = document.getElementById('comentarioPedido');
+
 const domicilioCp = document.getElementById('domicilioCp');
 const domicilioDetalles = document.getElementById('domicilioDetalles');
 const domicilioColonia = document.getElementById('domicilioColonia');
@@ -54,6 +55,14 @@ const splitPersonalizadoLugar = document.getElementById('splitPersonalizadoLugar
 const btnConfirmarSeparacionPedido = document.getElementById('btnConfirmarSeparacionPedido');
 const btnCancelarSeparacionPedido = document.getElementById('btnCancelarSeparacionPedido');
 
+const modalResenas = document.getElementById('modalResenas');
+const btnCerrarModalResenas = document.getElementById('btnCerrarModalResenas');
+const listaResenas = document.getElementById('listaResenas');
+const formularioResena = document.getElementById('formularioResena');
+const calificacionResena = document.getElementById('calificacionResena');
+const comentarioResena = document.getElementById('comentarioResena');
+const btnEnviarResena = document.getElementById('btnEnviarResena');
+
 const usuarioGuardado =
 	sessionStorage.getItem('microventa_usuario') ||
 	localStorage.getItem('microventa_usuario');
@@ -62,33 +71,38 @@ let usuario = null;
 let productosOriginales = [];
 let categoriasOriginales = [];
 let carrito = [];
-const cacheCodigosPostales = new Map();
 
-const domicilioPrincipal = {
-	cp: domicilioCp,
-	detalles: domicilioDetalles,
-	colonia: domicilioColonia,
-	calle: domicilioCalle,
-	numero: domicilioNumero,
-	lugar: lugarEntrega
-};
-
-const domicilioSplitNormal = {
-	cp: splitNormalCp,
-	detalles: splitNormalDetalles,
-	colonia: splitNormalColonia,
-	calle: splitNormalCalle,
-	numero: splitNormalNumero,
-	lugar: splitNormalLugar
-};
-
-const domicilioSplitPersonalizado = {
-	cp: splitPersonalizadoCp,
-	detalles: splitPersonalizadoDetalles,
-	colonia: splitPersonalizadoColonia,
-	calle: splitPersonalizadoCalle,
-	numero: splitPersonalizadoNumero,
-	lugar: splitPersonalizadoLugar
+const estadoAutocompleteDireccion = {
+	principal: {
+		input: null,
+		suggestions: null,
+		status: null,
+		wrapper: null,
+		temporizador: null,
+		controlador: null,
+		seleccionando: false,
+		lugar: lugarEntrega
+	},
+	splitNormal: {
+		input: null,
+		suggestions: null,
+		status: null,
+		wrapper: null,
+		temporizador: null,
+		controlador: null,
+		seleccionando: false,
+		lugar: splitNormalLugar
+	},
+	splitPersonalizado: {
+		input: null,
+		suggestions: null,
+		status: null,
+		wrapper: null,
+		temporizador: null,
+		controlador: null,
+		seleccionando: false,
+		lugar: splitPersonalizadoLugar
+	}
 };
 
 function normalizarRol(nombreRol) {
@@ -108,6 +122,16 @@ function obtenerNombreRolPorId(idRol) {
 		default:
 			return '';
 	}
+}
+
+function obtenerRolUsuarioActual() {
+	return normalizarRol(
+		usuario?.nombre_rol || obtenerNombreRolPorId(usuario?.id_rol)
+	);
+}
+
+function puedeResenar() {
+	return !!usuario && puedeComprar(usuario);
 }
 
 function puedeComprar(usuarioData) {
@@ -445,218 +469,502 @@ function actualizarInfoTelefono() {
 	}
 }
 
-function limpiarDomicilioCampos(campos) {
-	[campos.cp, campos.colonia, campos.calle, campos.numero].forEach((campo) => {
-		if (campo) {
-			campo.value = '';
-			campo.disabled = false;
-		}
-	});
+/* =========================
+	DIRECCIÓN CON AUTOCOMPLETADO
+========================= */
 
-	if (campos.colonia) {
-		campos.colonia.innerHTML = '<option value="">Primero escribe el CP</option>';
-	}
+function crearNodoDireccionAutocomplete(idBase, textoLabel, placeholder) {
+	const wrapper = document.createElement('div');
+	wrapper.className = 'form-group address-autocomplete';
+	wrapper.innerHTML = `
+		<label for="${idBase}">${textoLabel}</label>
+		<input
+			type="text"
+			id="${idBase}"
+			class="form-control"
+			placeholder="${placeholder}"
+			autocomplete="off"
+		>
+		<div id="${idBase}Suggestions" class="address-suggestions hidden"></div>
+		<div id="${idBase}Status" class="address-status hidden"></div>
+	`;
 
-	if (campos.lugar) {
-		campos.lugar.value = '';
-	}
-
-	campos.datosCp = null;
-	campos.detalles?.classList.add('hidden');
+	return wrapper;
 }
 
-function mostrarDomicilioCp(campos, visible) {
-	campos.cp?.closest('.form-group')?.classList.toggle('hidden', !visible);
-	campos.detalles?.classList.toggle('hidden', !visible || String(campos.cp?.value ?? '').length !== 5);
-}
-
-function habilitarDomicilioCampos(campos, habilitado) {
-	[campos.cp, campos.colonia, campos.calle, campos.numero].forEach((campo) => {
-		if (campo) {
-			campo.disabled = !habilitado;
-		}
-	});
-
-	mostrarDomicilioCp(campos, habilitado);
-}
-
-function actualizarDetallesDomicilio(campos) {
-	const cp = String(campos.cp?.value ?? '').replace(/\D/g, '').slice(0, 5);
-
-	if (campos.cp && campos.cp.value !== cp) {
-		campos.cp.value = cp;
-	}
-
-	if (cp.length === 5) {
-		campos.detalles?.classList.remove('hidden');
-		cargarOpcionesCodigoPostal(campos, cp);
-	} else {
-		campos.detalles?.classList.add('hidden');
-		if (campos.colonia) {
-			campos.colonia.innerHTML = '<option value="">Primero escribe el CP</option>';
-		}
-		if (campos.calle) campos.calle.value = '';
-		if (campos.numero) campos.numero.value = '';
-		campos.datosCp = null;
-	}
-}
-
-function obtenerDomicilioEstructurado(campos) {
-	return {
-		cp: String(campos.cp?.value ?? '').trim(),
-		colonia: String(campos.colonia?.value ?? '').trim(),
-		calle: String(campos.calle?.value ?? '').trim(),
-		numero: String(campos.numero?.value ?? '').trim(),
-		datosCp: campos.datosCp ?? null
-	};
-}
-
-function aplicarDomicilioEstructurado(campos, domicilio) {
-	if (!domicilio || !campos.cp) {
-		return;
-	}
-
-	campos.cp.value = domicilio.cp ?? '';
-	campos.datosCp = domicilio.datosCp ?? null;
-
-	if (campos.datosCp?.colonias?.length && campos.colonia) {
-		campos.colonia.innerHTML = '<option value="">Selecciona una colonia</option>';
-		campos.datosCp.colonias.forEach((colonia) => {
-			const option = document.createElement('option');
-			option.value = colonia;
-			option.textContent = colonia;
-			campos.colonia.appendChild(option);
-		});
-	}
-
-	actualizarDetallesDomicilio(campos);
-
-	if (campos.colonia) campos.colonia.value = domicilio.colonia ?? '';
-	if (campos.calle) campos.calle.value = domicilio.calle ?? '';
-	if (campos.numero) campos.numero.value = domicilio.numero ?? '';
-}
-
-async function consultarCodigoPostal(cp) {
-	if (cacheCodigosPostales.has(cp)) {
-		return cacheCodigosPostales.get(cp);
-	}
-
-	try {
-		const respuesta = await fetch(`https://api.zippopotam.us/MX/${cp}`);
-
-		if (!respuesta.ok) {
-			cacheCodigosPostales.set(cp, null);
-			return null;
-		}
-
-		const datos = await respuesta.json();
-		const lugares = Array.isArray(datos.places) ? datos.places : [];
-		
-		if (lugares.length === 0) {
-			cacheCodigosPostales.set(cp, null);
-			return null;
-		}
-
-		const resultado = {
-			cp,
-			estado: datos.places?.[0]?.state ?? '',
-			colonias: lugares
-				.map((lugar) => String(lugar['place name'] ?? '').trim())
-				.filter(Boolean)
-				.sort((a, b) => a.localeCompare(b, 'es'))
-		};
-
-		cacheCodigosPostales.set(cp, resultado);
-		return resultado;
-	} catch (error) {
-		console.error('Error al consultar código postal:', error);
-		cacheCodigosPostales.set(cp, null);
-		return null;
-	}
-}
-
-async function cargarOpcionesCodigoPostal(campos, cp) {
-	if (!campos.colonia || campos.cp?.dataset.cpCargado === cp) {
-		return;
-	}
-
-	campos.cp.dataset.cpCargado = cp;
-	campos.colonia.innerHTML = '<option value="">Buscando colonias...</option>';
-	campos.colonia.disabled = true;
-	campos.datosCp = null;
-
-	try {
-		const datosCp = await consultarCodigoPostal(cp);
-
-		if (!datosCp || datosCp.colonias.length === 0) {
-			campos.colonia.innerHTML = '<option value="">CP no encontrado</option>';
-			campos.cp.dataset.cpCargado = '';
+function ocultarBloqueLegacyDireccion(...elementos) {
+	elementos.forEach((elemento) => {
+		if (!elemento) {
 			return;
 		}
 
-		campos.datosCp = datosCp;
-		campos.colonia.innerHTML = '<option value="">Selecciona una colonia</option>';
-		datosCp.colonias.forEach((colonia) => {
-			const option = document.createElement('option');
-			option.value = colonia;
-			option.textContent = colonia;
-			campos.colonia.appendChild(option);
+		const grupo = elemento.closest('.form-group');
+		if (grupo) {
+			grupo.classList.add('hidden');
+		} else {
+			elemento.classList.add('hidden');
+		}
+	});
+}
+
+function inicializarCampoDireccion(config) {
+	if (!config?.lugar) {
+		return;
+	}
+
+	const yaExisteInput = document.getElementById(config.inputId);
+	const yaExisteSuggestions = document.getElementById(config.suggestionsId);
+	const yaExisteStatus = document.getElementById(config.statusId);
+
+	if (yaExisteInput && yaExisteSuggestions && yaExisteStatus) {
+		config.input = yaExisteInput;
+		config.suggestions = yaExisteSuggestions;
+		config.status = yaExisteStatus;
+		config.wrapper = yaExisteInput.closest('.address-autocomplete');
+		return;
+	}
+
+	const nodo = crearNodoDireccionAutocomplete(
+		config.inputId,
+		config.label,
+		config.placeholder
+	);
+
+	config.lugar.parentNode.insertBefore(nodo, config.lugar);
+
+	config.input = nodo.querySelector(`#${config.inputId}`);
+	config.suggestions = nodo.querySelector(`#${config.suggestionsId}`);
+	config.status = nodo.querySelector(`#${config.statusId}`);
+	config.wrapper = nodo;
+
+	ocultarBloqueLegacyDireccion(
+		config.legacyCp,
+		config.legacyDetalles,
+		config.legacyColonia,
+		config.legacyCalle,
+		config.legacyNumero
+	);
+}
+
+function mostrarEstadoDireccionCampo(campo, texto, tipo = 'normal') {
+	if (!campo?.status) {
+		return;
+	}
+
+	campo.status.textContent = texto;
+	campo.status.classList.remove('hidden');
+
+	if (tipo === 'error') {
+		campo.status.style.color = 'var(--rojo)';
+	} else if (tipo === 'success') {
+		campo.status.style.color = 'var(--verde)';
+	} else {
+		campo.status.style.color = 'var(--rosa-oscuro)';
+	}
+}
+
+function ocultarEstadoDireccionCampo(campo) {
+	if (!campo?.status) {
+		return;
+	}
+
+	campo.status.textContent = '';
+	campo.status.classList.add('hidden');
+	campo.status.style.color = '';
+}
+
+function ocultarSugerenciasDireccionCampo(campo) {
+	if (!campo?.suggestions) {
+		return;
+	}
+
+	campo.suggestions.innerHTML = '';
+	campo.suggestions.classList.add('hidden');
+}
+
+function partsPushUnico(lista, valor) {
+	if (!valor) {
+		return;
+	}
+
+	if (!lista.includes(valor)) {
+		lista.push(valor);
+	}
+}
+
+function construirTextoSecundarioDireccion(item) {
+	const partes = [];
+
+	if (item.address?.suburb) partes.push(item.address.suburb);
+	if (item.address?.city) partsPushUnico(partes, item.address.city);
+	if (item.address?.town) partsPushUnico(partes, item.address.town);
+	if (item.address?.state) partsPushUnico(partes, item.address.state);
+	if (item.address?.postcode) partsPushUnico(partes, item.address.postcode);
+
+	return partes.join(', ');
+}
+
+function obtenerTituloDireccion(item) {
+	const address = item.address ?? {};
+	const titulo = [];
+
+	if (address.road) titulo.push(address.road);
+	if (address.house_number) titulo.push(address.house_number);
+	if (!titulo.length && item.name) titulo.push(item.name);
+	if (!titulo.length && item.display_name) {
+		return item.display_name.split(',')[0];
+	}
+
+	return titulo.join(' ');
+}
+
+function seleccionarSugerenciaDireccionCampo(campo, direccionCompleta) {
+	if (!campo?.input) {
+		return;
+	}
+
+	campo.input.value = direccionCompleta;
+
+	if (campo.lugar) {
+		campo.lugar.value = direccionCompleta;
+	}
+
+	ocultarSugerenciasDireccionCampo(campo);
+	mostrarEstadoDireccionCampo(campo, 'Sugerencia aplicada.', 'success');
+
+	setTimeout(() => {
+		ocultarEstadoDireccionCampo(campo);
+	}, 1800);
+}
+
+function aplicarSugerenciaDesdeBotonCampo(campo, boton) {
+	const direccion = decodeURIComponent(boton.dataset.direccion || '');
+
+	if (!direccion) {
+		return;
+	}
+
+	campo.seleccionando = true;
+	seleccionarSugerenciaDireccionCampo(campo, direccion);
+
+	setTimeout(() => {
+		campo.seleccionando = false;
+	}, 200);
+}
+
+function renderizarSugerenciasDireccionCampo(campo, resultados) {
+	if (!campo?.suggestions) {
+		return;
+	}
+
+	if (!Array.isArray(resultados) || resultados.length === 0) {
+		campo.suggestions.innerHTML = `
+			<div class="address-suggestion-item" style="cursor: default;">
+				<span class="address-suggestion-main">No se encontraron coincidencias</span>
+				<span class="address-suggestion-secondary">Prueba escribiendo calle, colonia o ciudad.</span>
+			</div>
+		`;
+		campo.suggestions.classList.remove('hidden');
+		return;
+	}
+
+	campo.suggestions.innerHTML = resultados.map((item) => {
+		const titulo = obtenerTituloDireccion(item);
+		const secundario = construirTextoSecundarioDireccion(item) || item.display_name;
+
+		return `
+			<button
+				type="button"
+				class="address-suggestion-item"
+				data-direccion="${encodeURIComponent(item.display_name)}"
+			>
+				<span class="address-suggestion-main">${titulo}</span>
+				<span class="address-suggestion-secondary">${secundario}</span>
+			</button>
+		`;
+	}).join('');
+
+	campo.suggestions.classList.remove('hidden');
+
+	campo.suggestions.querySelectorAll('.address-suggestion-item').forEach((boton) => {
+		boton.addEventListener('mousedown', (event) => {
+			event.preventDefault();
+			aplicarSugerenciaDesdeBotonCampo(campo, boton);
 		});
+
+		boton.addEventListener('touchstart', (event) => {
+			event.preventDefault();
+			aplicarSugerenciaDesdeBotonCampo(campo, boton);
+		}, { passive: false });
+
+		boton.addEventListener('click', (event) => {
+			event.preventDefault();
+			aplicarSugerenciaDesdeBotonCampo(campo, boton);
+		});
+	});
+}
+
+async function buscarSugerenciasDireccionCampo(campo, texto) {
+	const termino = texto.trim();
+
+	if (termino.length < 5) {
+		ocultarSugerenciasDireccionCampo(campo);
+		ocultarEstadoDireccionCampo(campo);
+
+		if (campo?.lugar) {
+			campo.lugar.value = termino;
+		}
+
+		return;
+	}
+
+	try {
+		if (campo.controlador) {
+			campo.controlador.abort();
+		}
+
+		campo.controlador = new AbortController();
+
+		mostrarEstadoDireccionCampo(campo, 'Buscando sugerencias...');
+
+		const url = new URL('https://nominatim.openstreetmap.org/search');
+		url.searchParams.set('q', termino);
+		url.searchParams.set('format', 'jsonv2');
+		url.searchParams.set('addressdetails', '1');
+		url.searchParams.set('limit', '5');
+		url.searchParams.set('countrycodes', 'mx');
+		url.searchParams.set('accept-language', 'es');
+
+		const respuesta = await fetch(url.toString(), {
+			method: 'GET',
+			signal: campo.controlador.signal,
+			headers: {
+				'Accept': 'application/json'
+			}
+		});
+
+		if (!respuesta.ok) {
+			throw new Error('No se pudo consultar el servicio de direcciones.');
+		}
+
+		const data = await respuesta.json();
+
+		renderizarSugerenciasDireccionCampo(campo, data);
+		ocultarEstadoDireccionCampo(campo);
+
+		if (campo?.lugar) {
+			campo.lugar.value = termino;
+		}
 	} catch (error) {
-		console.error('Error al consultar codigo postal:', error);
-		campos.colonia.innerHTML = '<option value="">No se pudo consultar el CP</option>';
-		campos.cp.dataset.cpCargado = '';
-	} finally {
-		campos.colonia.disabled = false;
+		if (error.name === 'AbortError') {
+			return;
+		}
+
+		console.error('Error al buscar sugerencias de dirección:', error);
+		ocultarSugerenciasDireccionCampo(campo);
+		mostrarEstadoDireccionCampo(campo, 'No se pudieron obtener sugerencias en este momento.', 'error');
+
+		if (campo?.lugar) {
+			campo.lugar.value = termino;
+		}
 	}
 }
 
-function validarDomicilioCampos(campos, etiqueta, mostrarError = mostrarMensaje) {
-	const cp = String(campos.cp?.value ?? '').trim();
-	const colonia = String(campos.colonia?.value ?? '').trim();
-	const calle = String(campos.calle?.value ?? '').trim();
-	const numero = String(campos.numero?.value ?? '').trim();
-
-	if (!/^\d{5}$/.test(cp)) {
-		mostrarError('error', `Debes escribir un codigo postal valido de 5 digitos para ${etiqueta}.`);
-		campos.cp?.focus();
-		return null;
+function programarBusquedaDireccionCampo(campo) {
+	if (!campo?.input) {
+		return;
 	}
 
-	actualizarDetallesDomicilio(campos);
+	clearTimeout(campo.temporizador);
 
-	if (colonia === '') {
-		mostrarError('error', `Debes escribir la colonia para ${etiqueta}.`);
-		campos.colonia?.focus();
-		return null;
-	}
-
-	if (calle === '') {
-		mostrarError('error', `Debes escribir la calle para ${etiqueta}.`);
-		campos.calle?.focus();
-		return null;
-	}
-
-	if (numero === '') {
-		mostrarError('error', `Debes escribir el numero para ${etiqueta}.`);
-		campos.numero?.focus();
-		return null;
-	}
-
-	const direccion = `CP ${cp}, Colonia ${colonia}, Calle ${calle}, Numero ${numero}`;
-	const direccionCompleta = campos.datosCp?.estado
-		? `${direccion}, ${campos.datosCp.estado}`
-		: direccion;
-
-	if (campos.lugar) {
-		campos.lugar.value = direccionCompleta;
-	}
-
-	return direccionCompleta;
+	campo.temporizador = setTimeout(() => {
+		buscarSugerenciasDireccionCampo(campo, campo.input.value);
+	}, 450);
 }
 
-function vincularDomicilioCampos(campos) {
-	campos.cp?.addEventListener('input', () => actualizarDetallesDomicilio(campos));
+function limpiarCampoDireccion(campo) {
+	if (!campo?.input) {
+		return;
+	}
+
+	campo.input.value = '';
+
+	if (campo.lugar) {
+		campo.lugar.value = '';
+	}
+
+	campo.input.disabled = false;
+	ocultarSugerenciasDireccionCampo(campo);
+	ocultarEstadoDireccionCampo(campo);
+}
+
+function habilitarCampoDireccion(campo, habilitado) {
+	if (!campo?.input) {
+		return;
+	}
+
+	campo.input.disabled = !habilitado;
+
+	if (!habilitado) {
+		ocultarSugerenciasDireccionCampo(campo);
+	}
+}
+
+function obtenerTextoDireccionCampo(campo) {
+	return String(campo?.input?.value ?? '').trim();
+}
+
+function aplicarTextoDireccionCampo(campo, direccion) {
+	if (!campo?.input) {
+		return;
+	}
+
+	const texto = String(direccion ?? '').trim();
+	campo.input.value = texto;
+
+	if (campo.lugar) {
+		campo.lugar.value = texto;
+	}
+}
+
+function validarTextoDireccionCampo(campo, etiqueta, mostrarError = mostrarMensaje) {
+	const direccion = obtenerTextoDireccionCampo(campo);
+
+	if (direccion === '') {
+		mostrarError('error', `Debes escribir la dirección para ${etiqueta}.`);
+		campo.input?.focus();
+		return null;
+	}
+
+	if (direccion.length < 8) {
+		mostrarError('error', `La dirección para ${etiqueta} es demasiado corta.`);
+		campo.input?.focus();
+		return null;
+	}
+
+	if (campo.lugar) {
+		campo.lugar.value = direccion;
+	}
+
+	return direccion;
+}
+
+function configurarAutocompleteDireccion() {
+	inicializarCampoDireccion({
+		...estadoAutocompleteDireccion.principal,
+		inputId: 'direccionEntregaTexto',
+		suggestionsId: 'direccionEntregaTextoSuggestions',
+		statusId: 'direccionEntregaTextoStatus',
+		label: 'Dirección de entrega',
+		placeholder: 'Escribe calle, número, colonia o ciudad',
+		legacyCp: domicilioCp,
+		legacyDetalles: domicilioDetalles,
+		legacyColonia: domicilioColonia,
+		legacyCalle: domicilioCalle,
+		legacyNumero: domicilioNumero
+	});
+
+	inicializarCampoDireccion({
+		...estadoAutocompleteDireccion.splitNormal,
+		inputId: 'splitNormalDireccionTexto',
+		suggestionsId: 'splitNormalDireccionTextoSuggestions',
+		statusId: 'splitNormalDireccionTextoStatus',
+		label: 'Dirección de entrega',
+		placeholder: 'Escribe calle, número, colonia o ciudad',
+		legacyCp: splitNormalCp,
+		legacyDetalles: splitNormalDetalles,
+		legacyColonia: splitNormalColonia,
+		legacyCalle: splitNormalCalle,
+		legacyNumero: splitNormalNumero
+	});
+
+	inicializarCampoDireccion({
+		...estadoAutocompleteDireccion.splitPersonalizado,
+		inputId: 'splitPersonalizadoDireccionTexto',
+		suggestionsId: 'splitPersonalizadoDireccionTextoSuggestions',
+		statusId: 'splitPersonalizadoDireccionTextoStatus',
+		label: 'Dirección de entrega',
+		placeholder: 'Escribe calle, número, colonia o ciudad',
+		legacyCp: splitPersonalizadoCp,
+		legacyDetalles: splitPersonalizadoDetalles,
+		legacyColonia: splitPersonalizadoColonia,
+		legacyCalle: splitPersonalizadoCalle,
+		legacyNumero: splitPersonalizadoNumero
+	});
+
+	const principalInput = document.getElementById('direccionEntregaTexto');
+	const principalSuggestions = document.getElementById('direccionEntregaTextoSuggestions');
+	const principalStatus = document.getElementById('direccionEntregaTextoStatus');
+
+	const splitNormalInput = document.getElementById('splitNormalDireccionTexto');
+	const splitNormalSuggestions = document.getElementById('splitNormalDireccionTextoSuggestions');
+	const splitNormalStatus = document.getElementById('splitNormalDireccionTextoStatus');
+
+	const splitPersonalizadoInput = document.getElementById('splitPersonalizadoDireccionTexto');
+	const splitPersonalizadoSuggestions = document.getElementById('splitPersonalizadoDireccionTextoSuggestions');
+	const splitPersonalizadoStatus = document.getElementById('splitPersonalizadoDireccionTextoStatus');
+
+	estadoAutocompleteDireccion.principal.input = principalInput;
+	estadoAutocompleteDireccion.principal.suggestions = principalSuggestions;
+	estadoAutocompleteDireccion.principal.status = principalStatus;
+	estadoAutocompleteDireccion.principal.wrapper = principalInput?.closest('.address-autocomplete') ?? null;
+
+	estadoAutocompleteDireccion.splitNormal.input = splitNormalInput;
+	estadoAutocompleteDireccion.splitNormal.suggestions = splitNormalSuggestions;
+	estadoAutocompleteDireccion.splitNormal.status = splitNormalStatus;
+	estadoAutocompleteDireccion.splitNormal.wrapper = splitNormalInput?.closest('.address-autocomplete') ?? null;
+
+	estadoAutocompleteDireccion.splitPersonalizado.input = splitPersonalizadoInput;
+	estadoAutocompleteDireccion.splitPersonalizado.suggestions = splitPersonalizadoSuggestions;
+	estadoAutocompleteDireccion.splitPersonalizado.status = splitPersonalizadoStatus;
+	estadoAutocompleteDireccion.splitPersonalizado.wrapper = splitPersonalizadoInput?.closest('.address-autocomplete') ?? null;
+}
+
+function vincularEventosCampoDireccion(campo) {
+	if (!campo?.input) {
+		return;
+	}
+
+	campo.input.addEventListener('input', () => {
+		if (campo.lugar) {
+			campo.lugar.value = campo.input.value.trim();
+		}
+
+		programarBusquedaDireccionCampo(campo);
+	});
+
+	campo.input.addEventListener('blur', () => {
+		setTimeout(() => {
+			if (!campo.seleccionando) {
+				ocultarSugerenciasDireccionCampo(campo);
+			}
+		}, 180);
+	});
+}
+
+function inicializarAutocompletadoDirecciones() {
+	configurarAutocompleteDireccion();
+	vincularEventosCampoDireccion(estadoAutocompleteDireccion.principal);
+	vincularEventosCampoDireccion(estadoAutocompleteDireccion.splitNormal);
+	vincularEventosCampoDireccion(estadoAutocompleteDireccion.splitPersonalizado);
+
+	document.addEventListener('click', (event) => {
+		const campos = [
+			estadoAutocompleteDireccion.principal,
+			estadoAutocompleteDireccion.splitNormal,
+			estadoAutocompleteDireccion.splitPersonalizado
+		];
+
+		campos.forEach((campo) => {
+			const clicDentro =
+				campo?.input?.contains(event.target) ||
+				campo?.suggestions?.contains(event.target);
+
+			if (!clicDentro) {
+				ocultarSugerenciasDireccionCampo(campo);
+			}
+		});
+	});
 }
 
 function inicializarEntrega() {
@@ -686,6 +994,7 @@ function inicializarEntrega() {
 		lugarEntrega.value = '';
 	}
 
+	limpiarCampoDireccion(estadoAutocompleteDireccion.principal);
 	actualizarEstadoLugarEntrega();
 }
 
@@ -698,17 +1007,20 @@ function actualizarEstadoLugarEntrega() {
 		return;
 	}
 
+	const campoDireccion = estadoAutocompleteDireccion.principal;
+
 	if (esPedidoParaRecoger()) {
 		usarDireccionPerfil.checked = false;
 		usarDireccionPerfil.disabled = true;
-		limpiarDomicilioCampos(domicilioPrincipal);
-		habilitarDomicilioCampos(domicilioPrincipal, false);
+		limpiarCampoDireccion(campoDireccion);
+		habilitarCampoDireccion(campoDireccion, false);
+		lugarEntrega.value = 'Recoger en tienda';
 		limpiarMensaje();
 		return;
 	}
 
 	usarDireccionPerfil.disabled = false;
-	habilitarDomicilioCampos(domicilioPrincipal, true);
+	habilitarCampoDireccion(campoDireccion, true);
 
 	const direccionGuardada = (usuario?.direccion ?? '').trim();
 	const usarPerfil = usarDireccionPerfil.checked;
@@ -720,22 +1032,24 @@ function actualizarEstadoLugarEntrega() {
 				'error',
 				'No puedes usar la dirección del perfil porque no tienes una guardada.'
 			);
-			limpiarDomicilioCampos(domicilioPrincipal);
-			habilitarDomicilioCampos(domicilioPrincipal, true);
+			limpiarCampoDireccion(campoDireccion);
+			habilitarCampoDireccion(campoDireccion, true);
 			return;
 		}
 
-		limpiarDomicilioCampos(domicilioPrincipal);
-		lugarEntrega.value = direccionGuardada;
-		habilitarDomicilioCampos(domicilioPrincipal, false);
+		aplicarTextoDireccionCampo(campoDireccion, direccionGuardada);
+		habilitarCampoDireccion(campoDireccion, false);
 		limpiarMensaje();
 		return;
 	}
 
-	habilitarDomicilioCampos(domicilioPrincipal, true);
-	if (lugarEntrega.value === direccionGuardada) {
-		lugarEntrega.value = '';
+	habilitarCampoDireccion(campoDireccion, true);
+
+	if (obtenerTextoDireccionCampo(campoDireccion) === direccionGuardada) {
+		limpiarCampoDireccion(campoDireccion);
 	}
+
+	lugarEntrega.value = obtenerTextoDireccionCampo(campoDireccion);
 }
 
 function cargarCategoriasEnFiltro(categorias) {
@@ -1056,12 +1370,24 @@ function renderizarProductos(productos) {
 							${textoStock}
 						</div>
 
-						<button
-							class="btn-add"
-							data-id="${producto.id_producto}"
-						>
-							${textoBoton}
-						</button>
+						<div class="product-actions">
+							<button
+								class="btn-reviews"
+								data-id="${producto.id_producto}"
+								data-name="${producto.nombre_producto}"
+								type="button"
+							>
+								Ver reseñas
+							</button>
+
+							<button
+								class="btn-add"
+								data-id="${producto.id_producto}"
+								type="button"
+							>
+								${textoBoton}
+							</button>
+						</div>
 					</div>
 				</div>
 			</article>
@@ -1074,6 +1400,16 @@ function renderizarProductos(productos) {
 		boton.addEventListener('click', () => {
 			const idProducto = Number(boton.getAttribute('data-id'));
 			agregarAlCarrito(idProducto);
+		});
+	});
+
+	const botonesResenas = listaProductos.querySelectorAll('.btn-reviews');
+
+	botonesResenas.forEach((boton) => {
+		boton.addEventListener('click', () => {
+			const idProducto = Number(boton.getAttribute('data-id'));
+			const nombreProducto = boton.getAttribute('data-name') ?? 'Producto';
+			mostrarModalResenas(idProducto, nombreProducto);
 		});
 	});
 }
@@ -1242,6 +1578,9 @@ async function guardarTelefonoSiCambio() {
 
 function validarLugarEntrega() {
 	if (esPedidoParaRecoger()) {
+		if (lugarEntrega) {
+			lugarEntrega.value = 'Recoger en tienda';
+		}
 		return 'Recoger en tienda';
 	}
 
@@ -1252,7 +1591,10 @@ function validarLugarEntrega() {
 		return direccionGuardada;
 	}
 
-	const lugar = validarDomicilioCampos(domicilioPrincipal, 'el pedido');
+	const lugar = validarTextoDireccionCampo(
+		estadoAutocompleteDireccion.principal,
+		'el pedido'
+	);
 
 	if (!lugar) {
 		return null;
@@ -1362,9 +1704,9 @@ function obtenerEntregaBase(lugarEntregaFinal) {
 	return {
 		tipoEntrega,
 		lugarEntrega: tipoEntrega === 'recoger' ? 'Recoger en tienda' : lugarEntregaFinal,
-		domicilio: tipoEntrega === 'domicilio'
-			? obtenerDomicilioEstructurado(domicilioPrincipal)
-			: null
+		direccionTexto: tipoEntrega === 'domicilio'
+			? obtenerTextoDireccionCampo(estadoAutocompleteDireccion.principal)
+			: ''
 	};
 }
 
@@ -1377,43 +1719,49 @@ function mostrarMensajeSeparacion(tipo, texto) {
 	splitOrderMessage.textContent = texto;
 }
 
-function actualizarCampoLugarSeparacion(tipoSelect, campos) {
-	if (!tipoSelect || !campos?.cp) {
+function actualizarCampoLugarSeparacion(tipoSelect, campoDireccion) {
+	if (!tipoSelect || !campoDireccion?.input) {
 		return;
 	}
 
 	if (tipoSelect.value === 'recoger') {
-		limpiarDomicilioCampos(campos);
-		if (campos.lugar) {
-			campos.lugar.value = 'Recoger en tienda';
+		limpiarCampoDireccion(campoDireccion);
+
+		if (campoDireccion.lugar) {
+			campoDireccion.lugar.value = 'Recoger en tienda';
 		}
-		habilitarDomicilioCampos(campos, false);
+
+		habilitarCampoDireccion(campoDireccion, false);
 		return;
 	}
 
-	habilitarDomicilioCampos(campos, true);
-	actualizarDetallesDomicilio(campos);
+	habilitarCampoDireccion(campoDireccion, true);
+
+	const textoActual = obtenerTextoDireccionCampo(campoDireccion);
+	if (campoDireccion.lugar) {
+		campoDireccion.lugar.value = textoActual;
+	}
 }
 
-function configurarEntregaSeparada(tipoSelect, campos, entregaBase) {
-	if (!tipoSelect || !campos?.cp) {
+function configurarEntregaSeparada(tipoSelect, campoDireccion, entregaBase) {
+	if (!tipoSelect || !campoDireccion?.input) {
 		return;
 	}
 
 	tipoSelect.value = entregaBase.tipoEntrega;
-	limpiarDomicilioCampos(campos);
-	actualizarCampoLugarSeparacion(tipoSelect, campos);
+	limpiarCampoDireccion(campoDireccion);
+	actualizarCampoLugarSeparacion(tipoSelect, campoDireccion);
 
 	if (entregaBase.tipoEntrega === 'domicilio') {
-		aplicarDomicilioEstructurado(campos, entregaBase.domicilio);
+		aplicarTextoDireccionCampo(campoDireccion, entregaBase.direccionTexto || entregaBase.lugarEntrega);
 	}
 }
 
-function leerEntregaSeparada(tipoSelect, campos, etiqueta) {
+function leerEntregaSeparada(tipoSelect, campoDireccion, etiqueta) {
 	const tipoEntrega = tipoSelect?.value === 'recoger' ? 'recoger' : 'domicilio';
 	const lugar = tipoEntrega === 'recoger'
 		? 'Recoger en tienda'
-		: validarDomicilioCampos(campos, etiqueta, mostrarMensajeSeparacion);
+		: validarTextoDireccionCampo(campoDireccion, etiqueta, mostrarMensajeSeparacion);
 
 	if (!lugar) {
 		return null;
@@ -1457,8 +1805,18 @@ function abrirModalSeparacionPedido(detallesSeparados, entregaBase) {
 		splitOrderMessage.textContent = '';
 	}
 
-	configurarEntregaSeparada(splitNormalTipo, domicilioSplitNormal, entregaBase);
-	configurarEntregaSeparada(splitPersonalizadoTipo, domicilioSplitPersonalizado, entregaBase);
+	configurarEntregaSeparada(
+		splitNormalTipo,
+		estadoAutocompleteDireccion.splitNormal,
+		entregaBase
+	);
+
+	configurarEntregaSeparada(
+		splitPersonalizadoTipo,
+		estadoAutocompleteDireccion.splitPersonalizado,
+		entregaBase
+	);
+
 	modalSeparacionPedido.classList.remove('hidden');
 
 	return new Promise((resolve) => {
@@ -1473,23 +1831,26 @@ function abrirModalSeparacionPedido(detallesSeparados, entregaBase) {
 
 		splitNormalTipo.onchange = () => actualizarCampoLugarSeparacion(
 			splitNormalTipo,
-			domicilioSplitNormal
+			estadoAutocompleteDireccion.splitNormal
 		);
+
 		splitPersonalizadoTipo.onchange = () => actualizarCampoLugarSeparacion(
 			splitPersonalizadoTipo,
-			domicilioSplitPersonalizado
+			estadoAutocompleteDireccion.splitPersonalizado
 		);
 
 		btnCancelarSeparacionPedido.onclick = () => cerrar(null);
+
 		btnConfirmarSeparacionPedido.onclick = () => {
 			const entregaNormal = leerEntregaSeparada(
 				splitNormalTipo,
-				domicilioSplitNormal,
+				estadoAutocompleteDireccion.splitNormal,
 				'pedido normal'
 			);
+
 			const entregaPersonalizada = leerEntregaSeparada(
 				splitPersonalizadoTipo,
-				domicilioSplitPersonalizado,
+				estadoAutocompleteDireccion.splitPersonalizado,
 				'pedido personalizado'
 			);
 
@@ -1575,7 +1936,7 @@ async function realizarPedido() {
 			lugarEntrega.value = '';
 		}
 
-		limpiarDomicilioCampos(domicilioPrincipal);
+		limpiarCampoDireccion(estadoAutocompleteDireccion.principal);
 
 		if (comentarioPedido) {
 			comentarioPedido.value = '';
@@ -1599,7 +1960,6 @@ async function realizarPedido() {
 				`Pedido realizado correctamente. Tu numero de pedido es ${formatearIdsPedidos(idsPedidos)}.`
 			);
 		}
-
 	} catch (error) {
 		console.error('Error al realizar pedido:', error);
 		mostrarMensaje('error', error.message || 'No se pudo realizar el pedido.');
@@ -1637,13 +1997,247 @@ if (btnIrCarritoMovil) {
 	btnIrCarritoMovil.addEventListener('click', enfocarCarrito);
 }
 
-vincularDomicilioCampos(domicilioPrincipal);
-vincularDomicilioCampos(domicilioSplitNormal);
-vincularDomicilioCampos(domicilioSplitPersonalizado);
+/* =========================
+	RESEÑAS
+========================= */
+
+let productoActualResena = null;
+
+function obtenerNombreVisibleUsuarioResena(resena) {
+	return (
+		resena?.usuario?.nombreuser ||
+		resena?.usuario?.nombre_completo ||
+		'Usuario'
+	);
+}
+
+function obtenerAvisoResena() {
+	if (!modalResenas) {
+		return null;
+	}
+
+	let aviso = document.getElementById('mensajeResenaAcceso');
+
+	if (!aviso) {
+		aviso = document.createElement('p');
+		aviso.id = 'mensajeResenaAcceso';
+		aviso.style.textAlign = 'center';
+		aviso.style.color = 'var(--gris-texto)';
+		aviso.style.fontStyle = 'italic';
+		aviso.style.marginTop = '15px';
+		formularioResena?.parentNode?.insertBefore(aviso, formularioResena.nextSibling);
+	}
+
+	return aviso;
+}
+
+function mostrarAvisoResena(texto) {
+	const aviso = obtenerAvisoResena();
+
+	if (!aviso) {
+		return;
+	}
+
+	aviso.textContent = texto;
+	aviso.classList.remove('hidden');
+}
+
+function ocultarAvisoResena() {
+	const aviso = obtenerAvisoResena();
+
+	if (!aviso) {
+		return;
+	}
+
+	aviso.textContent = '';
+	aviso.classList.add('hidden');
+}
+
+async function cargarResenas(idProducto) {
+	try {
+		const { data, error } = await db
+			.from('reseñas_productos')
+			.select(`
+				id_reseña,
+				comentario,
+				calificacion,
+				fecha,
+				id_usuario,
+				usuario (
+					nombre_completo,
+					nombreuser
+				)
+			`)
+			.eq('id_producto', idProducto)
+			.order('fecha', { ascending: false });
+
+		if (error) {
+			console.error('Error cargando reseñas:', error);
+			return [];
+		}
+
+		return data ?? [];
+	} catch (error) {
+		console.error('Error en cargarResenas:', error);
+		return [];
+	}
+}
+
+function renderizarResenas(resenas) {
+	if (!listaResenas) {
+		return;
+	}
+
+	if (!resenas || resenas.length === 0) {
+		listaResenas.innerHTML = `
+			<p class="no-reviews">
+				Aún no hay reseñas para este producto. ¡Sé el primero en opinar!
+			</p>
+		`;
+		return;
+	}
+
+	listaResenas.innerHTML = resenas.map((resena) => {
+		const estrellas = '★'.repeat(Number(resena.calificacion ?? 0)) + '☆'.repeat(5 - Number(resena.calificacion ?? 0));
+		const fecha = resena.fecha
+			? new Date(resena.fecha).toLocaleDateString('es-MX')
+			: '';
+		const autor = obtenerNombreVisibleUsuarioResena(resena);
+		const comentario = String(resena.comentario ?? '').trim() || 'Sin comentario';
+
+		return `
+			<div class="review-item">
+				<div class="review-header">
+					<span class="review-author">${autor}</span>
+					<span class="review-rating">${estrellas} (${resena.calificacion})</span>
+				</div>
+				<div class="review-date">${fecha}</div>
+				<div class="review-comment">${comentario}</div>
+			</div>
+		`;
+	}).join('');
+}
+
+async function mostrarModalResenas(idProducto, nombreProducto) {
+	productoActualResena = Number(idProducto);
+
+	const tituloModal = modalResenas?.querySelector('h2');
+	if (tituloModal) {
+		tituloModal.textContent = `Reseñas de ${nombreProducto}`;
+	}
+
+	const resenas = await cargarResenas(idProducto);
+	renderizarResenas(resenas);
+
+	if (puedeResenar()) {
+		if (formularioResena) {
+			formularioResena.style.display = 'block';
+		}
+
+		calificacionResena.value = '';
+		comentarioResena.value = '';
+		ocultarAvisoResena();
+	} else {
+		if (formularioResena) {
+			formularioResena.style.display = 'none';
+		}
+
+		mostrarAvisoResena('Debes iniciar sesión para dejar una reseña.');
+	}
+
+	modalResenas?.classList.remove('hidden');
+}
+
+async function enviarResena() {
+	if (!productoActualResena) {
+		alert('No se encontró el producto para la reseña.');
+		return;
+	}
+
+	if (!usuario || !puedeResenar()) {
+		alert('Debes iniciar sesión para dejar una reseña.');
+		return;
+	}
+
+	const calificacion = Number(calificacionResena?.value ?? 0);
+	const comentario = String(comentarioResena?.value ?? '').trim();
+
+	if (!calificacion || calificacion < 1 || calificacion > 5) {
+		alert('Por favor selecciona una calificación válida.');
+		return;
+	}
+
+	if (comentario === '') {
+		alert('Por favor escribe un comentario.');
+		return;
+	}
+
+	try {
+		const { error } = await db
+			.from('reseñas_productos')
+			.upsert(
+				{
+					id_producto: Number(productoActualResena),
+					id_usuario: Number(usuario.id_usuario),
+					calificacion,
+					comentario
+				},
+				{
+					onConflict: 'id_producto,id_usuario'
+				}
+			);
+
+		if (error) {
+			console.error('Error enviando reseña:', error);
+			alert('Error al guardar la reseña. Inténtalo de nuevo.');
+			return;
+		}
+
+		alert('¡Reseña guardada exitosamente!');
+		calificacionResena.value = '';
+		comentarioResena.value = '';
+
+		const resenas = await cargarResenas(productoActualResena);
+		renderizarResenas(resenas);
+	} catch (error) {
+		console.error('Error en enviarResena:', error);
+		alert('Error al enviar la reseña.');
+	}
+}
+
+function cerrarModalResenas() {
+	modalResenas?.classList.add('hidden');
+	productoActualResena = null;
+
+	if (calificacionResena) {
+		calificacionResena.value = '';
+	}
+
+	if (comentarioResena) {
+		comentarioResena.value = '';
+	}
+}
+
+if (btnCerrarModalResenas) {
+	btnCerrarModalResenas.addEventListener('click', cerrarModalResenas);
+}
+
+if (btnEnviarResena) {
+	btnEnviarResena.addEventListener('click', enviarResena);
+}
+
+if (modalResenas) {
+	modalResenas.addEventListener('click', (e) => {
+		if (e.target === modalResenas) {
+			cerrarModalResenas();
+		}
+	});
+}
 
 (async function init() {
 	cargarCarrito();
 	renderizarCarrito();
+	inicializarAutocompletadoDirecciones();
 	await refrescarUsuarioDesdeBD();
 	inicializarEntrega();
 	cargarCategorias();
