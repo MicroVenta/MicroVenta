@@ -635,6 +635,71 @@ body {
 	justify-content: center;
 }
 
+.split-order-modal {
+	width: min(920px, 96vw);
+	max-height: 92vh;
+	overflow-y: auto;
+	background: #fff;
+	border: 1px solid rgba(217, 108, 138, 0.16);
+	border-radius: 8px;
+	padding: 26px;
+	box-shadow: 0 25px 60px rgba(0, 0, 0, 0.18);
+}
+
+.split-order-header {
+	margin-bottom: 18px;
+}
+
+.split-order-header h2 {
+	color: var(--cafe-oscuro);
+	font-size: 1.6rem;
+	margin-bottom: 8px;
+}
+
+.split-order-header p,
+.split-order-section p {
+	color: var(--gris-texto);
+	line-height: 1.6;
+}
+
+.split-order-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 18px;
+}
+
+.split-order-section {
+	border: 1px solid var(--gris-borde);
+	border-radius: 8px;
+	padding: 18px;
+	background: var(--gris-suave);
+}
+
+.split-order-section h3 {
+	color: var(--cafe-oscuro);
+	font-size: 1.1rem;
+	margin-bottom: 6px;
+}
+
+.address-fields {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.address-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(120px, 0.45fr);
+	gap: 14px;
+}
+
+.split-order-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 12px;
+	margin-top: 18px;
+}
+
 .register-modal {
 	width: min(760px, 96%);
 	background: #f8f6f7;
@@ -796,6 +861,8 @@ body {
 
 	.filters-grid,
 	.products-grid,
+	.split-order-grid,
+	.address-grid,
 	.product-meta {
 		grid-template-columns: 1fr;
 	}
@@ -806,6 +873,10 @@ body {
 
 	.modal-card {
 		padding: 22px;
+	}
+
+	.split-order-actions {
+		flex-direction: column;
 	}
 
 	.register-modal {

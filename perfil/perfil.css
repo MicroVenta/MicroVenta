@@ -339,6 +339,7 @@ body {
 }
 
 .form-group input,
+.form-group select,
 .form-group textarea {
 	width: 100%;
 	padding: 14px 15px;
@@ -352,6 +353,7 @@ body {
 }
 
 .form-group input:focus,
+.form-group select:focus,
 .form-group textarea:focus {
 	border-color: rgba(217, 108, 138, 0.55);
 	box-shadow: 0 0 0 4px rgba(217, 108, 138, 0.10);
@@ -365,6 +367,18 @@ body {
 
 .address-group {
 	position: relative;
+}
+
+.address-fields {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.address-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(120px, 0.45fr);
+	gap: 14px;
 }
 
 .address-toolbar {
@@ -611,7 +625,8 @@ body {
 		font-size: 1.6rem;
 	}
 
-	.form-grid {
+	.form-grid,
+	.address-grid {
 		grid-template-columns: 1fr;
 	}
 

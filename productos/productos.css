@@ -719,6 +719,82 @@ body {
 	display: none !important;
 }
 
+.modal-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(60, 35, 45, 0.45);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 20px;
+	z-index: 9999;
+}
+
+.split-order-modal {
+	width: min(920px, 96vw);
+	max-height: 92vh;
+	overflow-y: auto;
+	background: #fff;
+	border: 1px solid rgba(217, 108, 138, 0.16);
+	border-radius: 8px;
+	padding: 26px;
+	box-shadow: 0 25px 60px rgba(0, 0, 0, 0.18);
+}
+
+.split-order-header {
+	margin-bottom: 18px;
+}
+
+.split-order-header h2 {
+	color: var(--cafe-oscuro);
+	font-size: 1.6rem;
+	margin-bottom: 8px;
+}
+
+.split-order-header p,
+.split-order-section p {
+	color: var(--gris-texto);
+	line-height: 1.6;
+}
+
+.split-order-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 18px;
+}
+
+.split-order-section {
+	border: 1px solid var(--gris-borde);
+	border-radius: 8px;
+	padding: 18px;
+	background: var(--gris-suave);
+}
+
+.split-order-section h3 {
+	color: var(--cafe-oscuro);
+	font-size: 1.1rem;
+	margin-bottom: 6px;
+}
+
+.address-fields {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.address-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(120px, 0.45fr);
+	gap: 14px;
+}
+
+.split-order-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 12px;
+	margin-top: 18px;
+}
+
 .empty-state,
 .empty-cart {
 	background: rgba(255, 255, 255, 0.96);
@@ -853,6 +929,8 @@ body {
 
 	.filters-grid,
 	.products-grid,
+	.split-order-grid,
+	.address-grid,
 	.product-meta {
 		grid-template-columns: 1fr;
 	}
@@ -920,6 +998,10 @@ body {
 
 	.cart-card {
 		padding-right: 20px;
+	}
+
+	.split-order-actions {
+		flex-direction: column;
 	}
 }
 

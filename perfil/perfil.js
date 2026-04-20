@@ -389,6 +389,8 @@ function ocultarSugerenciasDireccion() {
 	sugerenciasDireccion.classList.add('hidden');
 }
 
+
+
 function partsPushUnico(lista, valor) {
 	if (!valor) {
 		return;
@@ -769,12 +771,6 @@ function validarFormulario() {
 		return null;
 	}
 
-	if (direccion && direccion.length < 10) {
-		mostrarMensaje('Ingresa una dirección más completa.', 'error');
-		inputDireccion.focus();
-		return null;
-	}
-
 	return {
 		nombre_completo: nombreCompleto,
 		nombreuser: nombreuser || null,
@@ -784,28 +780,13 @@ function validarFormulario() {
 	};
 }
 
-if (inputDireccion) {
-	inputDireccion.addEventListener('input', () => {
-		programarBusquedaDireccion();
-	});
-
-	inputDireccion.addEventListener('focus', () => {
-		if (inputDireccion.value.trim().length >= 5) {
-			programarBusquedaDireccion();
-		}
-	});
-
-	inputDireccion.addEventListener('blur', () => {
-		setTimeout(() => {
-			if (!seleccionandoSugerenciaDireccion) {
-				ocultarSugerenciasDireccion();
-			}
-		}, 180);
-	});
+if (btnUbicacionActual) {
+	btnUbicacionActual.classList.add('hidden');
+	btnUbicacionActual.addEventListener('click', usarUbicacionActual);
 }
 
-if (btnUbicacionActual) {
-	btnUbicacionActual.addEventListener('click', usarUbicacionActual);
+if (inputDireccion) {
+	inputDireccion.addEventListener('input', programarBusquedaDireccion);
 }
 
 document.addEventListener('click', (event) => {

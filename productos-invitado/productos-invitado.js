@@ -16,6 +16,11 @@ const telefonoPedido = document.getElementById('telefonoPedido');
 const tipoEntregaPedido = document.getElementById('tipoEntregaPedido');
 const lugarEntrega = document.getElementById('lugarEntrega');
 const comentarioPedido = document.getElementById('comentarioPedido');
+const domicilioCp = document.getElementById('domicilioCp');
+const domicilioDetalles = document.getElementById('domicilioDetalles');
+const domicilioColonia = document.getElementById('domicilioColonia');
+const domicilioCalle = document.getElementById('domicilioCalle');
+const domicilioNumero = document.getElementById('domicilioNumero');
 
 const cartCard = document.getElementById('cartCard');
 const btnIrCarritoMovil = document.getElementById('btnIrCarritoMovil');
@@ -23,6 +28,27 @@ const mobileCartCount = document.getElementById('mobileCartCount');
 
 const modalConfirmacion = document.getElementById('modalConfirmacion');
 const btnCerrarModal = document.getElementById('btnCerrarModal');
+
+const modalSeparacionPedido = document.getElementById('modalSeparacionPedido');
+const splitOrderSummary = document.getElementById('splitOrderSummary');
+const splitPersonalizadoProductos = document.getElementById('splitPersonalizadoProductos');
+const splitOrderMessage = document.getElementById('splitOrderMessage');
+const splitNormalTipo = document.getElementById('splitNormalTipo');
+const splitNormalCp = document.getElementById('splitNormalCp');
+const splitNormalDetalles = document.getElementById('splitNormalDetalles');
+const splitNormalColonia = document.getElementById('splitNormalColonia');
+const splitNormalCalle = document.getElementById('splitNormalCalle');
+const splitNormalNumero = document.getElementById('splitNormalNumero');
+const splitNormalLugar = document.getElementById('splitNormalLugar');
+const splitPersonalizadoTipo = document.getElementById('splitPersonalizadoTipo');
+const splitPersonalizadoCp = document.getElementById('splitPersonalizadoCp');
+const splitPersonalizadoDetalles = document.getElementById('splitPersonalizadoDetalles');
+const splitPersonalizadoColonia = document.getElementById('splitPersonalizadoColonia');
+const splitPersonalizadoCalle = document.getElementById('splitPersonalizadoCalle');
+const splitPersonalizadoNumero = document.getElementById('splitPersonalizadoNumero');
+const splitPersonalizadoLugar = document.getElementById('splitPersonalizadoLugar');
+const btnConfirmarSeparacionPedido = document.getElementById('btnConfirmarSeparacionPedido');
+const btnCancelarSeparacionPedido = document.getElementById('btnCancelarSeparacionPedido');
 
 const modalRegistro = document.getElementById('modalRegistro');
 const btnAbrirRegistro = document.getElementById('btnAbrirRegistro');
@@ -41,6 +67,34 @@ const registroConfirmarContrasena = document.getElementById('registroConfirmarCo
 let productosOriginales = [];
 let categoriasOriginales = [];
 let carrito = [];
+const cacheCodigosPostales = new Map();
+
+const domicilioPrincipal = {
+	cp: domicilioCp,
+	detalles: domicilioDetalles,
+	colonia: domicilioColonia,
+	calle: domicilioCalle,
+	numero: domicilioNumero,
+	lugar: lugarEntrega
+};
+
+const domicilioSplitNormal = {
+	cp: splitNormalCp,
+	detalles: splitNormalDetalles,
+	colonia: splitNormalColonia,
+	calle: splitNormalCalle,
+	numero: splitNormalNumero,
+	lugar: splitNormalLugar
+};
+
+const domicilioSplitPersonalizado = {
+	cp: splitPersonalizadoCp,
+	detalles: splitPersonalizadoDetalles,
+	colonia: splitPersonalizadoColonia,
+	calle: splitPersonalizadoCalle,
+	numero: splitPersonalizadoNumero,
+	lugar: splitPersonalizadoLugar
+};
 
 function obtenerClaveCarrito() {
 	return 'microventa_carrito_invitado';
@@ -657,6 +711,208 @@ function esCorreoValido(correo) {
 	return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo);
 }
 
+function limpiarDomicilioCampos(campos) {
+	[campos.cp, campos.colonia, campos.calle, campos.numero].forEach((campo) => {
+		if (campo) {
+			campo.value = '';
+			campo.disabled = false;
+		}
+	});
+
+	if (campos.colonia) {
+		campos.colonia.innerHTML = '<option value="">Primero escribe el CP</option>';
+	}
+
+	if (campos.lugar) {
+		campos.lugar.value = '';
+	}
+
+	campos.datosCp = null;
+	campos.detalles?.classList.add('hidden');
+}
+
+function mostrarDomicilioCp(campos, visible) {
+	campos.cp?.closest('.form-group')?.classList.toggle('hidden', !visible);
+	campos.detalles?.classList.toggle('hidden', !visible || String(campos.cp?.value ?? '').length !== 5);
+}
+
+function habilitarDomicilioCampos(campos, habilitado) {
+	[campos.cp, campos.colonia, campos.calle, campos.numero].forEach((campo) => {
+		if (campo) {
+			campo.disabled = !habilitado;
+		}
+	});
+
+	mostrarDomicilioCp(campos, habilitado);
+}
+
+function actualizarDetallesDomicilio(campos) {
+	const cp = String(campos.cp?.value ?? '').replace(/\D/g, '').slice(0, 5);
+
+	if (campos.cp && campos.cp.value !== cp) {
+		campos.cp.value = cp;
+	}
+
+	if (cp.length === 5) {
+		campos.detalles?.classList.remove('hidden');
+		cargarOpcionesCodigoPostal(campos, cp);
+	} else {
+		campos.detalles?.classList.add('hidden');
+		if (campos.colonia) {
+			campos.colonia.innerHTML = '<option value="">Primero escribe el CP</option>';
+		}
+		if (campos.calle) campos.calle.value = '';
+		if (campos.numero) campos.numero.value = '';
+		campos.datosCp = null;
+	}
+}
+
+function obtenerDomicilioEstructurado(campos) {
+	return {
+		cp: String(campos.cp?.value ?? '').trim(),
+		colonia: String(campos.colonia?.value ?? '').trim(),
+		calle: String(campos.calle?.value ?? '').trim(),
+		numero: String(campos.numero?.value ?? '').trim(),
+		datosCp: campos.datosCp ?? null
+	};
+}
+
+function aplicarDomicilioEstructurado(campos, domicilio) {
+	if (!domicilio || !campos.cp) {
+		return;
+	}
+
+	campos.cp.value = domicilio.cp ?? '';
+	campos.datosCp = domicilio.datosCp ?? null;
+
+	if (campos.datosCp?.colonias?.length && campos.colonia) {
+		campos.colonia.innerHTML = '<option value="">Selecciona una colonia</option>';
+		campos.datosCp.colonias.forEach((colonia) => {
+			const option = document.createElement('option');
+			option.value = colonia;
+			option.textContent = colonia;
+			campos.colonia.appendChild(option);
+		});
+	}
+
+	actualizarDetallesDomicilio(campos);
+
+	if (campos.colonia) campos.colonia.value = domicilio.colonia ?? '';
+	if (campos.calle) campos.calle.value = domicilio.calle ?? '';
+	if (campos.numero) campos.numero.value = domicilio.numero ?? '';
+}
+
+async function consultarCodigoPostal(cp) {
+	if (cacheCodigosPostales.has(cp)) {
+		return cacheCodigosPostales.get(cp);
+	}
+
+	const respuesta = await fetch(`https://api.zippopotam.us/MX/${cp}`);
+
+	if (!respuesta.ok) {
+		cacheCodigosPostales.set(cp, null);
+		return null;
+	}
+
+	const datos = await respuesta.json();
+	const lugares = Array.isArray(datos.places) ? datos.places : [];
+	const resultado = {
+		cp,
+		estado: datos.places?.[0]?.state ?? '',
+		colonias: lugares
+			.map((lugar) => String(lugar['place name'] ?? '').trim())
+			.filter(Boolean)
+			.sort((a, b) => a.localeCompare(b, 'es'))
+	};
+
+	cacheCodigosPostales.set(cp, resultado);
+	return resultado;
+}
+
+async function cargarOpcionesCodigoPostal(campos, cp) {
+	if (!campos.colonia || campos.cp?.dataset.cpCargado === cp) {
+		return;
+	}
+
+	campos.cp.dataset.cpCargado = cp;
+	campos.colonia.innerHTML = '<option value="">Buscando colonias...</option>';
+	campos.colonia.disabled = true;
+	campos.datosCp = null;
+
+	try {
+		const datosCp = await consultarCodigoPostal(cp);
+
+		if (!datosCp || datosCp.colonias.length === 0) {
+			campos.colonia.innerHTML = '<option value="">CP no encontrado</option>';
+			campos.cp.dataset.cpCargado = '';
+			return;
+		}
+
+		campos.datosCp = datosCp;
+		campos.colonia.innerHTML = '<option value="">Selecciona una colonia</option>';
+		datosCp.colonias.forEach((colonia) => {
+			const option = document.createElement('option');
+			option.value = colonia;
+			option.textContent = colonia;
+			campos.colonia.appendChild(option);
+		});
+	} catch (error) {
+		console.error('Error al consultar codigo postal:', error);
+		campos.colonia.innerHTML = '<option value="">No se pudo consultar el CP</option>';
+		campos.cp.dataset.cpCargado = '';
+	} finally {
+		campos.colonia.disabled = false;
+	}
+}
+
+function validarDomicilioCampos(campos, etiqueta, mostrarError = mostrarMensaje) {
+	const cp = String(campos.cp?.value ?? '').trim();
+	const colonia = String(campos.colonia?.value ?? '').trim();
+	const calle = String(campos.calle?.value ?? '').trim();
+	const numero = String(campos.numero?.value ?? '').trim();
+
+	if (!/^\d{5}$/.test(cp)) {
+		mostrarError('error', `Debes escribir un codigo postal valido de 5 digitos para ${etiqueta}.`);
+		campos.cp?.focus();
+		return null;
+	}
+
+	actualizarDetallesDomicilio(campos);
+
+	if (colonia === '') {
+		mostrarError('error', `Debes escribir la colonia para ${etiqueta}.`);
+		campos.colonia?.focus();
+		return null;
+	}
+
+	if (calle === '') {
+		mostrarError('error', `Debes escribir la calle para ${etiqueta}.`);
+		campos.calle?.focus();
+		return null;
+	}
+
+	if (numero === '') {
+		mostrarError('error', `Debes escribir el numero para ${etiqueta}.`);
+		campos.numero?.focus();
+		return null;
+	}
+
+	const direccion = `CP ${cp}, Colonia ${colonia}, Calle ${calle}, Numero ${numero}`;
+	const direccionCompleta = campos.datosCp?.estado
+		? `${direccion}, ${campos.datosCp.estado}`
+		: direccion;
+
+	if (campos.lugar) {
+		campos.lugar.value = direccionCompleta;
+	}
+
+	return direccionCompleta;
+}
+
+function vincularDomicilioCampos(campos) {
+	campos.cp?.addEventListener('input', () => actualizarDetallesDomicilio(campos));
+}
+
 function esPedidoParaRecoger() {
 	return tipoEntregaPedido?.value === 'recoger';
 }
@@ -667,23 +923,24 @@ function actualizarEstadoLugarEntrega() {
 	}
 
 	if (esPedidoParaRecoger()) {
-		lugarEntrega.value = '';
-		lugarEntrega.disabled = true;
-		lugarEntrega.placeholder = 'No se necesita direccion porque pasaras por el pedido a la tienda.';
+		limpiarDomicilioCampos(domicilioPrincipal);
+		habilitarDomicilioCampos(domicilioPrincipal, false);
 		limpiarMensaje();
 		return;
 	}
 
-	lugarEntrega.disabled = false;
-	lugarEntrega.placeholder = 'Escribe tu direccion completa de entrega';
+	habilitarDomicilioCampos(domicilioPrincipal, true);
+	actualizarDetallesDomicilio(domicilioPrincipal);
 }
 
 function validarFormularioInvitado() {
 	const nombre = String(nombreInvitado?.value ?? '').trim();
 	const correo = String(correoPedido?.value ?? '').trim();
 	const telefono = String(telefonoPedido?.value ?? '').trim();
-	const direccion = String(lugarEntrega?.value ?? '').trim();
 	const paraRecoger = esPedidoParaRecoger();
+	const direccion = paraRecoger
+		? 'Recoger en tienda'
+		: validarDomicilioCampos(domicilioPrincipal, 'el pedido');
 
 	if (nombre === '') {
 		mostrarMensaje('error', 'Debes escribir tu nombre.');
@@ -709,9 +966,7 @@ function validarFormularioInvitado() {
 		return null;
 	}
 
-	if (!paraRecoger && direccion === '') {
-		mostrarMensaje('error', 'Debes escribir la dirección de entrega.');
-		lugarEntrega?.focus();
+	if (!direccion) {
 		return null;
 	}
 
@@ -719,13 +974,251 @@ function validarFormularioInvitado() {
 		nombre,
 		correo,
 		telefono,
-		direccion: paraRecoger ? 'Recoger en tienda' : direccion,
+		direccion,
 		tipoEntrega: paraRecoger ? 'recoger' : 'domicilio'
 	};
 }
 
-function pedidoTienePersonalizacion() {
-	return carrito.some((item) => Boolean(item.es_personalizado));
+function obtenerCantidadStockItem(item) {
+	const cantidad = Math.max(0, Number(item.cantidad ?? 0));
+	const cantidadStock = Math.max(0, Number(item.cantidad_stock ?? 0));
+
+	return Math.min(cantidad, cantidadStock);
+}
+
+function obtenerCantidadPersonalizadaItem(item) {
+	const cantidad = Math.max(0, Number(item.cantidad ?? 0));
+	const cantidadStock = obtenerCantidadStockItem(item);
+	const cantidadPersonalizada = Math.max(0, Number(item.cantidad_personalizada ?? 0));
+
+	return Math.min(cantidad - cantidadStock, cantidadPersonalizada || (cantidad - cantidadStock));
+}
+
+function crearDetallePedido(item, cantidad) {
+	return {
+		id_producto: Number(item.id_producto),
+		cantidad: Number(cantidad),
+		subtotal: Number(item.precio_unitario) * Number(cantidad)
+	};
+}
+
+function calcularTotalDetalles(detalles) {
+	return detalles.reduce(
+		(total, detalle) => total + Number(detalle.subtotal ?? 0),
+		0
+	);
+}
+
+function separarDetallesPedido() {
+	const detallesNormales = [];
+	const detallesPersonalizados = [];
+
+	carrito.forEach((item) => {
+		const cantidadStock = obtenerCantidadStockItem(item);
+		const cantidadPersonalizada = obtenerCantidadPersonalizadaItem(item);
+
+		if (cantidadStock > 0) {
+			detallesNormales.push(crearDetallePedido(item, cantidadStock));
+		}
+
+		if (cantidadPersonalizada > 0) {
+			detallesPersonalizados.push(crearDetallePedido(item, cantidadPersonalizada));
+		}
+	});
+
+	return {
+		normales: detallesNormales,
+		personalizados: detallesPersonalizados
+	};
+}
+
+async function crearPedidoInvitado(datosInvitado, detallesPedido, entregaPedido) {
+	const total = calcularTotalDetalles(detallesPedido);
+	const tipoEntrega = entregaPedido.tipoEntrega === 'recoger' ? 'recoger' : 'domicilio';
+	const lugarEntregaFinal = tipoEntrega === 'recoger'
+		? 'Recoger en tienda'
+		: entregaPedido.lugarEntrega;
+
+	const { data: idPedido, error } = await db.rpc('procesar_pedido_invitado', {
+		p_nombre_invitado: datosInvitado.nombre,
+		p_correo_contacto: datosInvitado.correo,
+		p_telefono_contacto: datosInvitado.telefono,
+		p_direccion_contacto: lugarEntregaFinal,
+		p_total: Number(total),
+		p_lugar_entrega: lugarEntregaFinal,
+		p_tipo_entrega: tipoEntrega,
+		p_comentario_pedido: obtenerComentarioPedido(),
+		p_detalles: detallesPedido
+	});
+
+	if (error || !idPedido) {
+		console.error('Error al procesar pedido invitado:', error);
+		throw new Error('No se pudo crear el pedido como invitado.');
+	}
+
+	return idPedido;
+}
+
+function formatearIdsPedidos(idsPedidos) {
+	return idsPedidos.map((idPedido) => `#${idPedido}`).join(' y ');
+}
+
+function obtenerProductosConPedidoPersonalizado() {
+	return carrito
+		.map((item) => ({
+			nombre: item.nombre_producto,
+			cantidad: obtenerCantidadPersonalizadaItem(item)
+		}))
+		.filter((item) => item.cantidad > 0);
+}
+
+function obtenerEntregaBase(datosInvitado) {
+	return {
+		tipoEntrega: datosInvitado.tipoEntrega,
+		lugarEntrega: datosInvitado.tipoEntrega === 'recoger'
+			? 'Recoger en tienda'
+			: datosInvitado.direccion,
+		domicilio: datosInvitado.tipoEntrega === 'domicilio'
+			? obtenerDomicilioEstructurado(domicilioPrincipal)
+			: null
+	};
+}
+
+function mostrarMensajeSeparacion(tipo, texto) {
+	if (!splitOrderMessage) {
+		return;
+	}
+
+	splitOrderMessage.className = `message ${tipo}`;
+	splitOrderMessage.textContent = texto;
+}
+
+function actualizarCampoLugarSeparacion(tipoSelect, campos) {
+	if (!tipoSelect || !campos?.cp) {
+		return;
+	}
+
+	if (tipoSelect.value === 'recoger') {
+		limpiarDomicilioCampos(campos);
+		if (campos.lugar) {
+			campos.lugar.value = 'Recoger en tienda';
+		}
+		habilitarDomicilioCampos(campos, false);
+		return;
+	}
+
+	habilitarDomicilioCampos(campos, true);
+	actualizarDetallesDomicilio(campos);
+}
+
+function configurarEntregaSeparada(tipoSelect, campos, entregaBase) {
+	if (!tipoSelect || !campos?.cp) {
+		return;
+	}
+
+	tipoSelect.value = entregaBase.tipoEntrega;
+	limpiarDomicilioCampos(campos);
+	actualizarCampoLugarSeparacion(tipoSelect, campos);
+
+	if (entregaBase.tipoEntrega === 'domicilio') {
+		aplicarDomicilioEstructurado(campos, entregaBase.domicilio);
+	}
+}
+
+function leerEntregaSeparada(tipoSelect, campos, etiqueta) {
+	const tipoEntrega = tipoSelect?.value === 'recoger' ? 'recoger' : 'domicilio';
+	const lugar = tipoEntrega === 'recoger'
+		? 'Recoger en tienda'
+		: validarDomicilioCampos(campos, etiqueta, mostrarMensajeSeparacion);
+
+	if (!lugar) {
+		return null;
+	}
+
+	return {
+		tipoEntrega,
+		lugarEntrega: lugar
+	};
+}
+
+function abrirModalSeparacionPedido(detallesSeparados, entregaBase) {
+	if (detallesSeparados.normales.length === 0 || detallesSeparados.personalizados.length === 0) {
+		return Promise.resolve({
+			normal: entregaBase,
+			personalizado: entregaBase
+		});
+	}
+
+	if (!modalSeparacionPedido) {
+		return Promise.resolve(null);
+	}
+
+	const productosPersonalizados = obtenerProductosConPedidoPersonalizado();
+	const textoProductos = productosPersonalizados
+		.map((item) => `- ${item.nombre}: ${item.cantidad} unidad(es)`)
+		.join('\n');
+
+	if (splitOrderSummary) {
+		splitOrderSummary.textContent =
+			'Por sobrepasar el stock, se generaran dos pedidos. Puedes elegir una entrega distinta para cada uno.';
+	}
+
+	if (splitPersonalizadoProductos) {
+		splitPersonalizadoProductos.textContent =
+			`Se realizara aparte el pedido personalizado de: ${textoProductos.replace(/\n/g, ' ')}`;
+	}
+
+	if (splitOrderMessage) {
+		splitOrderMessage.className = 'message';
+		splitOrderMessage.textContent = '';
+	}
+
+	configurarEntregaSeparada(splitNormalTipo, domicilioSplitNormal, entregaBase);
+	configurarEntregaSeparada(splitPersonalizadoTipo, domicilioSplitPersonalizado, entregaBase);
+	modalSeparacionPedido.classList.remove('hidden');
+
+	return new Promise((resolve) => {
+		const cerrar = (resultado) => {
+			modalSeparacionPedido.classList.add('hidden');
+			btnConfirmarSeparacionPedido.onclick = null;
+			btnCancelarSeparacionPedido.onclick = null;
+			splitNormalTipo.onchange = null;
+			splitPersonalizadoTipo.onchange = null;
+			resolve(resultado);
+		};
+
+		splitNormalTipo.onchange = () => actualizarCampoLugarSeparacion(
+			splitNormalTipo,
+			domicilioSplitNormal
+		);
+		splitPersonalizadoTipo.onchange = () => actualizarCampoLugarSeparacion(
+			splitPersonalizadoTipo,
+			domicilioSplitPersonalizado
+		);
+
+		btnCancelarSeparacionPedido.onclick = () => cerrar(null);
+		btnConfirmarSeparacionPedido.onclick = () => {
+			const entregaNormal = leerEntregaSeparada(
+				splitNormalTipo,
+				domicilioSplitNormal,
+				'pedido normal'
+			);
+			const entregaPersonalizada = leerEntregaSeparada(
+				splitPersonalizadoTipo,
+				domicilioSplitPersonalizado,
+				'pedido personalizado'
+			);
+
+			if (!entregaNormal || !entregaPersonalizada) {
+				return;
+			}
+
+			cerrar({
+				normal: entregaNormal,
+				personalizado: entregaPersonalizada
+			});
+		};
+	});
 }
 
 function obtenerComentarioPedido() {
@@ -751,34 +1244,35 @@ async function realizarPedidoInvitado() {
 	btnRealizarPedido.textContent = 'Procesando...';
 
 	try {
-		const total = carrito.reduce(
-			(acumulado, item) => acumulado + (Number(item.precio_unitario) * Number(item.cantidad)),
-			0
-		);
+		const detallesSeparados = separarDetallesPedido();
+		const idsPedidos = [];
+		const entregaBase = obtenerEntregaBase(datosInvitado);
+		const entregasPedido = await abrirModalSeparacionPedido(detallesSeparados, entregaBase);
 
-		const detallesPedido = carrito.map((item) => ({
-			id_producto: Number(item.id_producto),
-			cantidad: Number(item.cantidad),
-			subtotal: Number(item.precio_unitario) * Number(item.cantidad)
-		}));
+		if (!entregasPedido) {
+			return;
+		}
 
-		const huboPersonalizacion = pedidoTienePersonalizacion();
+		if (detallesSeparados.normales.length > 0) {
+			const idPedidoNormal = await crearPedidoInvitado(
+				datosInvitado,
+				detallesSeparados.normales,
+				entregasPedido.normal
+			);
+			idsPedidos.push(idPedidoNormal);
+		}
 
-		const { data: idPedido, error } = await db.rpc('procesar_pedido_invitado', {
-			p_nombre_invitado: datosInvitado.nombre,
-			p_correo_contacto: datosInvitado.correo,
-			p_telefono_contacto: datosInvitado.telefono,
-			p_direccion_contacto: datosInvitado.direccion,
-			p_total: Number(total),
-			p_lugar_entrega: datosInvitado.direccion,
-			p_tipo_entrega: datosInvitado.tipoEntrega,
-			p_comentario_pedido: obtenerComentarioPedido(),
-			p_detalles: detallesPedido
-		});
+		if (detallesSeparados.personalizados.length > 0) {
+			const idPedidoPersonalizado = await crearPedidoInvitado(
+				datosInvitado,
+				detallesSeparados.personalizados,
+				entregasPedido.personalizado
+			);
+			idsPedidos.push(idPedidoPersonalizado);
+		}
 
-		if (error || !idPedido) {
-			console.error('Error al procesar pedido invitado:', error);
-			throw new Error('No se pudo crear el pedido como invitado.');
+		if (idsPedidos.length === 0) {
+			throw new Error('No se encontraron productos validos para el pedido.');
 		}
 
 		carrito = [];
@@ -793,20 +1287,26 @@ async function realizarPedidoInvitado() {
 			tipoEntregaPedido.value = 'domicilio';
 		}
 		lugarEntrega.value = '';
+		limpiarDomicilioCampos(domicilioPrincipal);
 		if (comentarioPedido) {
 			comentarioPedido.value = '';
 		}
 		actualizarEstadoLugarEntrega();
 
-		if (huboPersonalizacion) {
+		if (detallesSeparados.normales.length > 0 && detallesSeparados.personalizados.length > 0) {
 			mostrarMensaje(
 				'success',
-				`Pedido realizado correctamente. Tu número de pedido es #${idPedido}. Se registró como pedido personalizado porque uno o más productos requieren preparación adicional.`
+				`Pedido realizado correctamente. Se separo en pedido normal y pedido personalizado. Tus numeros de pedido son ${formatearIdsPedidos(idsPedidos)}.`
+			);
+		} else if (detallesSeparados.personalizados.length > 0) {
+			mostrarMensaje(
+				'success',
+				`Pedido personalizado realizado correctamente. Tu numero de pedido es ${formatearIdsPedidos(idsPedidos)}.`
 			);
 		} else {
 			mostrarMensaje(
 				'success',
-				`Pedido realizado correctamente. Tu número de pedido es #${idPedido}.`
+				`Pedido realizado correctamente. Tu numero de pedido es ${formatearIdsPedidos(idsPedidos)}.`
 			);
 		}
 
@@ -1012,6 +1512,10 @@ btnCerrarRegistro?.addEventListener('click', cerrarModalRegistro);
 btnCancelarRegistro?.addEventListener('click', cerrarModalRegistro);
 formRegistroModal?.addEventListener('submit', registrarUsuarioDesdeModal);
 btnIrCarritoMovil?.addEventListener('click', enfocarCarrito);
+
+vincularDomicilioCampos(domicilioPrincipal);
+vincularDomicilioCampos(domicilioSplitNormal);
+vincularDomicilioCampos(domicilioSplitPersonalizado);
 
 modalConfirmacion?.addEventListener('click', (event) => {
 	if (event.target === modalConfirmacion) {

@@ -142,14 +142,48 @@
 							<div id="direccionPerfilInfo" class="delivery-info hidden"></div>
 
 							<div class="form-group">
-								<label for="lugarEntrega">Lugar de entrega</label>
-								<textarea
-									id="lugarEntrega"
-									class="form-control textarea-control"
-									rows="4"
-									placeholder="Escribe el lugar de entrega"
-								></textarea>
+								<label for="domicilioCp">Codigo postal</label>
+								<input
+									type="text"
+									id="domicilioCp"
+									class="form-control"
+									inputmode="numeric"
+									maxlength="5"
+									placeholder="Ej. 31000"
+								>
 							</div>
+
+							<div id="domicilioDetalles" class="address-fields hidden">
+								<div class="form-group">
+									<label for="domicilioColonia">Colonia</label>
+									<select id="domicilioColonia" class="form-control">
+										<option value="">Primero escribe el CP</option>
+									</select>
+								</div>
+
+								<div class="address-grid">
+									<div class="form-group">
+										<label for="domicilioCalle">Calle</label>
+										<input
+											type="text"
+											id="domicilioCalle"
+											class="form-control"
+											placeholder="Escribe la calle"
+										>
+									</div>
+
+									<div class="form-group">
+										<label for="domicilioNumero">Numero</label>
+										<input
+											type="text"
+											id="domicilioNumero"
+											class="form-control"
+											placeholder="Ej. 123"
+										>
+									</div>
+								</div>
+							</div>
+							<textarea id="lugarEntrega" class="hidden" aria-hidden="true"></textarea>
 
 							<div class="form-group">
 								<label for="comentarioPedido">Comentarios o instrucciones</label>
@@ -188,6 +222,126 @@
 	>
 		Ver carrito (<span id="mobileCartCount">0</span>)
 	</button>
+
+	<div id="modalSeparacionPedido" class="modal-overlay hidden">
+		<div class="split-order-modal">
+			<div class="split-order-header">
+				<div>
+					<h2>Pedido separado</h2>
+					<p id="splitOrderSummary">
+						Una parte del pedido se prepara aparte por sobrepasar el stock.
+					</p>
+				</div>
+			</div>
+
+			<div class="split-order-grid">
+				<section class="split-order-section">
+					<h3>Pedido normal</h3>
+					<p>Productos que salen del stock disponible.</p>
+
+					<div class="form-group">
+						<label for="splitNormalTipo">Tipo de entrega</label>
+						<select id="splitNormalTipo" class="form-control">
+							<option value="domicilio">Llevar a una direccion</option>
+							<option value="recoger">Pasar por el pedido a la tienda</option>
+						</select>
+					</div>
+
+					<div class="form-group">
+						<label for="splitNormalCp">Codigo postal</label>
+						<input
+							type="text"
+							id="splitNormalCp"
+							class="form-control"
+							inputmode="numeric"
+							maxlength="5"
+							placeholder="Ej. 31000"
+						>
+					</div>
+
+					<div id="splitNormalDetalles" class="address-fields hidden">
+						<div class="form-group">
+							<label for="splitNormalColonia">Colonia</label>
+							<select id="splitNormalColonia" class="form-control">
+								<option value="">Primero escribe el CP</option>
+							</select>
+						</div>
+
+						<div class="address-grid">
+							<div class="form-group">
+								<label for="splitNormalCalle">Calle</label>
+								<input type="text" id="splitNormalCalle" class="form-control">
+							</div>
+
+							<div class="form-group">
+								<label for="splitNormalNumero">Numero</label>
+								<input type="text" id="splitNormalNumero" class="form-control">
+							</div>
+						</div>
+					</div>
+					<textarea id="splitNormalLugar" class="hidden" aria-hidden="true"></textarea>
+				</section>
+
+				<section class="split-order-section">
+					<h3>Pedido personalizado</h3>
+					<p id="splitPersonalizadoProductos">Productos que se preparan aparte.</p>
+
+					<div class="form-group">
+						<label for="splitPersonalizadoTipo">Tipo de entrega</label>
+						<select id="splitPersonalizadoTipo" class="form-control">
+							<option value="domicilio">Llevar a una direccion</option>
+							<option value="recoger">Pasar por el pedido a la tienda</option>
+						</select>
+					</div>
+
+					<div class="form-group">
+						<label for="splitPersonalizadoCp">Codigo postal</label>
+						<input
+							type="text"
+							id="splitPersonalizadoCp"
+							class="form-control"
+							inputmode="numeric"
+							maxlength="5"
+							placeholder="Ej. 31000"
+						>
+					</div>
+
+					<div id="splitPersonalizadoDetalles" class="address-fields hidden">
+						<div class="form-group">
+							<label for="splitPersonalizadoColonia">Colonia</label>
+							<select id="splitPersonalizadoColonia" class="form-control">
+								<option value="">Primero escribe el CP</option>
+							</select>
+						</div>
+
+						<div class="address-grid">
+							<div class="form-group">
+								<label for="splitPersonalizadoCalle">Calle</label>
+								<input type="text" id="splitPersonalizadoCalle" class="form-control">
+							</div>
+
+							<div class="form-group">
+								<label for="splitPersonalizadoNumero">Numero</label>
+								<input type="text" id="splitPersonalizadoNumero" class="form-control">
+							</div>
+						</div>
+					</div>
+					<textarea id="splitPersonalizadoLugar" class="hidden" aria-hidden="true"></textarea>
+				</section>
+			</div>
+
+			<div id="splitOrderMessage" class="message"></div>
+
+			<div class="split-order-actions">
+				<button id="btnCancelarSeparacionPedido" class="btn btn-light" type="button">
+					Cancelar
+				</button>
+				<button id="btnConfirmarSeparacionPedido" class="btn btn-primary" type="button">
+					Crear pedidos
+				</button>
+			</div>
+		</div>
+	</div>
 
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 	<script src="/conexion.js"></script>
