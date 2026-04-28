@@ -1,5 +1,6 @@
 const DIRECCION_NEGOCIO = '21.478761147795492, -104.86575261965632';
 const NOMBRE_NEGOCIO = 'Dulce Mordisco';
+const COORDENADAS_TEPIC = [21.5095, -104.8957];
 
 const ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjFjZjIzZmE2NjMxNTRjYTg4Nzk2Mzc4OGM1ZTE2OWMzIiwiaCI6Im11cm11cjY0In0=';
 
@@ -1133,7 +1134,7 @@ function inicializarMapaRuta() {
 	const coordenadasNegocio = convertirCoordenadas(DIRECCION_NEGOCIO, NOMBRE_NEGOCIO);
 	const vistaInicial = coordenadasNegocio
 		? [coordenadasNegocio.lat, coordenadasNegocio.lon]
-		: [23.2494, -106.4111];
+		: COORDENADAS_TEPIC;
 
 	mapaRuta = L.map('mapaRuta', {
 		zoomControl: true

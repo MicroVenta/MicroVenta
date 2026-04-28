@@ -55,6 +55,11 @@ const splitPersonalizadoLugar = document.getElementById('splitPersonalizadoLugar
 const btnConfirmarSeparacionPedido = document.getElementById('btnConfirmarSeparacionPedido');
 const btnCancelarSeparacionPedido = document.getElementById('btnCancelarSeparacionPedido');
 
+const modalDireccionInvalida = document.getElementById('modalDireccionInvalida');
+const modalDireccionInvalidaTexto = document.getElementById('modalDireccionInvalidaTexto');
+const btnCerrarModalDireccionInvalida = document.getElementById('btnCerrarModalDireccionInvalida');
+const btnAceptarModalDireccionInvalida = document.getElementById('btnAceptarModalDireccionInvalida');
+
 const modalResenas = document.getElementById('modalResenas');
 const btnCerrarModalResenas = document.getElementById('btnCerrarModalResenas');
 const listaResenas = document.getElementById('listaResenas');
@@ -72,6 +77,44 @@ let productosOriginales = [];
 let categoriasOriginales = [];
 let carrito = [];
 
+const AWS_REGION = 'us-east-2';
+const AWS_LOCATION_KEY = 'v1.public.eyJqdGkiOiI4OTY5OGIyYy1hZmQyLTQyYmItYjZjNi0xZTAwNWU2MWY2N2UifRfhEn2cmnsmQT2oZxWtopI2LigByNeDiy0oA3Zqm4Yej9MvT33_zzXMYaad7gCh1zuVnyCyAUHBwg5htBa5nQhuCY4ViXzP8lO94Nx6tD3EqmkvjIKEvR3d4JCTYoFcHdOWKmOmUEeSKKiFNpK0e6E4fk7mvX4a5pdSEnv3zvu6ohA7qEvycpJsUjuP7h8FT6p5gLLp6XUfV-CQSqxKAzU2waRJGNvFlJttMF7KXBgli9nErtyG7Hyz56FDKL0GlLwC7Wl3-3xjcXNz7AY5Yd4TQXh97P3AUuZ-DoCXaGsG3NZdCqT42UvsTcDYmE49e97pyeBwCR5BMuOdH_a-YOU.NjAyMWJkZWUtMGMyOS00NmRkLThjZTMtODEyOTkzZTUyMTBi';
+const AWS_BIAS_POSITION = [-104.8957, 21.5095];
+const MUNICIPIOS_PERMITIDOS = [
+	'tepic',
+	'xalisco',
+	'ixtlán del río',
+	'ixtlan del rio'
+];
+
+const MAP_STYLE = {
+	version: 8,
+	sources: {
+		'osm-raster': {
+			type: 'raster',
+			tiles: [
+				'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+			],
+			tileSize: 256,
+			attribution: '© OpenStreetMap contributors'
+		}
+	},
+	layers: [
+		{
+			id: 'osm-raster-layer',
+			type: 'raster',
+			source: 'osm-raster',
+			minzoom: 0,
+			maxzoom: 19
+		}
+	]
+};
+const MAP_CENTER_TEPIC = [-104.8957, 21.5095];
+
+let mapaPrincipal = null;
+let marcadorPrincipal = null;
+let mapaListoPrincipal = false;
+
 const estadoAutocompleteDireccion = {
 	principal: {
 		input: null,
@@ -81,6 +124,8 @@ const estadoAutocompleteDireccion = {
 		temporizador: null,
 		controlador: null,
 		seleccionando: false,
+		latitud: null,
+		longitud: null,
 		lugar: lugarEntrega
 	},
 	splitNormal: {
@@ -91,6 +136,8 @@ const estadoAutocompleteDireccion = {
 		temporizador: null,
 		controlador: null,
 		seleccionando: false,
+		latitud: null,
+		longitud: null,
 		lugar: splitNormalLugar
 	},
 	splitPersonalizado: {
@@ -101,6 +148,8 @@ const estadoAutocompleteDireccion = {
 		temporizador: null,
 		controlador: null,
 		seleccionando: false,
+		latitud: null,
+		longitud: null,
 		lugar: splitPersonalizadoLugar
 	}
 };
@@ -211,6 +260,8 @@ async function refrescarUsuarioDesdeBD() {
 				id_rol,
 				telefono,
 				direccion,
+				latitud,
+				longitud,
 				nombreuser,
 				estado
 			`)
@@ -470,7 +521,7 @@ function actualizarInfoTelefono() {
 }
 
 /* =========================
-	DIRECCIÓN CON AUTOCOMPLETADO
+	DIRECCIÓN CON AUTOCOMPLETADO AWS
 ========================= */
 
 function crearNodoDireccionAutocomplete(idBase, textoLabel, placeholder) {
@@ -582,74 +633,515 @@ function ocultarSugerenciasDireccionCampo(campo) {
 	campo.suggestions.classList.add('hidden');
 }
 
-function partsPushUnico(lista, valor) {
-	if (!valor) {
+function normalizarTextoDireccion(valor) {
+	return String(valor ?? '')
+		.normalize('NFD')
+		.replace(/[\u0300-\u036f]/g, '')
+		.toLowerCase()
+		.trim();
+}
+
+function direccionPermitidaAws(item) {
+	const texto = normalizarTextoDireccion([
+		item?.Address?.Label,
+		item?.Address?.Locality,
+		item?.Address?.SubRegion,
+		item?.Address?.Region,
+		item?.Title
+	].filter(Boolean).join(' '));
+
+	return MUNICIPIOS_PERMITIDOS.some((municipio) => {
+		return texto.includes(normalizarTextoDireccion(municipio));
+	});
+}
+
+function obtenerDireccionAws(item) {
+	return item?.Address?.Label || item?.Title || '';
+}
+
+function obtenerMensajeCoberturaDireccion(etiqueta = 'el pedido') {
+	return `La direccion para ${etiqueta} debe tener coordenadas validas dentro de Tepic, Xalisco o Ixtlan del Rio. Selecciona una sugerencia valida o ajusta el punto en el mapa.`;
+}
+
+function mostrarModalDireccionInvalida(texto) {
+	if (!modalDireccionInvalida) {
+		window.alert(texto);
 		return;
 	}
 
-	if (!lista.includes(valor)) {
-		lista.push(valor);
+	if (modalDireccionInvalidaTexto) {
+		modalDireccionInvalidaTexto.textContent = texto;
 	}
+
+	modalDireccionInvalida.classList.remove('hidden');
 }
 
-function construirTextoSecundarioDireccion(item) {
-	const partes = [];
-
-	if (item.address?.suburb) partes.push(item.address.suburb);
-	if (item.address?.city) partsPushUnico(partes, item.address.city);
-	if (item.address?.town) partsPushUnico(partes, item.address.town);
-	if (item.address?.state) partsPushUnico(partes, item.address.state);
-	if (item.address?.postcode) partsPushUnico(partes, item.address.postcode);
-
-	return partes.join(', ');
+function cerrarModalDireccionInvalida() {
+	modalDireccionInvalida?.classList.add('hidden');
 }
 
 function obtenerTituloDireccion(item) {
-	const address = item.address ?? {};
-	const titulo = [];
-
-	if (address.road) titulo.push(address.road);
-	if (address.house_number) titulo.push(address.house_number);
-	if (!titulo.length && item.name) titulo.push(item.name);
-	if (!titulo.length && item.display_name) {
-		return item.display_name.split(',')[0];
-	}
-
-	return titulo.join(' ');
+	return item?.Title || item?.Address?.Label || 'Dirección';
 }
 
-function seleccionarSugerenciaDireccionCampo(campo, direccionCompleta) {
+function construirTextoSecundarioDireccion(item) {
+	const address = item?.Address ?? {};
+	const partes = [];
+
+	if (address.Neighborhood) partes.push(address.Neighborhood);
+	if (address.SubRegion) partes.push(address.SubRegion);
+	if (address.Locality) partes.push(address.Locality);
+	if (address.Region) partes.push(address.Region);
+	if (address.PostalCode) partes.push(address.PostalCode);
+	if (address.Country) partes.push(address.Country);
+
+	return partes
+		.filter(Boolean)
+		.filter((valor, index, arreglo) => arreglo.indexOf(valor) === index)
+		.join(', ') || obtenerDireccionAws(item);
+}
+
+async function buscarAutocompleteAws(campo, texto) {
+	const url = `https://places.geo.${AWS_REGION}.amazonaws.com/v2/autocomplete?key=${AWS_LOCATION_KEY}`;
+
+	const respuesta = await fetch(url, {
+		method: 'POST',
+		headers: {
+			'content-type': 'application/json'
+		},
+		body: JSON.stringify({
+			QueryText: texto,
+			Language: 'es',
+			MaxResults: 8,
+			Filter: {
+				IncludeCountries: ['MEX']
+			},
+			BiasPosition: AWS_BIAS_POSITION
+		}),
+		signal: campo.controlador?.signal
+	});
+
+	if (!respuesta.ok) {
+		throw new Error('No se pudo consultar AWS Location.');
+	}
+
+	const data = await respuesta.json();
+	const resultados = data.ResultItems ?? [];
+
+	return resultados
+		.filter((item) => obtenerDireccionAws(item) !== '')
+		.filter(direccionPermitidaAws)
+		.slice(0, 5);
+}
+
+async function geocodificarDireccionAws(direccion) {
+	const texto = String(direccion ?? '').trim();
+
+	if (!texto) {
+		return null;
+	}
+
+	const url = `https://places.geo.${AWS_REGION}.amazonaws.com/v2/geocode?key=${AWS_LOCATION_KEY}`;
+
+	const respuesta = await fetch(url, {
+		method: 'POST',
+		headers: {
+			'content-type': 'application/json'
+		},
+		body: JSON.stringify({
+			QueryText: texto,
+			Language: 'es',
+			MaxResults: 5,
+			Filter: {
+				IncludeCountries: ['MEX']
+			},
+			BiasPosition: AWS_BIAS_POSITION
+		})
+	});
+
+	if (!respuesta.ok) {
+		throw new Error('No se pudo geocodificar la dirección.');
+	}
+
+	const data = await respuesta.json();
+	const item = (data.ResultItems ?? []).find(direccionPermitidaAws);
+
+	if (!item?.Position || !Array.isArray(item.Position)) {
+		return null;
+	}
+
+	const longitud = Number(item.Position[0]);
+	const latitud = Number(item.Position[1]);
+
+	if (!Number.isFinite(latitud) || !Number.isFinite(longitud)) {
+		return null;
+	}
+
+	return {
+		direccion: obtenerDireccionAws(item) || texto,
+		latitud,
+		longitud
+	};
+}
+
+function crearMapaDireccionPrincipal() {
+	const campo = estadoAutocompleteDireccion.principal;
+
+	if (!campo?.wrapper || document.getElementById('mapaDireccionEntrega')) {
+		return;
+	}
+
+	const wrapperMapa = document.createElement('div');
+	wrapperMapa.className = 'address-map-wrapper';
+	wrapperMapa.innerHTML = `
+		<div id="mapaDireccionEntrega" class="address-map"></div>
+		<div class="address-map-help">
+			Puedes seleccionar una sugerencia o tocar un punto del mapa para ajustar la ubicación.
+		</div>
+	`;
+
+	campo.wrapper.insertAdjacentElement('afterend', wrapperMapa);
+}
+
+function inicializarMapaDireccionPrincipal() {
+	if (!window.maplibregl) {
+		console.error('MapLibre no está cargado. Revisa el script en productos.html.');
+		return;
+	}
+
+	const contenedorMapa = document.getElementById('mapaDireccionEntrega');
+
+	if (!contenedorMapa || mapaPrincipal) {
+		return;
+	}
+
+	mapaPrincipal = new maplibregl.Map({
+		container: 'mapaDireccionEntrega',
+		style: MAP_STYLE,
+		center: MAP_CENTER_TEPIC,
+		zoom: 13
+	});
+
+	mapaPrincipal.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+	marcadorPrincipal = new maplibregl.Marker({
+		draggable: true
+	})
+		.setLngLat(MAP_CENTER_TEPIC)
+		.addTo(mapaPrincipal);
+
+	marcadorPrincipal.on('dragend', async () => {
+		const posicion = marcadorPrincipal.getLngLat();
+		await aplicarPuntoMapaComoDireccion(posicion.lat, posicion.lng);
+	});
+
+	mapaPrincipal.on('load', () => {
+		mapaListoPrincipal = true;
+
+		if (tieneCoordenadasCampoDireccion(estadoAutocompleteDireccion.principal)) {
+			moverMapaDireccion(
+				estadoAutocompleteDireccion.principal.latitud,
+				estadoAutocompleteDireccion.principal.longitud
+			);
+		} else {
+			const coordenadasTepic = obtenerCoordenadasTepic();
+			moverMapaDireccion(coordenadasTepic.latitud, coordenadasTepic.longitud);
+		}
+	});
+
+	mapaPrincipal.on('click', async (event) => {
+		await aplicarPuntoMapaComoDireccion(event.lngLat.lat, event.lngLat.lng);
+	});
+}
+
+function moverMapaDireccion(latitud, longitud) {
+	if (
+		!mapaPrincipal ||
+		!marcadorPrincipal ||
+		!Number.isFinite(Number(latitud)) ||
+		!Number.isFinite(Number(longitud))
+	) {
+		return;
+	}
+
+	const lngLat = [Number(longitud), Number(latitud)];
+
+	marcadorPrincipal.setLngLat(lngLat);
+
+	mapaPrincipal.flyTo({
+		center: lngLat,
+		zoom: 16,
+		essential: true
+	});
+}
+
+function esCampoDireccionPrincipal(campo) {
+	return campo === estadoAutocompleteDireccion.principal;
+}
+
+function tieneCoordenadasCampoDireccion(campo) {
+	return (
+		Number.isFinite(Number(campo?.latitud)) &&
+		Number.isFinite(Number(campo?.longitud))
+	);
+}
+
+function obtenerCoordenadasTepic() {
+	return {
+		latitud: Number(MAP_CENTER_TEPIC[1]),
+		longitud: Number(MAP_CENTER_TEPIC[0])
+	};
+}
+
+function leerCoordenadaDataset(valor) {
+	const texto = String(valor ?? '').trim();
+
+	if (texto === '') {
+		return null;
+	}
+
+	const numero = Number(texto);
+	return Number.isFinite(numero) ? numero : null;
+}
+
+async function obtenerDireccionDesdeCoordenadasAws(latitud, longitud) {
+	const url = `https://places.geo.${AWS_REGION}.amazonaws.com/v2/reverse-geocode?key=${AWS_LOCATION_KEY}`;
+
+	const respuesta = await fetch(url, {
+		method: 'POST',
+		headers: {
+			'content-type': 'application/json'
+		},
+		body: JSON.stringify({
+			QueryPosition: [Number(longitud), Number(latitud)],
+			Language: 'es',
+			MaxResults: 5
+		})
+	});
+
+	if (!respuesta.ok) {
+		throw new Error('No se pudo obtener la dirección desde el mapa.');
+	}
+
+	const data = await respuesta.json();
+	const item = (data.ResultItems ?? []).find(direccionPermitidaAws);
+
+	if (!item) {
+		return null;
+	}
+
+	return {
+		direccion: obtenerDireccionAws(item),
+		latitud: Number(latitud),
+		longitud: Number(longitud)
+	};
+}
+
+async function aplicarPuntoMapaComoDireccion(latitud, longitud) {
+	const campo = estadoAutocompleteDireccion.principal;
+
+	if (esPedidoParaRecoger()) {
+		mostrarEstadoDireccionCampo(
+			campo,
+			'Cambia el tipo de entrega a domicilio para seleccionar una direccion.',
+			'error'
+		);
+		return;
+	}
+
+	if (usarDireccionPerfil?.checked) {
+		usarDireccionPerfil.checked = false;
+	}
+
+	habilitarCampoDireccion(campo, true);
+
+	try {
+		mostrarEstadoDireccionCampo(campo, 'Obteniendo dirección con AWS...', 'normal');
+
+		const resultado = await obtenerDireccionDesdeCoordenadasAws(latitud, longitud);
+
+		if (!resultado?.direccion) {
+			mostrarEstadoDireccionCampo(campo, 'No se encontró una dirección válida en ese punto.', 'error');
+			return;
+		}
+
+		if (!direccionPermitidaAws({
+			Address: {
+				Label: resultado.direccion
+			},
+			Title: resultado.direccion
+		})) {
+			mostrarEstadoDireccionCampo(
+				campo,
+				'Solo se permiten direcciones de Tepic, Xalisco e Ixtlán del Río.',
+				'error'
+			);
+			return;
+		}
+
+		seleccionarSugerenciaDireccionCampo(
+			campo,
+			resultado.direccion,
+			resultado.latitud,
+			resultado.longitud
+		);
+	} catch (error) {
+		console.error('Error al seleccionar punto del mapa:', error);
+		mostrarEstadoDireccionCampo(campo, 'No se pudo obtener la dirección desde el mapa.', 'error');
+	}
+}
+
+async function sincronizarDireccionPrincipalDesdeTexto(opciones = {}) {
+	const { mostrarEstado = false } = opciones;
+	const campo = estadoAutocompleteDireccion.principal;
+
+	if (!campo?.input || esPedidoParaRecoger() || usarDireccionPerfil?.checked) {
+		return false;
+	}
+
+	const direccion = obtenerTextoDireccionCampo(campo);
+
+	if (direccion === '') {
+		return false;
+	}
+
+	if (tieneCoordenadasCampoDireccion(campo)) {
+		moverMapaDireccion(campo.latitud, campo.longitud);
+		return true;
+	}
+
+	try {
+		if (mostrarEstado) {
+			mostrarEstadoDireccionCampo(campo, 'Ubicando direccion en el mapa...', 'normal');
+		}
+
+		const resultado = await geocodificarDireccionAws(direccion);
+
+		if (obtenerTextoDireccionCampo(campo) !== direccion) {
+			return false;
+		}
+
+		if (!resultado?.direccion) {
+			if (mostrarEstado) {
+				mostrarEstadoDireccionCampo(
+					campo,
+					'No se pudo ubicar esa direccion en el mapa.',
+					'error'
+				);
+			}
+			return false;
+		}
+
+		seleccionarSugerenciaDireccionCampo(
+			campo,
+			resultado.direccion || direccion,
+			resultado.latitud,
+			resultado.longitud,
+			{ mostrarEstado }
+		);
+		return true;
+	} catch (error) {
+		console.error('Error al sincronizar direccion con el mapa:', error);
+
+		if (mostrarEstado) {
+			mostrarEstadoDireccionCampo(
+				campo,
+				'No se pudo ubicar la direccion en el mapa.',
+				'error'
+			);
+		}
+
+		return false;
+	}
+}
+
+function seleccionarSugerenciaDireccionCampo(
+	campo,
+	direccionCompleta,
+	latitud = null,
+	longitud = null,
+	opciones = {}
+) {
+	const { mostrarEstado = true } = opciones;
 	if (!campo?.input) {
 		return;
 	}
 
 	campo.input.value = direccionCompleta;
+	campo.latitud = latitud;
+	campo.longitud = longitud;
+
+	if (esCampoDireccionPrincipal(campo)) {
+		if (Number.isFinite(Number(latitud)) && Number.isFinite(Number(longitud))) {
+			moverMapaDireccion(latitud, longitud);
+		} else {
+			const coordenadasTepic = obtenerCoordenadasTepic();
+			moverMapaDireccion(coordenadasTepic.latitud, coordenadasTepic.longitud);
+		}
+	}
 
 	if (campo.lugar) {
 		campo.lugar.value = direccionCompleta;
 	}
 
 	ocultarSugerenciasDireccionCampo(campo);
-	mostrarEstadoDireccionCampo(campo, 'Sugerencia aplicada.', 'success');
+
+	if (!mostrarEstado) {
+		return;
+	}
+
+	if (Number.isFinite(Number(latitud)) && Number.isFinite(Number(longitud))) {
+		mostrarEstadoDireccionCampo(campo, 'Sugerencia aplicada con coordenadas.', 'success');
+	} else {
+		mostrarEstadoDireccionCampo(campo, 'Sugerencia aplicada, pero sin coordenadas.', 'error');
+	}
 
 	setTimeout(() => {
 		ocultarEstadoDireccionCampo(campo);
 	}, 1800);
 }
 
-function aplicarSugerenciaDesdeBotonCampo(campo, boton) {
+async function aplicarSugerenciaDesdeBotonCampo(campo, boton) {
 	const direccion = decodeURIComponent(boton.dataset.direccion || '');
+	const latitud = leerCoordenadaDataset(boton.dataset.latitud);
+	const longitud = leerCoordenadaDataset(boton.dataset.longitud);
 
 	if (!direccion) {
 		return;
 	}
 
 	campo.seleccionando = true;
-	seleccionarSugerenciaDireccionCampo(campo, direccion);
+	mostrarEstadoDireccionCampo(campo, 'Obteniendo coordenadas con AWS...', 'normal');
 
-	setTimeout(() => {
-		campo.seleccionando = false;
-	}, 200);
+	try {
+		if (Number.isFinite(latitud) && Number.isFinite(longitud)) {
+			seleccionarSugerenciaDireccionCampo(campo, direccion, latitud, longitud);
+			return;
+		}
+
+		const resultado = await geocodificarDireccionAws(direccion);
+
+		if (!resultado) {
+			seleccionarSugerenciaDireccionCampo(campo, direccion, null, null);
+			mostrarEstadoDireccionCampo(campo, 'Se aplicó la dirección, pero no se encontraron coordenadas.', 'error');
+			return;
+		}
+
+		seleccionarSugerenciaDireccionCampo(
+			campo,
+			resultado.direccion || direccion,
+			resultado.latitud,
+			resultado.longitud
+		);
+	} catch (error) {
+		console.error('Error al geocodificar sugerencia con AWS:', error);
+		seleccionarSugerenciaDireccionCampo(campo, direccion, null, null);
+		mostrarEstadoDireccionCampo(campo, 'Se aplicó la dirección, pero no se pudieron obtener coordenadas.', 'error');
+	} finally {
+		setTimeout(() => {
+			campo.seleccionando = false;
+		}, 200);
+	}
 }
 
 function renderizarSugerenciasDireccionCampo(campo, resultados) {
@@ -660,8 +1152,8 @@ function renderizarSugerenciasDireccionCampo(campo, resultados) {
 	if (!Array.isArray(resultados) || resultados.length === 0) {
 		campo.suggestions.innerHTML = `
 			<div class="address-suggestion-item" style="cursor: default;">
-				<span class="address-suggestion-main">No se encontraron coincidencias</span>
-				<span class="address-suggestion-secondary">Prueba escribiendo calle, colonia o ciudad.</span>
+				<span class="address-suggestion-main">No se encontraron coincidencias válidas</span>
+				<span class="address-suggestion-secondary">Solo se permiten direcciones de Tepic, Xalisco e Ixtlán del Río.</span>
 			</div>
 		`;
 		campo.suggestions.classList.remove('hidden');
@@ -670,13 +1162,18 @@ function renderizarSugerenciasDireccionCampo(campo, resultados) {
 
 	campo.suggestions.innerHTML = resultados.map((item) => {
 		const titulo = obtenerTituloDireccion(item);
-		const secundario = construirTextoSecundarioDireccion(item) || item.display_name;
+		const secundario = construirTextoSecundarioDireccion(item);
+		const direccion = obtenerDireccionAws(item);
+		const latitud = Array.isArray(item.Position) ? Number(item.Position[1]) : '';
+		const longitud = Array.isArray(item.Position) ? Number(item.Position[0]) : '';
 
 		return `
 			<button
 				type="button"
 				class="address-suggestion-item"
-				data-direccion="${encodeURIComponent(item.display_name)}"
+				data-direccion="${encodeURIComponent(direccion)}"
+				data-latitud="${Number.isFinite(latitud) ? latitud : ''}"
+				data-longitud="${Number.isFinite(longitud) ? longitud : ''}"
 			>
 				<span class="address-suggestion-main">${titulo}</span>
 				<span class="address-suggestion-secondary">${secundario}</span>
@@ -707,6 +1204,9 @@ function renderizarSugerenciasDireccionCampo(campo, resultados) {
 async function buscarSugerenciasDireccionCampo(campo, texto) {
 	const termino = texto.trim();
 
+	campo.latitud = null;
+	campo.longitud = null;
+
 	if (termino.length < 5) {
 		ocultarSugerenciasDireccionCampo(campo);
 		ocultarEstadoDireccionCampo(campo);
@@ -725,29 +1225,9 @@ async function buscarSugerenciasDireccionCampo(campo, texto) {
 
 		campo.controlador = new AbortController();
 
-		mostrarEstadoDireccionCampo(campo, 'Buscando sugerencias...');
+		mostrarEstadoDireccionCampo(campo, 'Buscando sugerencias con AWS...');
 
-		const url = new URL('https://nominatim.openstreetmap.org/search');
-		url.searchParams.set('q', termino);
-		url.searchParams.set('format', 'jsonv2');
-		url.searchParams.set('addressdetails', '1');
-		url.searchParams.set('limit', '5');
-		url.searchParams.set('countrycodes', 'mx');
-		url.searchParams.set('accept-language', 'es');
-
-		const respuesta = await fetch(url.toString(), {
-			method: 'GET',
-			signal: campo.controlador.signal,
-			headers: {
-				'Accept': 'application/json'
-			}
-		});
-
-		if (!respuesta.ok) {
-			throw new Error('No se pudo consultar el servicio de direcciones.');
-		}
-
-		const data = await respuesta.json();
+		const data = await buscarAutocompleteAws(campo, termino);
 
 		renderizarSugerenciasDireccionCampo(campo, data);
 		ocultarEstadoDireccionCampo(campo);
@@ -760,7 +1240,7 @@ async function buscarSugerenciasDireccionCampo(campo, texto) {
 			return;
 		}
 
-		console.error('Error al buscar sugerencias de dirección:', error);
+		console.error('Error al buscar sugerencias de dirección con AWS:', error);
 		ocultarSugerenciasDireccionCampo(campo);
 		mostrarEstadoDireccionCampo(campo, 'No se pudieron obtener sugerencias en este momento.', 'error');
 
@@ -788,6 +1268,8 @@ function limpiarCampoDireccion(campo) {
 	}
 
 	campo.input.value = '';
+	campo.latitud = null;
+	campo.longitud = null;
 
 	if (campo.lugar) {
 		campo.lugar.value = '';
@@ -796,6 +1278,11 @@ function limpiarCampoDireccion(campo) {
 	campo.input.disabled = false;
 	ocultarSugerenciasDireccionCampo(campo);
 	ocultarEstadoDireccionCampo(campo);
+
+	if (esCampoDireccionPrincipal(campo)) {
+		const coordenadasTepic = obtenerCoordenadasTepic();
+		moverMapaDireccion(coordenadasTepic.latitud, coordenadasTepic.longitud);
+	}
 }
 
 function habilitarCampoDireccion(campo, habilitado) {
@@ -821,6 +1308,8 @@ function aplicarTextoDireccionCampo(campo, direccion) {
 
 	const texto = String(direccion ?? '').trim();
 	campo.input.value = texto;
+	campo.latitud = null;
+	campo.longitud = null;
 
 	if (campo.lugar) {
 		campo.lugar.value = texto;
@@ -926,11 +1415,23 @@ function vincularEventosCampoDireccion(campo) {
 	}
 
 	campo.input.addEventListener('input', () => {
+		campo.latitud = null;
+		campo.longitud = null;
+
 		if (campo.lugar) {
 			campo.lugar.value = campo.input.value.trim();
 		}
 
 		programarBusquedaDireccionCampo(campo);
+	});
+
+	campo.input.addEventListener('keydown', (event) => {
+		if (event.key !== 'Enter' || !esCampoDireccionPrincipal(campo)) {
+			return;
+		}
+
+		event.preventDefault();
+		void sincronizarDireccionPrincipalDesdeTexto({ mostrarEstado: true });
 	});
 
 	campo.input.addEventListener('blur', () => {
@@ -939,6 +1440,12 @@ function vincularEventosCampoDireccion(campo) {
 				ocultarSugerenciasDireccionCampo(campo);
 			}
 		}, 180);
+
+		if (esCampoDireccionPrincipal(campo)) {
+			setTimeout(() => {
+				void sincronizarDireccionPrincipalDesdeTexto();
+			}, 200);
+		}
 	});
 }
 
@@ -965,6 +1472,8 @@ function inicializarAutocompletadoDirecciones() {
 			}
 		});
 	});
+	crearMapaDireccionPrincipal();
+	inicializarMapaDireccionPrincipal();
 }
 
 function inicializarEntrega() {
@@ -1038,6 +1547,9 @@ function actualizarEstadoLugarEntrega() {
 		}
 
 		aplicarTextoDireccionCampo(campoDireccion, direccionGuardada);
+		campoDireccion.latitud = Number.isFinite(Number(usuario?.latitud)) ? Number(usuario.latitud) : null;
+		campoDireccion.longitud = Number.isFinite(Number(usuario?.longitud)) ? Number(usuario.longitud) : null;
+		moverMapaDireccion(campoDireccion.latitud, campoDireccion.longitud);
 		habilitarCampoDireccion(campoDireccion, false);
 		limpiarMensaje();
 		return;
@@ -1608,6 +2120,100 @@ function obtenerComentarioPedido() {
 	return comentario === '' ? null : comentario;
 }
 
+function aplicarResultadoValidacionDireccion(campoDireccion, direccion, latitud, longitud) {
+	if (!campoDireccion) {
+		return;
+	}
+
+	campoDireccion.latitud = latitud;
+	campoDireccion.longitud = longitud;
+
+	if (campoDireccion.lugar) {
+		campoDireccion.lugar.value = direccion;
+	}
+
+	if (campoDireccion.input) {
+		seleccionarSugerenciaDireccionCampo(
+			campoDireccion,
+			direccion,
+			latitud,
+			longitud,
+			{ mostrarEstado: false }
+		);
+	}
+}
+
+async function validarEntregaConCobertura(entregaPedido, opciones = {}) {
+	const {
+		campoDireccion = null,
+		etiqueta = 'el pedido',
+		mostrarError = null
+	} = opciones;
+
+	const tipoEntrega = entregaPedido?.tipoEntrega === 'recoger' ? 'recoger' : 'domicilio';
+
+	if (tipoEntrega === 'recoger') {
+		return {
+			...entregaPedido,
+			lugarEntrega: 'Recoger en tienda',
+			latitudEntrega: null,
+			longitudEntrega: null
+		};
+	}
+
+	const direccion = String(entregaPedido?.lugarEntrega ?? '').trim();
+
+	if (!direccion) {
+		return null;
+	}
+
+	let resultado = null;
+
+	try {
+		if (
+			Number.isFinite(Number(entregaPedido?.latitudEntrega)) &&
+			Number.isFinite(Number(entregaPedido?.longitudEntrega))
+		) {
+			resultado = await obtenerDireccionDesdeCoordenadasAws(
+				Number(entregaPedido.latitudEntrega),
+				Number(entregaPedido.longitudEntrega)
+			);
+		}
+
+		if (!resultado?.direccion) {
+			resultado = await geocodificarDireccionAws(direccion);
+		}
+	} catch (error) {
+		console.error('Error validando cobertura de direccion:', error);
+	}
+
+	if (!resultado?.direccion) {
+		const mensaje = obtenerMensajeCoberturaDireccion(etiqueta);
+
+		if (typeof mostrarError === 'function') {
+			mostrarError('error', mensaje);
+		}
+
+		mostrarModalDireccionInvalida(mensaje);
+		campoDireccion?.input?.focus();
+		return null;
+	}
+
+	aplicarResultadoValidacionDireccion(
+		campoDireccion,
+		resultado.direccion,
+		resultado.latitud,
+		resultado.longitud
+	);
+
+	return {
+		...entregaPedido,
+		lugarEntrega: resultado.direccion,
+		latitudEntrega: resultado.latitud,
+		longitudEntrega: resultado.longitud
+	};
+}
+
 function obtenerCantidadStockItem(item) {
 	const cantidad = Math.max(0, Number(item.cantidad ?? 0));
 	const cantidadStock = Math.max(0, Number(item.cantidad_stock ?? 0));
@@ -1661,12 +2267,23 @@ function separarDetallesPedido() {
 	};
 }
 
+async function prepararEntregaConCoordenadas(entregaPedido) {
+	const entregaValidada = await validarEntregaConCobertura(entregaPedido);
+
+	if (!entregaValidada) {
+		throw new Error(obtenerMensajeCoberturaDireccion('el pedido'));
+	}
+
+	return entregaValidada;
+}
+
 async function crearPedidoCliente(detallesPedido, entregaPedido) {
 	const total = calcularTotalDetalles(detallesPedido);
-	const tipoEntrega = entregaPedido.tipoEntrega === 'recoger' ? 'recoger' : 'domicilio';
+	const entregaPreparada = await prepararEntregaConCoordenadas(entregaPedido);
+	const tipoEntrega = entregaPreparada.tipoEntrega === 'recoger' ? 'recoger' : 'domicilio';
 	const lugarEntregaFinal = tipoEntrega === 'recoger'
 		? 'Recoger en tienda'
-		: entregaPedido.lugarEntrega;
+		: entregaPreparada.lugarEntrega;
 
 	const { data: idPedido, error } = await db.rpc('procesar_pedido', {
 		p_id_cliente: Number(usuario.id_usuario),
@@ -1674,7 +2291,9 @@ async function crearPedidoCliente(detallesPedido, entregaPedido) {
 		p_lugar_entrega: lugarEntregaFinal,
 		p_tipo_entrega: tipoEntrega,
 		p_comentario_pedido: obtenerComentarioPedido(),
-		p_detalles: detallesPedido
+		p_detalles: detallesPedido,
+		p_latitud_entrega: tipoEntrega === 'recoger' ? null : entregaPreparada.latitudEntrega,
+		p_longitud_entrega: tipoEntrega === 'recoger' ? null : entregaPreparada.longitudEntrega
 	});
 
 	if (error || !idPedido) {
@@ -1700,13 +2319,25 @@ function obtenerProductosConPedidoPersonalizado() {
 
 function obtenerEntregaBase(lugarEntregaFinal) {
 	const tipoEntrega = esPedidoParaRecoger() ? 'recoger' : 'domicilio';
+	const campoDireccion = estadoAutocompleteDireccion.principal;
+	const usandoDireccionPerfil = usarDireccionPerfil?.checked === true;
+
+	const latitudEntrega = usandoDireccionPerfil
+		? (Number.isFinite(Number(usuario?.latitud)) ? Number(usuario.latitud) : null)
+		: (Number.isFinite(Number(campoDireccion.latitud)) ? Number(campoDireccion.latitud) : null);
+
+	const longitudEntrega = usandoDireccionPerfil
+		? (Number.isFinite(Number(usuario?.longitud)) ? Number(usuario.longitud) : null)
+		: (Number.isFinite(Number(campoDireccion.longitud)) ? Number(campoDireccion.longitud) : null);
 
 	return {
 		tipoEntrega,
 		lugarEntrega: tipoEntrega === 'recoger' ? 'Recoger en tienda' : lugarEntregaFinal,
 		direccionTexto: tipoEntrega === 'domicilio'
-			? obtenerTextoDireccionCampo(estadoAutocompleteDireccion.principal)
-			: ''
+			? obtenerTextoDireccionCampo(campoDireccion)
+			: '',
+		latitudEntrega: tipoEntrega === 'domicilio' ? latitudEntrega : null,
+		longitudEntrega: tipoEntrega === 'domicilio' ? longitudEntrega : null
 	};
 }
 
@@ -1754,6 +2385,12 @@ function configurarEntregaSeparada(tipoSelect, campoDireccion, entregaBase) {
 
 	if (entregaBase.tipoEntrega === 'domicilio') {
 		aplicarTextoDireccionCampo(campoDireccion, entregaBase.direccionTexto || entregaBase.lugarEntrega);
+		campoDireccion.latitud = Number.isFinite(Number(entregaBase.latitudEntrega))
+			? Number(entregaBase.latitudEntrega)
+			: null;
+		campoDireccion.longitud = Number.isFinite(Number(entregaBase.longitudEntrega))
+			? Number(entregaBase.longitudEntrega)
+			: null;
 	}
 }
 
@@ -1769,7 +2406,13 @@ function leerEntregaSeparada(tipoSelect, campoDireccion, etiqueta) {
 
 	return {
 		tipoEntrega,
-		lugarEntrega: lugar
+		lugarEntrega: lugar,
+		latitudEntrega: tipoEntrega === 'domicilio' && Number.isFinite(Number(campoDireccion.latitud))
+			? Number(campoDireccion.latitud)
+			: null,
+		longitudEntrega: tipoEntrega === 'domicilio' && Number.isFinite(Number(campoDireccion.longitud))
+			? Number(campoDireccion.longitud)
+			: null
 	};
 }
 
@@ -1841,7 +2484,7 @@ function abrirModalSeparacionPedido(detallesSeparados, entregaBase) {
 
 		btnCancelarSeparacionPedido.onclick = () => cerrar(null);
 
-		btnConfirmarSeparacionPedido.onclick = () => {
+		btnConfirmarSeparacionPedido.onclick = async () => {
 			const entregaNormal = leerEntregaSeparada(
 				splitNormalTipo,
 				estadoAutocompleteDireccion.splitNormal,
@@ -1858,9 +2501,35 @@ function abrirModalSeparacionPedido(detallesSeparados, entregaBase) {
 				return;
 			}
 
+			const entregaNormalValidada = await validarEntregaConCobertura(
+				entregaNormal,
+				{
+					campoDireccion: estadoAutocompleteDireccion.splitNormal,
+					etiqueta: 'el pedido normal',
+					mostrarError: mostrarMensajeSeparacion
+				}
+			);
+
+			if (!entregaNormalValidada) {
+				return;
+			}
+
+			const entregaPersonalizadaValidada = await validarEntregaConCobertura(
+				entregaPersonalizada,
+				{
+					campoDireccion: estadoAutocompleteDireccion.splitPersonalizado,
+					etiqueta: 'el pedido personalizado',
+					mostrarError: mostrarMensajeSeparacion
+				}
+			);
+
+			if (!entregaPersonalizadaValidada) {
+				return;
+			}
+
 			cerrar({
-				normal: entregaNormal,
-				personalizado: entregaPersonalizada
+				normal: entregaNormalValidada,
+				personalizado: entregaPersonalizadaValidada
 			});
 		};
 	});
@@ -1892,8 +2561,23 @@ async function realizarPedido() {
 	try {
 		const detallesSeparados = separarDetallesPedido();
 		const idsPedidos = [];
-		const entregaBase = obtenerEntregaBase(lugarEntregaFinal);
-		const entregasPedido = await abrirModalSeparacionPedido(detallesSeparados, entregaBase);
+		const entregaBaseValidada = await validarEntregaConCobertura(
+			obtenerEntregaBase(lugarEntregaFinal),
+			{
+				campoDireccion: estadoAutocompleteDireccion.principal,
+				etiqueta: 'el pedido',
+				mostrarError: mostrarMensaje
+			}
+		);
+
+		if (!entregaBaseValidada) {
+			return;
+		}
+
+		const entregasPedido = await abrirModalSeparacionPedido(
+			detallesSeparados,
+			entregaBaseValidada
+		);
 
 		if (!entregasPedido) {
 			return;
@@ -2222,8 +2906,24 @@ if (btnCerrarModalResenas) {
 	btnCerrarModalResenas.addEventListener('click', cerrarModalResenas);
 }
 
+if (btnCerrarModalDireccionInvalida) {
+	btnCerrarModalDireccionInvalida.addEventListener('click', cerrarModalDireccionInvalida);
+}
+
+if (btnAceptarModalDireccionInvalida) {
+	btnAceptarModalDireccionInvalida.addEventListener('click', cerrarModalDireccionInvalida);
+}
+
 if (btnEnviarResena) {
 	btnEnviarResena.addEventListener('click', enviarResena);
+}
+
+if (modalDireccionInvalida) {
+	modalDireccionInvalida.addEventListener('click', (event) => {
+		if (event.target === modalDireccionInvalida) {
+			cerrarModalDireccionInvalida();
+		}
+	});
 }
 
 if (modalResenas) {

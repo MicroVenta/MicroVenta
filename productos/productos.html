@@ -6,6 +6,11 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>MicroVenta | Productos</title>
 	<link rel="stylesheet" href="/productos/productos.css">
+
+<link
+	rel="stylesheet"
+	href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css"
+/>
 </head>
 <body>
 	<div class="mobile-overlay hidden" id="mobileOverlay"></div>
@@ -346,6 +351,38 @@
 		</div>
 	</div>
 
+	<div id="modalDireccionInvalida" class="modal-overlay hidden">
+		<div class="modal-content modal-alert-content">
+			<div class="modal-header">
+				<h2>Dirección no disponible</h2>
+				<button
+					id="btnCerrarModalDireccionInvalida"
+					class="modal-close"
+					type="button"
+					aria-label="Cerrar modal"
+				>
+					&times;
+				</button>
+			</div>
+
+			<div class="modal-body">
+				<p id="modalDireccionInvalidaTexto" class="modal-alert-text">
+					La dirección indicada no se pudo validar para la entrega.
+				</p>
+
+				<div class="modal-alert-actions">
+					<button
+						id="btnAceptarModalDireccionInvalida"
+						class="btn btn-primary"
+						type="button"
+					>
+						Entendido
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
 	<div id="modalResenas" class="modal-overlay hidden">
 		<div class="modal-content">
 			<div class="modal-header">
@@ -372,11 +409,11 @@
 						<label for="calificacionResena">Calificación (1-5 estrellas)</label>
 						<select id="calificacionResena" class="form-control" required>
 							<option value="">Selecciona</option>
-							<option value="5">★★★★★ (5)</option>
-							<option value="4">★★★★☆ (4)</option>
-							<option value="3">★★★☆☆ (3)</option>
-							<option value="2">★★☆☆☆ (2)</option>
-							<option value="1">★☆☆☆☆ (1)</option>
+							<option value="5">⭐⭐⭐⭐⭐ (5)</option>
+							<option value="4">⭐⭐⭐⭐ (4)</option>
+							<option value="3">⭐⭐⭐ (3)</option>
+							<option value="2">⭐⭐ (2)</option>
+							<option value="1">⭐ (1)</option>
 						</select>
 					</div>
 
@@ -399,9 +436,11 @@
 		</div>
 	</div>
 
-	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-	<script src="/conexion.js"></script>
-	<script src="/sidebar.js"></script>
-	<script src="/productos/productos.js"></script>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/conexion.js"></script>
+<script src="/sidebar.js"></script>
+<script src="/productos/productos.js"></script>
 </body>
 </html>

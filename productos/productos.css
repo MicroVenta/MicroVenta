@@ -872,6 +872,22 @@ body {
 	padding: 20px 22px;
 }
 
+.modal-alert-content {
+	max-width: 520px;
+}
+
+.modal-alert-text {
+	color: var(--gris-texto);
+	line-height: 1.7;
+	font-size: 1rem;
+}
+
+.modal-alert-actions {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: 22px;
+}
+
 .reviews-list {
 	margin-bottom: 20px;
 	display: flex;
@@ -1245,5 +1261,33 @@ body {
 	.address-suggestions {
 		position: static;
 		margin-top: 6px;
+	}
+}
+
+.address-map-wrapper {
+	margin-top: 10px;
+	border: 1px solid var(--gris-borde);
+	border-radius: 18px;
+	overflow: hidden;
+	background: #fff;
+	box-shadow: 0 10px 24px rgba(120, 72, 92, 0.10);
+}
+
+.address-map {
+	width: 100%;
+	height: 260px;
+}
+
+.address-map-help {
+	padding: 10px 12px;
+	font-size: 0.85rem;
+	color: var(--gris-texto);
+	background: rgba(255, 247, 239, 0.9);
+	border-top: 1px solid rgba(217, 108, 138, 0.12);
+}
+
+@media (max-width: 700px) {
+	.address-map {
+		height: 220px;
 	}
 }
