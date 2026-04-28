@@ -3,6 +3,10 @@ const ID_ROL_AYUDANTE = 2;
 const ID_ROL_REPARTIDOR = 3;
 const ID_ROL_CLIENTE = 4;
 
+const AWS_REGION = 'us-east-2';
+const AWS_LOCATION_KEY = 'v1.public.eyJqdGkiOiI4OTY5OGIyYy1hZmQyLTQyYmItYjZjNi0xZTAwNWU2MWY2N2UifRfhEn2cmnsmQT2oZxWtopI2LigByNeDiy0oA3Zqm4Yej9MvT33_zzXMYaad7gCh1zuVnyCyAUHBwg5htBa5nQhuCY4ViXzP8lO94Nx6tD3EqmkvjIKEvR3d4JCTYoFcHdOWKmOmUEeSKKiFNpK0e6E4fk7mvX4a5pdSEnv3zvu6ohA7qEvycpJsUjuP7h8FT6p5gLLp6XUfV-CQSqxKAzU2waRJGNvFlJttMF7KXBgli9nErtyG7Hyz56FDKL0GlLwC7Wl3-3xjcXNz7AY5Yd4TQXh97P3AUuZ-DoCXaGsG3NZdCqT42UvsTcDYmE49e97pyeBwCR5BMuOdH_a-YOU.NjAyMWJkZWUtMGMyOS00NmRkLThjZTMtODEyOTkzZTUyMTBi';
+const AWS_BIAS_POSITION = [-104.8957, 21.5095];
+
 const nombreClienteTopbar = document.getElementById('nombreClienteTopbar');
 const nombreClienteHero = document.getElementById('nombreClienteHero');
 const correoClienteHero = document.getElementById('correoClienteHero');
@@ -44,6 +48,8 @@ let datosOriginales = null;
 let temporizadorBusquedaDireccion = null;
 let controladorBusquedaDireccion = null;
 let seleccionandoSugerenciaDireccion = false;
+let latitudDireccionSeleccionada = null;
+let longitudDireccionSeleccionada = null;
 
 function obtenerRolNormalizado(nombreRol) {
 	return (nombreRol ?? '').toString().trim().toLowerCase();
@@ -153,10 +159,6 @@ function cerrarSesion() {
 if (btnCerrarSesion) {
 	btnCerrarSesion.addEventListener('click', cerrarSesion);
 }
-
-/* =========================
-	MENÚ MÓVIL
-========================= */
 
 function abrirMenuMovil() {
 	if (!sidebar || !mobileOverlay) {
@@ -333,6 +335,9 @@ function llenarFormulario(usuarioData) {
 	inputCorreo.value = usuarioData.correo ?? '';
 	inputTelefono.value = usuarioData.telefono ?? '';
 	inputDireccion.value = usuarioData.direccion ?? '';
+
+	latitudDireccionSeleccionada = usuarioData.latitud ?? null;
+	longitudDireccionSeleccionada = usuarioData.longitud ?? null;
 }
 
 function guardarEnStorage(usuarioActualizado) {
@@ -389,55 +394,162 @@ function ocultarSugerenciasDireccion() {
 	sugerenciasDireccion.classList.add('hidden');
 }
 
-
-
-function partsPushUnico(lista, valor) {
-	if (!valor) {
-		return;
-	}
-
-	if (!lista.includes(valor)) {
-		lista.push(valor);
-	}
+function obtenerDireccionAws(item) {
+	return item?.Address?.Label || item?.Title || '';
 }
 
-function construirTextoSecundarioDireccion(item) {
+function obtenerTituloAws(item) {
+	return item?.Title || item?.Address?.Label || 'Dirección';
+}
+
+function obtenerTextoSecundarioAws(item) {
+	const address = item?.Address ?? {};
 	const partes = [];
 
-	if (item.address?.suburb) partes.push(item.address.suburb);
-	if (item.address?.city) partsPushUnico(partes, item.address.city);
-	if (item.address?.town) partsPushUnico(partes, item.address.town);
-	if (item.address?.state) partsPushUnico(partes, item.address.state);
-	if (item.address?.postcode) partsPushUnico(partes, item.address.postcode);
+	if (address.Neighborhood) partes.push(address.Neighborhood);
+	if (address.SubRegion) partes.push(address.SubRegion);
+	if (address.Locality) partes.push(address.Locality);
+	if (address.Region) partes.push(address.Region);
+	if (address.PostalCode) partes.push(address.PostalCode);
+	if (address.Country) partes.push(address.Country);
 
-	return partes.join(', ');
+	const texto = partes
+		.filter(Boolean)
+		.filter((valor, index, arreglo) => arreglo.indexOf(valor) === index)
+		.join(', ');
+
+	return texto || item?.Address?.Label || item?.Title || '';
 }
 
-function obtenerTituloDireccion(item) {
-	const address = item.address ?? {};
-	const titulo = [];
+async function buscarAutocompleteAws(texto) {
+	const url = `https://places.geo.${AWS_REGION}.amazonaws.com/v2/autocomplete?key=${AWS_LOCATION_KEY}`;
 
-	if (address.road) titulo.push(address.road);
-	if (address.house_number) titulo.push(address.house_number);
-	if (!titulo.length && item.name) titulo.push(item.name);
-	if (!titulo.length && item.display_name) {
-		return item.display_name.split(',')[0];
+	const respuesta = await fetch(url, {
+		method: 'post',
+		headers: {
+			'content-type': 'application/json'
+		},
+		body: JSON.stringify({
+			QueryText: texto,
+			Language: 'es',
+			MaxResults: 5,
+			Filter: {
+				IncludeCountries: ['MEX']
+			},
+			BiasPosition: AWS_BIAS_POSITION
+		}),
+		signal: controladorBusquedaDireccion?.signal
+	});
+
+	if (!respuesta.ok) {
+		throw new Error('No se pudo consultar AWS Location.');
 	}
 
-	return titulo.join(' ');
+	return respuesta.json();
 }
 
-function seleccionarSugerenciaDireccion(direccionCompleta) {
+async function geocodificarDireccionAws(direccion) {
+	const texto = String(direccion ?? '').trim();
+
+	if (!texto) {
+		return null;
+	}
+
+	const url = `https://places.geo.${AWS_REGION}.amazonaws.com/v2/geocode?key=${AWS_LOCATION_KEY}`;
+
+	const respuesta = await fetch(url, {
+		method: 'post',
+		headers: {
+			'content-type': 'application/json'
+		},
+		body: JSON.stringify({
+			QueryText: texto,
+			Language: 'es',
+			MaxResults: 1,
+			Filter: {
+				IncludeCountries: ['MEX']
+			},
+			BiasPosition: AWS_BIAS_POSITION
+		})
+	});
+
+	if (!respuesta.ok) {
+		throw new Error('No se pudo geocodificar la dirección.');
+	}
+
+	const data = await respuesta.json();
+	const item = data.ResultItems?.[0];
+
+	if (!item?.Position || !Array.isArray(item.Position)) {
+		return null;
+	}
+
+	const longitud = Number(item.Position[0]);
+	const latitud = Number(item.Position[1]);
+
+	if (!Number.isFinite(latitud) || !Number.isFinite(longitud)) {
+		return null;
+	}
+
+	return {
+		direccion: obtenerDireccionAws(item) || texto,
+		latitud,
+		longitud
+	};
+}
+
+async function obtenerDireccionDesdeUbicacion(latitud, longitud) {
+	const url = `https://places.geo.${AWS_REGION}.amazonaws.com/v2/reverse-geocode?key=${AWS_LOCATION_KEY}`;
+
+	const respuesta = await fetch(url, {
+		method: 'post',
+		headers: {
+			'content-type': 'application/json'
+		},
+		body: JSON.stringify({
+			QueryPosition: [Number(longitud), Number(latitud)],
+			Language: 'es',
+			MaxResults: 1
+		})
+	});
+
+	if (!respuesta.ok) {
+		throw new Error('No se pudo convertir la ubicación en una dirección.');
+	}
+
+	const data = await respuesta.json();
+	const item = data.ResultItems?.[0];
+
+	if (!item) {
+		throw new Error('No se obtuvo una dirección válida.');
+	}
+
+	return {
+		direccion: obtenerDireccionAws(item),
+		latitud: Number(latitud),
+		longitud: Number(longitud)
+	};
+}
+
+function seleccionarSugerenciaDireccion(direccionCompleta, latitud = null, longitud = null) {
 	inputDireccion.value = direccionCompleta;
+	latitudDireccionSeleccionada = latitud;
+	longitudDireccionSeleccionada = longitud;
+
 	ocultarSugerenciasDireccion();
-	mostrarEstadoDireccion('Sugerencia aplicada.', 'success');
+
+	if (latitud !== null && longitud !== null) {
+		mostrarEstadoDireccion('Sugerencia aplicada con coordenadas.', 'success');
+	} else {
+		mostrarEstadoDireccion('Sugerencia aplicada.', 'success');
+	}
 
 	setTimeout(() => {
 		ocultarEstadoDireccion();
 	}, 1800);
 }
 
-function aplicarSugerenciaDesdeBoton(boton) {
+async function aplicarSugerenciaDesdeBoton(boton) {
 	const direccion = decodeURIComponent(boton.dataset.direccion || '');
 
 	if (!direccion) {
@@ -445,11 +557,31 @@ function aplicarSugerenciaDesdeBoton(boton) {
 	}
 
 	seleccionandoSugerenciaDireccion = true;
-	seleccionarSugerenciaDireccion(direccion);
+	mostrarEstadoDireccion('Obteniendo coordenadas...', 'normal');
 
-	setTimeout(() => {
-		seleccionandoSugerenciaDireccion = false;
-	}, 200);
+	try {
+		const resultado = await geocodificarDireccionAws(direccion);
+
+		if (!resultado) {
+			seleccionarSugerenciaDireccion(direccion, null, null);
+			mostrarEstadoDireccion('Se aplicó la dirección, pero no se encontraron coordenadas.', 'error');
+			return;
+		}
+
+		seleccionarSugerenciaDireccion(
+			resultado.direccion || direccion,
+			resultado.latitud,
+			resultado.longitud
+		);
+	} catch (error) {
+		console.error('Error al geocodificar sugerencia:', error);
+		seleccionarSugerenciaDireccion(direccion, null, null);
+		mostrarEstadoDireccion('Se aplicó la dirección, pero no se pudieron obtener coordenadas.', 'error');
+	} finally {
+		setTimeout(() => {
+			seleccionandoSugerenciaDireccion = false;
+		}, 200);
+	}
 }
 
 function renderizarSugerenciasDirecciones(resultados) {
@@ -469,14 +601,15 @@ function renderizarSugerenciasDirecciones(resultados) {
 	}
 
 	sugerenciasDireccion.innerHTML = resultados.map((item) => {
-		const titulo = obtenerTituloDireccion(item);
-		const secundario = construirTextoSecundarioDireccion(item) || item.display_name;
+		const titulo = obtenerTituloAws(item);
+		const secundario = obtenerTextoSecundarioAws(item);
+		const direccion = obtenerDireccionAws(item);
 
 		return `
 			<button
 				type="button"
 				class="address-suggestion-item"
-				data-direccion="${encodeURIComponent(item.display_name)}"
+				data-direccion="${encodeURIComponent(direccion)}"
 			>
 				<span class="address-suggestion-main">${titulo}</span>
 				<span class="address-suggestion-secondary">${secundario}</span>
@@ -520,38 +653,18 @@ async function buscarSugerenciasDireccion(texto) {
 
 		controladorBusquedaDireccion = new AbortController();
 
-		mostrarEstadoDireccion('Buscando sugerencias...');
+		mostrarEstadoDireccion('Buscando sugerencias con AWS...');
 
-		const url = new URL('https://nominatim.openstreetmap.org/search');
-		url.searchParams.set('q', termino);
-		url.searchParams.set('format', 'jsonv2');
-		url.searchParams.set('addressdetails', '1');
-		url.searchParams.set('limit', '5');
-		url.searchParams.set('countrycodes', 'mx');
-		url.searchParams.set('accept-language', 'es');
+		const data = await buscarAutocompleteAws(termino);
 
-		const respuesta = await fetch(url.toString(), {
-			method: 'GET',
-			signal: controladorBusquedaDireccion.signal,
-			headers: {
-				'Accept': 'application/json'
-			}
-		});
-
-		if (!respuesta.ok) {
-			throw new Error('No se pudo consultar el servicio de direcciones.');
-		}
-
-		const data = await respuesta.json();
-
-		renderizarSugerenciasDirecciones(data);
+		renderizarSugerenciasDirecciones(data.ResultItems ?? []);
 		ocultarEstadoDireccion();
 	} catch (error) {
 		if (error.name === 'AbortError') {
 			return;
 		}
 
-		console.error('Error al buscar sugerencias de dirección:', error);
+		console.error('Error al buscar sugerencias de dirección con AWS:', error);
 		ocultarSugerenciasDireccion();
 		mostrarEstadoDireccion('No se pudieron obtener sugerencias en este momento.', 'error');
 	}
@@ -560,31 +673,12 @@ async function buscarSugerenciasDireccion(texto) {
 function programarBusquedaDireccion() {
 	clearTimeout(temporizadorBusquedaDireccion);
 
+	latitudDireccionSeleccionada = null;
+	longitudDireccionSeleccionada = null;
+
 	temporizadorBusquedaDireccion = setTimeout(() => {
 		buscarSugerenciasDireccion(inputDireccion.value);
 	}, 450);
-}
-
-async function obtenerDireccionDesdeUbicacion(latitud, longitud) {
-	const url = new URL('https://nominatim.openstreetmap.org/reverse');
-	url.searchParams.set('lat', latitud);
-	url.searchParams.set('lon', longitud);
-	url.searchParams.set('format', 'jsonv2');
-	url.searchParams.set('addressdetails', '1');
-	url.searchParams.set('accept-language', 'es');
-
-	const respuesta = await fetch(url.toString(), {
-		method: 'GET',
-		headers: {
-			'Accept': 'application/json'
-		}
-	});
-
-	if (!respuesta.ok) {
-		throw new Error('No se pudo convertir la ubicación en una dirección.');
-	}
-
-	return respuesta.json();
 }
 
 async function usarUbicacionActual() {
@@ -606,16 +700,18 @@ async function usarUbicacionActual() {
 				const latitud = posicion.coords.latitude;
 				const longitud = posicion.coords.longitude;
 
-				mostrarEstadoDireccion('Convirtiendo ubicación en dirección...');
+				mostrarEstadoDireccion('Convirtiendo ubicación en dirección con AWS...');
 
 				const resultado = await obtenerDireccionDesdeUbicacion(latitud, longitud);
-				const direccion = resultado?.display_name ?? '';
 
-				if (!direccion) {
+				if (!resultado?.direccion) {
 					throw new Error('No se obtuvo una dirección válida.');
 				}
 
-				inputDireccion.value = direccion;
+				inputDireccion.value = resultado.direccion;
+				latitudDireccionSeleccionada = resultado.latitud;
+				longitudDireccionSeleccionada = resultado.longitud;
+
 				ocultarSugerenciasDireccion();
 				mostrarEstadoDireccion('Dirección detectada correctamente.', 'success');
 
@@ -623,7 +719,7 @@ async function usarUbicacionActual() {
 					ocultarEstadoDireccion();
 				}, 2200);
 			} catch (error) {
-				console.error('Error al convertir ubicación:', error);
+				console.error('Error al convertir ubicación con AWS:', error);
 				mostrarEstadoDireccion('No se pudo obtener la dirección desde tu ubicación.', 'error');
 			} finally {
 				if (btnUbicacionActual) {
@@ -679,6 +775,8 @@ async function cargarPerfil() {
 				id_rol,
 				telefono,
 				direccion,
+				latitud,
+				longitud,
 				nombreuser,
 				estado
 			`)
@@ -709,7 +807,9 @@ async function cargarPerfil() {
 			nombreuser: usuarioData.nombreuser ?? '',
 			correo: usuarioData.correo ?? '',
 			telefono: usuarioData.telefono ?? '',
-			direccion: usuarioData.direccion ?? ''
+			direccion: usuarioData.direccion ?? '',
+			latitud: usuarioData.latitud ?? null,
+			longitud: usuarioData.longitud ?? null
 		};
 
 		usuario = {
@@ -736,6 +836,9 @@ function restaurarFormulario() {
 	inputCorreo.value = datosOriginales.correo;
 	inputTelefono.value = datosOriginales.telefono;
 	inputDireccion.value = datosOriginales.direccion;
+
+	latitudDireccionSeleccionada = datosOriginales.latitud;
+	longitudDireccionSeleccionada = datosOriginales.longitud;
 
 	ocultarMensaje();
 	ocultarSugerenciasDireccion();
@@ -780,8 +883,48 @@ function validarFormulario() {
 	};
 }
 
+async function prepararDatosDireccionParaGuardar(datosValidados) {
+	if (!datosValidados.direccion) {
+		return {
+			...datosValidados,
+			latitud: null,
+			longitud: null
+		};
+	}
+
+	if (
+		Number.isFinite(Number(latitudDireccionSeleccionada)) &&
+		Number.isFinite(Number(longitudDireccionSeleccionada))
+	) {
+		return {
+			...datosValidados,
+			latitud: Number(latitudDireccionSeleccionada),
+			longitud: Number(longitudDireccionSeleccionada)
+		};
+	}
+
+	mostrarEstadoDireccion('Obteniendo coordenadas con AWS...', 'normal');
+
+	const resultado = await geocodificarDireccionAws(datosValidados.direccion);
+
+	if (!resultado) {
+		throw new Error('No se pudieron obtener coordenadas para la dirección.');
+	}
+
+	inputDireccion.value = resultado.direccion;
+	latitudDireccionSeleccionada = resultado.latitud;
+	longitudDireccionSeleccionada = resultado.longitud;
+
+	return {
+		...datosValidados,
+		direccion: resultado.direccion,
+		latitud: resultado.latitud,
+		longitud: resultado.longitud
+	};
+}
+
 if (btnUbicacionActual) {
-	btnUbicacionActual.classList.add('hidden');
+	btnUbicacionActual.classList.remove('hidden');
 	btnUbicacionActual.addEventListener('click', usarUbicacionActual);
 }
 
@@ -815,14 +958,18 @@ if (formPerfil) {
 			btnGuardarPerfil.disabled = true;
 			btnGuardarPerfil.textContent = 'Guardando...';
 
+			const datosParaGuardar = await prepararDatosDireccionParaGuardar(datosValidados);
+
 			const { data, error } = await db
 				.from('usuario')
 				.update({
-					nombre_completo: datosValidados.nombre_completo,
-					nombreuser: datosValidados.nombreuser,
-					correo: datosValidados.correo,
-					telefono: datosValidados.telefono,
-					direccion: datosValidados.direccion
+					nombre_completo: datosParaGuardar.nombre_completo,
+					nombreuser: datosParaGuardar.nombreuser,
+					correo: datosParaGuardar.correo,
+					telefono: datosParaGuardar.telefono,
+					direccion: datosParaGuardar.direccion,
+					latitud: datosParaGuardar.latitud,
+					longitud: datosParaGuardar.longitud
 				})
 				.eq('id_usuario', usuario.id_usuario)
 				.select(`
@@ -832,6 +979,8 @@ if (formPerfil) {
 					id_rol,
 					telefono,
 					direccion,
+					latitud,
+					longitud,
 					nombreuser,
 					estado
 				`)
@@ -873,17 +1022,23 @@ if (formPerfil) {
 				nombreuser: usuarioActualizado.nombreuser ?? '',
 				correo: usuarioActualizado.correo ?? '',
 				telefono: usuarioActualizado.telefono ?? '',
-				direccion: usuarioActualizado.direccion ?? ''
+				direccion: usuarioActualizado.direccion ?? '',
+				latitud: usuarioActualizado.latitud ?? null,
+				longitud: usuarioActualizado.longitud ?? null
 			};
 
 			guardarEnStorage(usuarioActualizado);
 			llenarVista(usuarioActualizado);
 			llenarFormulario(usuarioActualizado);
 
+			ocultarEstadoDireccion();
 			mostrarMensaje('Tu perfil fue actualizado correctamente.', 'success');
 		} catch (err) {
 			console.error('Error general al guardar perfil:', err);
-			mostrarMensaje('Ocurrió un error al guardar la información.', 'error');
+			mostrarMensaje(
+				err.message || 'Ocurrió un error al guardar la información.',
+				'error'
+			);
 		} finally {
 			btnGuardarPerfil.disabled = false;
 			btnGuardarPerfil.textContent = 'Guardar cambios';
