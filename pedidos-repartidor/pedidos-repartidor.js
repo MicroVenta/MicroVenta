@@ -1,8 +1,19 @@
 const DIRECCION_NEGOCIO = '21.478761147795492, -104.86575261965632';
 const NOMBRE_NEGOCIO = 'Dulce Mordisco';
-const COORDENADAS_TEPIC = [21.5095, -104.8957];
-
-const ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjFjZjIzZmE2NjMxNTRjYTg4Nzk2Mzc4OGM1ZTE2OWMzIiwiaCI6Im11cm11cjY0In0=';
+const COORDENADAS_TEPIC = { lat: 21.5095, lon: -104.8957 };
+const AWS_REGION = 'us-east-2';
+const AWS_LOCATION_KEY = 'v1.public.eyJqdGkiOiI4OTY5OGIyYy1hZmQyLTQyYmItYjZjNi0xZTAwNWU2MWY2N2UifRfhEn2cmnsmQT2oZxWtopI2LigByNeDiy0oA3Zqm4Yej9MvT33_zzXMYaad7gCh1zuVnyCyAUHBwg5htBa5nQhuCY4ViXzP8lO94Nx6tD3EqmkvjIKEvR3d4JCTYoFcHdOWKmOmUEeSKKiFNpK0e6E4fk7mvX4a5pdSEnv3zvu6ohA7qEvycpJsUjuP7h8FT6p5gLLp6XUfV-CQSqxKAzU2waRJGNvFlJttMF7KXBgli9nErtyG7Hyz56FDKL0GlLwC7Wl3-3xjcXNz7AY5Yd4TQXh97P3AUuZ-DoCXaGsG3NZdCqT42UvsTcDYmE49e97pyeBwCR5BMuOdH_a-YOU.NjAyMWJkZWUtMGMyOS00NmRkLThjZTMtODEyOTkzZTUyMTBi';
+const AWS_BIAS_POSITION = [-104.8957, 21.5095];
+const AWS_MAP_STYLE = 'Standard';
+const AWS_MAP_STYLE_URL = `https://maps.geo.${AWS_REGION}.amazonaws.com/v2/styles/${AWS_MAP_STYLE}/descriptor?key=${AWS_LOCATION_KEY}`;
+const AWS_ROUTES_URL = `https://routes.geo.${AWS_REGION}.amazonaws.com/v2/routes?key=${AWS_LOCATION_KEY}`;
+const AWS_STATIC_MAP_URL = `https://maps.geo.${AWS_REGION}.amazonaws.com/v2/static/ruta-pedido.jpg`;
+const MUNICIPIOS_PERMITIDOS = [
+	'tepic',
+	'xalisco',
+	'ixtlan del rio',
+	'ixtlan del río'
+];
 
 const nombreRepartidor = document.getElementById('nombreRepartidor');
 const btnCerrarSesion = document.getElementById('btnCerrarSesion');
@@ -52,7 +63,7 @@ let mapaEstatus = {};
 let pedidoRutaActual = null;
 let modoOrigenRuta = 'negocio';
 let mapaRuta = null;
-let capaRuta = null;
+let mapaRutaListo = false;
 let marcadorOrigen = null;
 let marcadorDestino = null;
 let ultimaRutaExterna = '';
@@ -166,7 +177,7 @@ window.addEventListener('resize', () => {
 
 	if (mapaRuta) {
 		setTimeout(() => {
-			mapaRuta.invalidateSize();
+			redimensionarMapaRuta();
 		}, 150);
 	}
 });
@@ -205,7 +216,7 @@ function enfocarMapaEnMovil() {
 		resaltarMapa();
 
 		if (mapaRuta) {
-			mapaRuta.invalidateSize();
+			redimensionarMapaRuta();
 		}
 	}, 350);
 }
@@ -542,6 +553,60 @@ function actualizarBotonRutaExterna(url) {
 	}
 }
 
+function normalizarTextoBuscable(texto) {
+	return normalizarTextoDireccion(texto)
+		.normalize('NFD')
+		.replace(/[\u0300-\u036f]/g, '')
+		.toLowerCase();
+}
+
+function redimensionarMapaRuta() {
+	if (mapaRuta && typeof mapaRuta.resize === 'function') {
+		mapaRuta.resize();
+	}
+}
+
+function crearGeoJsonRutaDesdeCoordenadas(coordenadas) {
+	if (!Array.isArray(coordenadas) || coordenadas.length < 2) {
+		return {
+			type: 'FeatureCollection',
+			features: []
+		};
+	}
+
+	return {
+		type: 'FeatureCollection',
+		features: [
+			{
+				type: 'Feature',
+				properties: {},
+				geometry: {
+					type: 'LineString',
+					coordinates: coordenadas
+				}
+			}
+		]
+	};
+}
+
+function direccionPermitidaAws(item) {
+	const texto = normalizarTextoBuscable([
+		item?.Address?.Label,
+		item?.Address?.Locality,
+		item?.Address?.SubRegion,
+		item?.Address?.Region,
+		item?.Title
+	].filter(Boolean).join(' '));
+
+	return MUNICIPIOS_PERMITIDOS.some((municipio) => {
+		return texto.includes(normalizarTextoBuscable(municipio));
+	});
+}
+
+function obtenerDireccionAws(item) {
+	return item?.Address?.Label || item?.Title || '';
+}
+
 function calcularDistanciaLinealMetros(origen, destino) {
 	const radioTierra = 6371000;
 	const lat1 = (origen.lat * Math.PI) / 180;
@@ -563,56 +628,17 @@ function estimarDuracionLinealSegundos(distanciaMetros) {
 	return distanciaMetros / velocidadPromedioMps;
 }
 
-function crearIconoMapa(colorFondo, textoInterior) {
-	return L.divIcon({
-		className: 'custom-route-marker',
-		html: `
-			<div style="
-				position: relative;
-				width: 34px;
-				height: 46px;
-				display: flex;
-				align-items: flex-start;
-				justify-content: center;
-			">
-				<div style="
-					width: 34px;
-					height: 34px;
-					border-radius: 50% 50% 50% 0;
-					background: ${colorFondo};
-					transform: rotate(-45deg);
-					position: absolute;
-					top: 0;
-					left: 0;
-					box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
-					border: 3px solid #ffffff;
-					box-sizing: border-box;
-				"></div>
+function crearMarcadorMapa(colorFondo, textoInterior) {
+	const contenedor = document.createElement('div');
+	contenedor.className = 'route-marker';
+	contenedor.innerHTML = `
+		<div class="route-marker-pin" style="background: ${colorFondo};"></div>
+		<div class="route-marker-core" style="color: ${colorFondo};">
+			${escaparHtml(textoInterior)}
+		</div>
+	`;
 
-				<div style="
-					position: absolute;
-					top: 6px;
-					left: 6px;
-					width: 22px;
-					height: 22px;
-					border-radius: 50%;
-					background: #ffffff;
-					display: flex;
-					align-items: center;
-					justify-content: center;
-					font-size: 12px;
-					font-weight: 700;
-					color: ${colorFondo};
-					z-index: 2;
-				">
-					${escaparHtml(textoInterior)}
-				</div>
-			</div>
-		`,
-		iconSize: [34, 46],
-		iconAnchor: [17, 42],
-		popupAnchor: [0, -38]
-	});
+	return contenedor;
 }
 
 function renderizarMapaConPuntos(origen, destino) {
@@ -1173,6 +1199,414 @@ function limpiarMapaRuta() {
 	}
 }
 
+function asegurarCapasRutaMapa() {
+	if (!mapaRuta || !mapaRutaListo) {
+		return false;
+	}
+
+	if (!mapaRuta.getSource('ruta-source')) {
+		mapaRuta.addSource('ruta-source', {
+			type: 'geojson',
+			data: crearGeoJsonRutaDesdeCoordenadas([])
+		});
+	}
+
+	if (!mapaRuta.getLayer('ruta-base-layer')) {
+		mapaRuta.addLayer({
+			id: 'ruta-base-layer',
+			type: 'line',
+			source: 'ruta-source',
+			layout: {
+				'line-cap': 'round',
+				'line-join': 'round'
+			},
+			paint: {
+				'line-color': '#ffffff',
+				'line-width': 10,
+				'line-opacity': 0.95
+			}
+		});
+	}
+
+	if (!mapaRuta.getLayer('ruta-main-layer')) {
+		mapaRuta.addLayer({
+			id: 'ruta-main-layer',
+			type: 'line',
+			source: 'ruta-source',
+			layout: {
+				'line-cap': 'round',
+				'line-join': 'round'
+			},
+			paint: {
+				'line-color': '#2563eb',
+				'line-width': 6,
+				'line-opacity': 0.95
+			}
+		});
+	}
+
+	return true;
+}
+
+function ejecutarCuandoMapaRutaEsteListo(callback) {
+	if (!mapaRuta) {
+		return;
+	}
+
+	if (mapaRutaListo || mapaRuta.isStyleLoaded()) {
+		mapaRutaListo = true;
+		callback();
+		return;
+	}
+
+	mapaRuta.once('load', () => {
+		mapaRutaListo = true;
+		callback();
+	});
+}
+
+function ajustarVistaRuta(origen, destino, coordenadasRuta = []) {
+	if (!mapaRuta) {
+		return;
+	}
+
+	const bounds = new maplibregl.LngLatBounds();
+	const puntos = [
+		[origen.lon, origen.lat],
+		...coordenadasRuta,
+		[destino.lon, destino.lat]
+	];
+
+	puntos.forEach((punto) => {
+		if (Array.isArray(punto) && punto.length === 2) {
+			bounds.extend(punto);
+		}
+	});
+
+	if (!bounds.isEmpty()) {
+		mapaRuta.fitBounds(bounds, {
+			padding: 60,
+			duration: 700
+		});
+	}
+
+	window.setTimeout(() => {
+		redimensionarMapaRuta();
+	}, 150);
+}
+
+function renderizarRutaEnMapa(origen, destino, coordenadasRuta, opciones = {}) {
+	const {
+		colorDestino = '#16a34a',
+		esAproximada = false
+	} = opciones;
+
+	ejecutarCuandoMapaRutaEsteListo(() => {
+		if (!asegurarCapasRutaMapa()) {
+			return;
+		}
+
+		limpiarMapaRuta();
+
+		const coordenadasValidas = Array.isArray(coordenadasRuta) && coordenadasRuta.length >= 2
+			? coordenadasRuta
+			: [
+				[origen.lon, origen.lat],
+				[destino.lon, destino.lat]
+			];
+
+		const source = mapaRuta.getSource('ruta-source');
+		if (source) {
+			source.setData(crearGeoJsonRutaDesdeCoordenadas(coordenadasValidas));
+		}
+
+		mapaRuta.setPaintProperty('ruta-base-layer', 'line-width', esAproximada ? 8 : 10);
+		mapaRuta.setPaintProperty('ruta-base-layer', 'line-opacity', esAproximada ? 0.9 : 0.95);
+		mapaRuta.setPaintProperty('ruta-main-layer', 'line-width', esAproximada ? 4 : 6);
+		mapaRuta.setPaintProperty('ruta-main-layer', 'line-opacity', esAproximada ? 0.85 : 0.95);
+		mapaRuta.setPaintProperty(
+			'ruta-main-layer',
+			'line-dasharray',
+			esAproximada ? [2, 2] : [1, 0.001]
+		);
+
+		marcadorOrigen = new maplibregl.Marker({
+			element: crearMarcadorMapa('#d96c8a', 'O'),
+			anchor: 'bottom'
+		})
+			.setLngLat([origen.lon, origen.lat])
+			.setPopup(
+				new maplibregl.Popup({ offset: 28 }).setHTML(`
+					<strong>Origen</strong><br>
+					${escaparHtml(origen.texto ?? 'Ubicación de origen')}
+				`)
+			)
+			.addTo(mapaRuta);
+
+		marcadorDestino = new maplibregl.Marker({
+			element: crearMarcadorMapa(colorDestino, 'D'),
+			anchor: 'bottom'
+		})
+			.setLngLat([destino.lon, destino.lat])
+			.setPopup(
+				new maplibregl.Popup({ offset: 28 }).setHTML(`
+					<strong>Destino</strong><br>
+					${escaparHtml(destino.texto ?? 'Ubicación de destino')}
+				`)
+			)
+			.addTo(mapaRuta);
+
+		ajustarVistaRuta(origen, destino, coordenadasValidas);
+	});
+}
+
+function renderizarMapaConPuntos(origen, destino) {
+	renderizarRutaEnMapa(
+		origen,
+		destino,
+		[
+			[origen.lon, origen.lat],
+			[destino.lon, destino.lat]
+		],
+		{
+			colorDestino: '#2563eb',
+			esAproximada: true
+		}
+	);
+}
+
+function renderizarRutaReal(origen, destino, ruta) {
+	renderizarRutaEnMapa(origen, destino, ruta.coordinates, {
+		colorDestino: '#16a34a',
+		esAproximada: false
+	});
+}
+
+async function geocodificarDireccionAws(direccion) {
+	const texto = String(direccion ?? '').trim();
+
+	if (!texto) {
+		return null;
+	}
+
+	const timeout = obtenerTimeoutFetch(12000);
+
+	try {
+		const respuesta = await fetch(
+			`https://places.geo.${AWS_REGION}.amazonaws.com/v2/geocode?key=${AWS_LOCATION_KEY}`,
+			{
+				method: 'POST',
+				headers: {
+					'content-type': 'application/json'
+				},
+				body: JSON.stringify({
+					QueryText: texto,
+					Language: 'es',
+					MaxResults: 5,
+					Filter: {
+						IncludeCountries: ['MEX']
+					},
+					BiasPosition: AWS_BIAS_POSITION
+				}),
+				signal: timeout.signal
+			}
+		);
+
+		if (!respuesta.ok) {
+			throw new Error('No se pudo geocodificar la dirección con AWS.');
+		}
+
+		const data = await respuesta.json();
+		const item = (data.ResultItems ?? []).find(direccionPermitidaAws);
+
+		if (!item?.Position || !Array.isArray(item.Position)) {
+			return null;
+		}
+
+		const lon = Number(item.Position[0]);
+		const lat = Number(item.Position[1]);
+
+		if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+			return null;
+		}
+
+		return {
+			lat,
+			lon,
+			texto: obtenerDireccionAws(item) || texto
+		};
+	} finally {
+		timeout.clear();
+	}
+}
+
+async function buscarPrimeraCoincidenciaDireccion(intento) {
+	try {
+		return await geocodificarDireccionAws(intento);
+	} catch (error) {
+		console.error('Error geocodificando dirección con AWS:', intento, error);
+		return null;
+	}
+}
+
+async function geocodificarDireccion(direccion, etiquetaSiEsCoordenada = 'Ubicación') {
+	const texto = normalizarTextoDireccion(direccion);
+
+	if (!texto) {
+		throw new Error('No hay un lugar de entrega válido para calcular la ruta.');
+	}
+
+	const coordenadasDirectas = convertirCoordenadas(texto, etiquetaSiEsCoordenada);
+
+	if (coordenadasDirectas) {
+		return coordenadasDirectas;
+	}
+
+	const intentos = construirIntentosGeocodificacion(texto);
+
+	for (const intento of intentos) {
+		const resultado = await buscarPrimeraCoincidenciaDireccion(intento);
+
+		if (resultado) {
+			return resultado;
+		}
+	}
+
+	throw new Error(`No se encontró una ubicación válida en AWS para el lugar de entrega: "${texto}".`);
+}
+
+async function consultarRuta(origen, destino) {
+	const timeout = obtenerTimeoutFetch(20000);
+
+	try {
+		const respuesta = await fetch(AWS_ROUTES_URL, {
+			method: 'POST',
+			headers: {
+				'content-type': 'application/json'
+			},
+			body: JSON.stringify({
+				Origin: [origen.lon, origen.lat],
+				Destination: [destino.lon, destino.lat],
+				TravelMode: 'Car',
+				RoutingObjective: 'FastestRoute',
+				DepartureTime: new Date().toISOString(),
+				LegGeometryFormat: 'Simple'
+			}),
+			signal: timeout.signal
+		});
+
+		const contentType = respuesta.headers.get('content-type') || '';
+		const esJson = contentType.includes('application/json');
+		const data = esJson ? await respuesta.json() : null;
+
+		if (!respuesta.ok) {
+			const detalle =
+				data?.message ||
+				data?.Message ||
+				data?.Errors?.[0]?.Message ||
+				`AWS respondió con estado ${respuesta.status}.`;
+
+			throw new Error(detalle);
+		}
+
+		const rutaPrincipal = Array.isArray(data?.Routes) ? data.Routes[0] : null;
+		const legs = Array.isArray(rutaPrincipal?.Legs) ? rutaPrincipal.Legs : [];
+		const coordinates = legs.flatMap((leg, index) => {
+			const lineString = Array.isArray(leg?.Geometry?.LineString)
+				? leg.Geometry.LineString
+				: [];
+
+			return index === 0 ? lineString : lineString.slice(1);
+		});
+
+		if (coordinates.length < 2) {
+			throw new Error('No se encontró una ruta disponible en AWS.');
+		}
+
+		const distanceMetros = Number(
+			rutaPrincipal?.Summary?.Distance ??
+			legs.reduce((total, leg) => {
+				return total + Number(
+					leg?.VehicleLegDetails?.Summary?.Overview?.Distance ??
+					leg?.PedestrianLegDetails?.Summary?.Overview?.Distance ??
+					leg?.FerryLegDetails?.Summary?.Overview?.Distance ??
+					0
+				);
+			}, 0)
+		);
+		const durationSeconds = Number(
+			rutaPrincipal?.Summary?.Duration ??
+			legs.reduce((total, leg) => {
+				return total + Number(
+					leg?.VehicleLegDetails?.Summary?.Overview?.Duration ??
+					leg?.PedestrianLegDetails?.Summary?.Overview?.Duration ??
+					leg?.FerryLegDetails?.Summary?.Overview?.Duration ??
+					0
+				);
+			}, 0)
+		);
+
+		return {
+			geometry: crearGeoJsonRutaDesdeCoordenadas(coordinates),
+			coordinates,
+			distance: Number.isFinite(distanceMetros) ? distanceMetros : 0,
+			duration: Number.isFinite(durationSeconds) ? durationSeconds : 0
+		};
+	} finally {
+		timeout.clear();
+	}
+}
+
+function limpiarMapaRuta() {
+	if (!mapaRuta) {
+		return;
+	}
+
+	if (marcadorOrigen) {
+		marcadorOrigen.remove();
+		marcadorOrigen = null;
+	}
+
+	if (marcadorDestino) {
+		marcadorDestino.remove();
+		marcadorDestino = null;
+	}
+
+	if (mapaRutaListo && mapaRuta.getSource('ruta-source')) {
+		mapaRuta.getSource('ruta-source').setData(crearGeoJsonRutaDesdeCoordenadas([]));
+	}
+}
+
+function inicializarMapaRuta() {
+	if (mapaRuta || !window.maplibregl) {
+		return;
+	}
+
+	const coordenadasNegocio = convertirCoordenadas(DIRECCION_NEGOCIO, NOMBRE_NEGOCIO) || COORDENADAS_TEPIC;
+
+	mapaRuta = new maplibregl.Map({
+		container: 'mapaRuta',
+		style: AWS_MAP_STYLE_URL,
+		center: [coordenadasNegocio.lon, coordenadasNegocio.lat],
+		zoom: 13
+	});
+
+	mapaRuta.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+	mapaRuta.on('load', () => {
+		mapaRutaListo = true;
+		asegurarCapasRutaMapa();
+		limpiarMapaRuta();
+		window.setTimeout(() => {
+			redimensionarMapaRuta();
+		}, 200);
+	});
+
+	window.setTimeout(() => {
+		redimensionarMapaRuta();
+	}, 200);
+}
+
 function limpiarResumenRuta() {
 	if (rutaPedidoId) {
 		rutaPedidoId.textContent = '-';
@@ -1278,7 +1712,7 @@ async function mostrarRutaPedido(pedido) {
 
 				setTimeout(() => {
 					if (mapaRuta) {
-						mapaRuta.invalidateSize();
+						redimensionarMapaRuta();
 					}
 				}, 250);
 			}
@@ -1293,7 +1727,7 @@ async function mostrarRutaPedido(pedido) {
 
 				setTimeout(() => {
 					if (mapaRuta) {
-						mapaRuta.invalidateSize();
+						redimensionarMapaRuta();
 					}
 				}, 250);
 			}
@@ -1782,7 +2216,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 	setTimeout(() => {
 		if (mapaRuta) {
-			mapaRuta.invalidateSize();
+			redimensionarMapaRuta();
 		}
 	}, 300);
 });
