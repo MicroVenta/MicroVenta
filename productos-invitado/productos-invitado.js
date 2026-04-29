@@ -52,6 +52,27 @@ const btnCancelarSeparacionPedido = document.getElementById('btnCancelarSeparaci
 const modalDireccionInvalida = document.getElementById('modalDireccionInvalida');
 const modalDireccionInvalidaTexto = document.getElementById('modalDireccionInvalidaTexto');
 const btnCerrarModalDireccionInvalida = document.getElementById('btnCerrarModalDireccionInvalida');
+const modalResenas = document.getElementById('modalResenas');
+const btnCerrarModalResenas = document.getElementById('btnCerrarModalResenas');
+const resumenResenas = document.getElementById('resumenResenas');
+const promedioResenas = document.getElementById('promedioResenas');
+const estrellasPromedioResenas = document.getElementById('estrellasPromedioResenas');
+const conteoResenas = document.getElementById('conteoResenas');
+const listaResenas = document.getElementById('listaResenas');
+const formularioResena = document.getElementById('formularioResena');
+const calificacionResena = document.getElementById('calificacionResena');
+const comentariosRapidosResena = document.getElementById('comentariosRapidosResena');
+const comentarioResenaWrapper = document.getElementById('comentarioResenaWrapper');
+const comentarioResena = document.getElementById('comentarioResena');
+const btnEnviarResena = document.getElementById('btnEnviarResena');
+const OPCIONES_COMENTARIO_RESENA = [
+	'Delicioso',
+	'Buena presentacion',
+	'Suficiente cantidad',
+	'Excelente sabor',
+	'Muy recomendable',
+	'Otro'
+];
 
 const modalRegistro = document.getElementById('modalRegistro');
 const btnAbrirRegistro = document.getElementById('btnAbrirRegistro');
@@ -66,10 +87,14 @@ const registroNombreCompleto = document.getElementById('registroNombreCompleto')
 const registroCorreo = document.getElementById('registroCorreo');
 const registroContrasena = document.getElementById('registroContrasena');
 const registroConfirmarContrasena = document.getElementById('registroConfirmarContrasena');
+const usuarioGuardado =
+	sessionStorage.getItem('microventa_usuario') ||
+	localStorage.getItem('microventa_usuario');
 
 let productosOriginales = [];
 let categoriasOriginales = [];
 let carrito = [];
+let usuarioActual = null;
 const cacheCodigosPostales = new Map();
 
 const AWS_REGION = 'us-east-2';
@@ -2656,6 +2681,485 @@ async function registrarUsuarioDesdeModal(event) {
 		btnRegistrarModal.textContent = 'Crear cuenta';
 	}
 }
+
+function normalizarRol(nombreRol) {
+	return String(nombreRol ?? '').trim().toLowerCase();
+}
+
+function obtenerNombreRolPorId(idRol) {
+	switch (Number(idRol)) {
+		case 1:
+			return 'administrador';
+		case 2:
+			return 'ayudante';
+		case 3:
+			return 'repartidor';
+		case 4:
+			return 'cliente';
+		default:
+			return '';
+	}
+}
+
+function puedeComprar(usuarioData) {
+	if (!usuarioData) {
+		return false;
+	}
+
+	const rol = normalizarRol(usuarioData.nombre_rol || obtenerNombreRolPorId(usuarioData.id_rol));
+	const idRol = Number(usuarioData.id_rol);
+
+	return (
+		rol === 'cliente' ||
+		rol === 'repartidor' ||
+		rol === 'administrador' ||
+		rol === 'ayudante' ||
+		idRol === 1 ||
+		idRol === 2 ||
+		idRol === 3 ||
+		idRol === 4
+	);
+}
+
+function puedeResenar() {
+	return !!usuarioActual && puedeComprar(usuarioActual);
+}
+
+if (usuarioGuardado) {
+	try {
+		usuarioActual = JSON.parse(usuarioGuardado);
+	} catch (error) {
+		console.warn('No se pudo leer la sesion del usuario para resenas.', error);
+		usuarioActual = null;
+	}
+}
+
+function renderizarProductos(productos) {
+	if (!listaProductos) {
+		return;
+	}
+
+	if (!productos || productos.length === 0) {
+		listaProductos.innerHTML = `
+			<div class="empty-state">
+				No se encontraron productos disponibles.
+			</div>
+		`;
+		return;
+	}
+
+	listaProductos.innerHTML = productos.map((producto) => {
+		const nombreCategoria = producto.categoria?.nombre_categoria ?? 'Sin categoria';
+		const stockActual = obtenerStockProducto(producto);
+		const cantidadEnCarrito = obtenerCantidadEnCarrito(producto.id_producto);
+		const descripcion =
+			producto.descripcion_producto && producto.descripcion_producto.trim() !== ''
+				? producto.descripcion_producto
+				: 'Producto disponible en Dulce Mordisco.';
+
+		let claseStock = 'stock-ok';
+		let textoStock = 'Disponible';
+		let textoBoton = 'Agregar';
+
+		if (stockActual <= 0) {
+			claseStock = 'stock-low';
+			textoStock = 'Agotado / personalizado';
+			textoBoton = 'Pedir personalizado';
+		} else if (cantidadEnCarrito >= stockActual) {
+			claseStock = 'stock-low';
+			textoStock = 'Stock cubierto / personalizado';
+			textoBoton = 'Agregar mas';
+		}
+
+		return `
+			<article class="product-card">
+				<img
+					src="${obtenerImagenProducto(producto)}"
+					alt="${producto.nombre_producto}"
+					class="product-image"
+				>
+
+				<div class="product-body">
+					<h3 class="product-title">${producto.nombre_producto}</h3>
+					<div class="product-category">${nombreCategoria}</div>
+
+					<p class="product-description">${descripcion}</p>
+
+					<div class="product-meta">
+						<div class="meta-box">
+							<strong>Precio</strong>
+							<span>${formatearMoneda(producto.precio_unitario)}</span>
+						</div>
+
+						<div class="meta-box">
+							<strong>Stock</strong>
+							<span>${stockActual}</span>
+						</div>
+					</div>
+
+					<div class="product-footer">
+						<div class="stock-badge ${claseStock}">
+							${textoStock}
+						</div>
+
+						<div class="product-actions">
+							<button
+								class="btn-reviews"
+								data-id="${producto.id_producto}"
+								data-name="${producto.nombre_producto}"
+								type="button"
+							>
+								Ver resenas
+							</button>
+
+							<button class="btn-add" data-id="${producto.id_producto}" type="button">
+								${textoBoton}
+							</button>
+						</div>
+					</div>
+				</div>
+			</article>
+		`;
+	}).join('');
+
+	const botonesAgregar = listaProductos.querySelectorAll('.btn-add');
+	botonesAgregar.forEach((boton) => {
+		boton.addEventListener('click', () => {
+			const idProducto = Number(boton.getAttribute('data-id'));
+			agregarAlCarrito(idProducto);
+		});
+	});
+
+	const botonesResenas = listaProductos.querySelectorAll('.btn-reviews');
+	botonesResenas.forEach((boton) => {
+		boton.addEventListener('click', () => {
+			const idProducto = Number(boton.getAttribute('data-id'));
+			const nombreProducto = boton.getAttribute('data-name') ?? 'Producto';
+			mostrarModalResenas(idProducto, nombreProducto);
+		});
+	});
+}
+
+let productoActualResena = null;
+let opcionComentarioResenaSeleccionada = '';
+
+function escaparHtmlResena(valor) {
+	return String(valor ?? '')
+		.replaceAll('&', '&amp;')
+		.replaceAll('<', '&lt;')
+		.replaceAll('>', '&gt;')
+		.replaceAll('"', '&quot;')
+		.replaceAll("'", '&#39;');
+}
+
+function obtenerEstrellasResena(calificacion) {
+	const valor = Math.max(0, Math.min(5, Number(calificacion) || 0));
+	return '★'.repeat(valor) + '☆'.repeat(5 - valor);
+}
+
+function obtenerInicialResena(nombre) {
+	const texto = String(nombre ?? '').trim();
+	return texto ? texto.charAt(0).toUpperCase() : 'U';
+}
+
+function obtenerNombreVisibleUsuarioResena(resena) {
+	return (
+		resena?.usuario?.nombreuser ||
+		resena?.usuario?.nombre_completo ||
+		'Usuario'
+	);
+}
+
+function actualizarResumenResenas(resenas) {
+	if (!resumenResenas || !promedioResenas || !estrellasPromedioResenas || !conteoResenas) {
+		return;
+	}
+
+	const total = Array.isArray(resenas) ? resenas.length : 0;
+	const suma = total > 0
+		? resenas.reduce((acumulado, resena) => acumulado + Number(resena.calificacion ?? 0), 0)
+		: 0;
+	const promedio = total > 0 ? suma / total : 0;
+
+	promedioResenas.textContent = promedio.toFixed(1);
+	estrellasPromedioResenas.textContent = obtenerEstrellasResena(Math.round(promedio));
+	conteoResenas.textContent = `${total} resena(s)`;
+	resumenResenas.classList.remove('hidden');
+}
+
+function actualizarCampoComentarioResena() {
+	const usarComentarioLibre = opcionComentarioResenaSeleccionada === 'Otro';
+
+	comentarioResenaWrapper?.classList.toggle('hidden', !usarComentarioLibre);
+
+	if (!usarComentarioLibre && comentarioResena) {
+		comentarioResena.value = '';
+	}
+}
+
+function renderizarOpcionesComentarioResena() {
+	if (!comentariosRapidosResena) {
+		return;
+	}
+
+	comentariosRapidosResena.innerHTML = OPCIONES_COMENTARIO_RESENA.map((opcion) => `
+		<button
+			type="button"
+			class="review-chip ${opcionComentarioResenaSeleccionada === opcion ? 'selected' : ''}"
+			data-value="${escaparHtmlResena(opcion)}"
+		>
+			${escaparHtmlResena(opcion)}
+		</button>
+	`).join('');
+
+	const botonesComentario = comentariosRapidosResena.querySelectorAll('.review-chip');
+	botonesComentario.forEach((boton) => {
+		boton.addEventListener('click', () => {
+			opcionComentarioResenaSeleccionada = boton.dataset.value ?? '';
+			renderizarOpcionesComentarioResena();
+			actualizarCampoComentarioResena();
+
+			if (opcionComentarioResenaSeleccionada === 'Otro') {
+				comentarioResena?.focus();
+			}
+		});
+	});
+}
+
+function reiniciarFormularioResena() {
+	if (calificacionResena) {
+		calificacionResena.value = '';
+	}
+
+	if (comentarioResena) {
+		comentarioResena.value = '';
+	}
+
+	opcionComentarioResenaSeleccionada = '';
+	renderizarOpcionesComentarioResena();
+	actualizarCampoComentarioResena();
+}
+
+function obtenerComentarioResenaSeleccionado() {
+	if (opcionComentarioResenaSeleccionada === 'Otro') {
+		return String(comentarioResena?.value ?? '').trim();
+	}
+
+	return opcionComentarioResenaSeleccionada;
+}
+
+function obtenerAvisoResena() {
+	if (!modalResenas) {
+		return null;
+	}
+
+	let aviso = document.getElementById('mensajeResenaAcceso');
+
+	if (!aviso) {
+		aviso = document.createElement('p');
+		aviso.id = 'mensajeResenaAcceso';
+		formularioResena?.parentNode?.insertBefore(aviso, formularioResena.nextSibling);
+	}
+
+	return aviso;
+}
+
+function mostrarAvisoResena(texto) {
+	const aviso = obtenerAvisoResena();
+
+	if (!aviso) {
+		return;
+	}
+
+	aviso.textContent = texto;
+	aviso.classList.remove('hidden');
+}
+
+function ocultarAvisoResena() {
+	const aviso = obtenerAvisoResena();
+
+	if (!aviso) {
+		return;
+	}
+
+	aviso.textContent = '';
+	aviso.classList.add('hidden');
+}
+
+async function cargarResenas(idProducto) {
+	try {
+		const { data, error } = await db
+			.from('reseñas_productos')
+			.select(`
+				id_reseña,
+				comentario,
+				calificacion,
+				fecha,
+				id_usuario,
+				usuario (
+					nombre_completo,
+					nombreuser
+				)
+			`)
+			.eq('id_producto', idProducto)
+			.order('fecha', { ascending: false });
+
+		if (error) {
+			console.error('Error cargando resenas:', error);
+			return [];
+		}
+
+		return data ?? [];
+	} catch (error) {
+		console.error('Error en cargarResenas:', error);
+		return [];
+	}
+}
+
+function renderizarResenas(resenas) {
+	if (!listaResenas) {
+		return;
+	}
+
+	actualizarResumenResenas(resenas);
+
+	if (!resenas || resenas.length === 0) {
+		listaResenas.innerHTML = `
+			<p class="no-reviews">
+				Aun no hay resenas para este producto. Se el primero en opinar.
+			</p>
+		`;
+		return;
+	}
+
+	listaResenas.innerHTML = resenas.map((resena) => {
+		const estrellas = obtenerEstrellasResena(resena.calificacion);
+		const fecha = resena.fecha
+			? new Date(resena.fecha).toLocaleDateString('es-MX', {
+				day: 'numeric',
+				month: 'short',
+				year: 'numeric'
+			})
+			: '';
+		const autor = obtenerNombreVisibleUsuarioResena(resena);
+		const comentario = String(resena.comentario ?? '').trim() || 'Sin comentario';
+
+		return `
+			<div class="review-item">
+				<div class="review-header">
+					<div class="review-author-block">
+						<span class="review-avatar">${escaparHtmlResena(obtenerInicialResena(autor))}</span>
+						<div class="review-author-meta">
+							<span class="review-author">${escaparHtmlResena(autor)}</span>
+							<div class="review-date">${escaparHtmlResena(fecha)}</div>
+						</div>
+					</div>
+					<span class="review-rating">${escaparHtmlResena(estrellas)} (${Number(resena.calificacion ?? 0)})</span>
+				</div>
+				<div class="review-comment">${escaparHtmlResena(comentario)}</div>
+			</div>
+		`;
+	}).join('');
+}
+
+async function mostrarModalResenas(idProducto, nombreProducto) {
+	productoActualResena = Number(idProducto);
+
+	const tituloModal = modalResenas?.querySelector('h2');
+	if (tituloModal) {
+		tituloModal.textContent = `Resenas de ${nombreProducto}`;
+	}
+
+	const resenas = await cargarResenas(idProducto);
+	renderizarResenas(resenas);
+
+	if (puedeResenar()) {
+		if (formularioResena) {
+			formularioResena.style.display = 'block';
+		}
+
+		reiniciarFormularioResena();
+		ocultarAvisoResena();
+	} else {
+		if (formularioResena) {
+			formularioResena.style.display = 'none';
+		}
+
+		mostrarAvisoResena('Inicia sesion o registrate para dejar una resena.');
+	}
+
+	modalResenas?.classList.remove('hidden');
+}
+
+async function enviarResena() {
+	if (!productoActualResena) {
+		alert('No se encontro el producto para la resena.');
+		return;
+	}
+
+	if (!usuarioActual || !puedeResenar()) {
+		alert('Inicia sesion para dejar una resena.');
+		return;
+	}
+
+	const calificacion = Number(calificacionResena?.value ?? 0);
+	const comentario = obtenerComentarioResenaSeleccionado();
+
+	if (!calificacion || calificacion < 1 || calificacion > 5) {
+		alert('Por favor selecciona una calificacion valida.');
+		return;
+	}
+
+	if (comentario === '') {
+		alert('Selecciona un comentario rapido o elige "Otro" para escribir uno.');
+		return;
+	}
+
+	try {
+		const { error } = await db
+			.from('reseñas_productos')
+			.upsert(
+				{
+					id_producto: Number(productoActualResena),
+					id_usuario: Number(usuarioActual.id_usuario),
+					calificacion,
+					comentario
+				},
+				{
+					onConflict: 'id_producto,id_usuario'
+				}
+			);
+
+		if (error) {
+			console.error('Error enviando resena:', error);
+			alert('Error al guardar la resena. Intentalo de nuevo.');
+			return;
+		}
+
+		alert('Resena guardada exitosamente.');
+		reiniciarFormularioResena();
+
+		const resenas = await cargarResenas(productoActualResena);
+		renderizarResenas(resenas);
+	} catch (error) {
+		console.error('Error en enviarResena:', error);
+		alert('Error al enviar la resena.');
+	}
+}
+
+function cerrarModalResenas() {
+	modalResenas?.classList.add('hidden');
+	productoActualResena = null;
+	reiniciarFormularioResena();
+}
+
+btnCerrarModalResenas?.addEventListener('click', cerrarModalResenas);
+btnEnviarResena?.addEventListener('click', enviarResena);
+modalResenas?.addEventListener('click', (event) => {
+	if (event.target === modalResenas) {
+		cerrarModalResenas();
+	}
+});
 
 window.addEventListener('resize', () => {
 	actualizarBotonCarritoMovil();

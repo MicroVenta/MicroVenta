@@ -398,6 +398,18 @@
 			</div>
 
 			<div class="modal-body">
+				<div id="resumenResenas" class="reviews-summary hidden">
+					<div class="reviews-summary-score">
+						<strong id="promedioResenas">0.0</strong>
+						<span id="estrellasPromedioResenas" class="reviews-summary-stars">☆☆☆☆☆</span>
+					</div>
+
+					<div class="reviews-summary-meta">
+						<span id="conteoResenas" class="reviews-summary-count">0 resenas</span>
+						<p>Conoce lo que opinan otros clientes sobre este producto.</p>
+					</div>
+				</div>
+
 				<div id="listaResenas" class="reviews-list">
 					<p class="no-reviews">Cargando reseñas...</p>
 				</div>
@@ -418,6 +430,14 @@
 					</div>
 
 					<div class="form-group">
+						<label>Comentario rapido</label>
+						<div id="comentariosRapidosResena" class="review-quick-options"></div>
+						<p class="review-quick-help">
+							Selecciona una opcion o elige Otro para escribir tu comentario.
+						</p>
+					</div>
+
+					<div id="comentarioResenaWrapper" class="form-group review-textarea-group hidden">
 						<label for="comentarioResena">Comentario</label>
 						<textarea
 							id="comentarioResena"
