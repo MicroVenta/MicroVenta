@@ -16,6 +16,46 @@ const mobileOverlay = document.getElementById('mobileOverlay');
 
 let usuarios = [];
 
+function normalizarTexto(texto) {
+	return String(texto ?? '')
+		.normalize('NFD')
+		.replace(/[\u0300-\u036f]/g, '')
+		.trim()
+		.toLowerCase();
+}
+
+function estatusPermiteDesactivacion(descripcion) {
+	const estatus = normalizarTexto(descripcion);
+
+	return estatus === 'rechazado' ||
+		estatus === 'completado' ||
+		estatus === 'cancelado';
+}
+
+async function usuarioTienePedidosEnCurso(idUsuario) {
+	const { data, error } = await db
+		.from('pedido')
+		.select(`
+			id_pedido,
+			id_cliente,
+			id_repartidor,
+			estatus:estatuspedido!pedido_id_estatus_fkey (
+				descripcion
+			)
+		`)
+		.or(`id_cliente.eq.${idUsuario},id_repartidor.eq.${idUsuario}`);
+
+	if (error) {
+		throw error;
+	}
+
+	const pedidos = data ?? [];
+
+	return pedidos.some((pedido) => {
+		return !estatusPermiteDesactivacion(pedido.estatus?.descripcion);
+	});
+}
+
 function cerrarSesion() {
 	sessionStorage.removeItem('microventa_usuario');
 	localStorage.removeItem('microventa_usuario');
@@ -242,18 +282,30 @@ async function eliminarUsuario(id) {
 		return;
 	}
 
-	const { error } = await db
-		.from('usuario')
-		.update({ estado: false })
-		.eq('id_usuario', id);
+	try {
+		const tienePedidosEnCurso = await usuarioTienePedidosEnCurso(id);
 
-	if (error) {
-		console.error('Error al desactivar usuario:', error);
-		alert('No se pudo desactivar el usuario.');
-		return;
+		if (tienePedidosEnCurso) {
+			alert('No se puede desactivar el usuario porque tiene pedidos en curso.');
+			return;
+		}
+
+		const { error } = await db
+			.from('usuario')
+			.update({ estado: false })
+			.eq('id_usuario', id);
+
+		if (error) {
+			console.error('Error al desactivar usuario:', error);
+			alert('No se pudo desactivar el usuario.');
+			return;
+		}
+
+		await cargarUsuarios();
+	} catch (error) {
+		console.error('Error al validar pedidos del usuario:', error);
+		alert('No se pudo validar si el usuario tiene pedidos en curso.');
 	}
-
-	await cargarUsuarios();
 }
 
 window.eliminarUsuario = eliminarUsuario;
