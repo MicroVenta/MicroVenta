@@ -15,6 +15,9 @@ const statTotalGastado = document.getElementById('statTotalGastado');
 
 const buscarPedido = document.getElementById('buscarPedido');
 const filtroEstado = document.getElementById('filtroEstado');
+const filtroFechaDesde = document.getElementById('filtroFechaDesde');
+const filtroFechaHasta = document.getElementById('filtroFechaHasta');
+const filtroCantidadPedidos = document.getElementById('filtroCantidadPedidos');
 const btnLimpiarFiltros = document.getElementById('btnLimpiarFiltros');
 
 const textoResultados = document.getElementById('textoResultados');
@@ -38,7 +41,11 @@ let estatusCatalogo = [];
 let mapasRecogida = {};
 
 function normalizarTexto(texto) {
-	return String(texto ?? '').trim().toLowerCase();
+	return String(texto ?? '')
+		.normalize('NFD')
+		.replace(/[\u0300-\u036f]/g, '')
+		.trim()
+		.toLowerCase();
 }
 
 function puedeVerMisPedidos(usuarioData) {
@@ -216,6 +223,61 @@ function formatearFechaHora(fecha) {
 
 function formatearDinero(cantidad) {
 	return `$${Number(cantidad || 0).toFixed(2)}`;
+}
+
+function construirFechaLocal(valorFecha, finDelDia = false) {
+	if (!valorFecha) {
+		return null;
+	}
+
+	const partes = String(valorFecha).split('-').map(Number);
+
+	if (partes.length !== 3 || partes.some((parte) => !Number.isFinite(parte))) {
+		return null;
+	}
+
+	const [anio, mes, dia] = partes;
+
+	if (finDelDia) {
+		return new Date(anio, mes - 1, dia, 23, 59, 59, 999);
+	}
+
+	return new Date(anio, mes - 1, dia, 0, 0, 0, 0);
+}
+
+function obtenerRangoFechas() {
+	const fechaDesdeValor = filtroFechaDesde?.value || '';
+	const fechaHastaValor = filtroFechaHasta?.value || '';
+
+	if (fechaDesdeValor && fechaHastaValor && fechaDesdeValor > fechaHastaValor) {
+		return {
+			fechaDesde: construirFechaLocal(fechaHastaValor, false),
+			fechaHasta: construirFechaLocal(fechaDesdeValor, true)
+		};
+	}
+
+	return {
+		fechaDesde: construirFechaLocal(fechaDesdeValor, false),
+		fechaHasta: construirFechaLocal(fechaHastaValor, true)
+	};
+}
+
+function actualizarTextoResultados(totalCoincidencias, totalMostrados) {
+	if (!textoResultados) {
+		return;
+	}
+
+	if (totalCoincidencias === 0) {
+		textoResultados.textContent = '0 pedidos encontrados.';
+		return;
+	}
+
+	if (totalCoincidencias !== totalMostrados) {
+		textoResultados.textContent = `Mostrando ${totalMostrados} de ${totalCoincidencias} pedido(s) encontrado(s).`;
+		return;
+	}
+
+	textoResultados.textContent = `${totalCoincidencias} pedido(s) encontrado(s).`;
 }
 
 function escaparHtml(texto) {
@@ -883,15 +945,7 @@ function renderizarPedidos(pedidos) {
 			</div>
 		`;
 
-		if (textoResultados) {
-			textoResultados.textContent = '0 pedidos encontrados.';
-		}
-
 		return;
-	}
-
-	if (textoResultados) {
-		textoResultados.textContent = `${pedidos.length} pedido(s) encontrado(s).`;
 	}
 
 	Object.values(mapasRecogida).forEach((mapa) => {
@@ -1063,8 +1117,10 @@ function asignarEventosCancelacion() {
 function aplicarFiltros() {
 	const textoBusqueda = normalizarTexto(buscarPedido?.value || '');
 	const estadoSeleccionado = normalizarTexto(filtroEstado?.value || 'todos');
+	const cantidadSeleccionada = filtroCantidadPedidos?.value || 'todos';
+	const { fechaDesde, fechaHasta } = obtenerRangoFechas();
 
-	pedidosFiltrados = pedidosOriginales.filter((pedido) => {
+	let coincidencias = pedidosOriginales.filter((pedido) => {
 		const coincideBusqueda =
 			textoBusqueda === '' ||
 			String(pedido.id_pedido).toLowerCase().includes(textoBusqueda);
@@ -1078,6 +1134,40 @@ function aplicarFiltros() {
 		return coincideBusqueda && coincideEstado;
 	});
 
+	if (fechaDesde || fechaHasta) {
+		coincidencias = coincidencias.filter((pedido) => {
+			if (!pedido.fecha_pedido) {
+				return false;
+			}
+
+			const fechaPedido = new Date(pedido.fecha_pedido);
+
+			if (Number.isNaN(fechaPedido.getTime())) {
+				return false;
+			}
+
+			if (fechaDesde && fechaPedido < fechaDesde) {
+				return false;
+			}
+
+			if (fechaHasta && fechaPedido > fechaHasta) {
+				return false;
+			}
+
+			return true;
+		});
+	}
+
+	const totalCoincidencias = coincidencias.length;
+	const limiteCantidad = Number.parseInt(cantidadSeleccionada, 10);
+
+	pedidosFiltrados = [...coincidencias];
+
+	if (cantidadSeleccionada !== 'todos' && Number.isFinite(limiteCantidad) && limiteCantidad > 0) {
+		pedidosFiltrados = pedidosFiltrados.slice(0, limiteCantidad);
+	}
+
+	actualizarTextoResultados(totalCoincidencias, pedidosFiltrados.length);
 	renderizarPedidos(pedidosFiltrados);
 	actualizarResumen(pedidosFiltrados);
 }
@@ -1090,6 +1180,18 @@ if (filtroEstado) {
 	filtroEstado.addEventListener('change', aplicarFiltros);
 }
 
+if (filtroFechaDesde) {
+	filtroFechaDesde.addEventListener('input', aplicarFiltros);
+}
+
+if (filtroFechaHasta) {
+	filtroFechaHasta.addEventListener('input', aplicarFiltros);
+}
+
+if (filtroCantidadPedidos) {
+	filtroCantidadPedidos.addEventListener('change', aplicarFiltros);
+}
+
 if (btnLimpiarFiltros) {
 	btnLimpiarFiltros.addEventListener('click', () => {
 		if (buscarPedido) {
@@ -1098,6 +1200,18 @@ if (btnLimpiarFiltros) {
 
 		if (filtroEstado) {
 			filtroEstado.value = 'todos';
+		}
+
+		if (filtroFechaDesde) {
+			filtroFechaDesde.value = '';
+		}
+
+		if (filtroFechaHasta) {
+			filtroFechaHasta.value = '';
+		}
+
+		if (filtroCantidadPedidos) {
+			filtroCantidadPedidos.value = 'todos';
 		}
 
 		aplicarFiltros();
@@ -1190,9 +1304,7 @@ async function cargarPedidosCliente() {
 
 		pedidosOriginales = data ?? [];
 		pedidosFiltrados = [...pedidosOriginales];
-
-		renderizarPedidos(pedidosFiltrados);
-		actualizarResumen(pedidosFiltrados);
+		aplicarFiltros();
 
 		if (fechaActualizacion) {
 			fechaActualizacion.textContent = new Date().toLocaleString('es-MX', {

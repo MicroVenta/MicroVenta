@@ -1324,6 +1324,33 @@ function habilitarCampoDireccion(campo, habilitado) {
 	}
 }
 
+function obtenerWrapperMapaDireccionPrincipal() {
+	const mapa = document.getElementById('mapaDireccionEntrega');
+	return mapa?.closest('.address-map-wrapper') ?? null;
+}
+
+function actualizarVisibilidadCampoDireccion(campo, visible) {
+	if (!campo) {
+		return;
+	}
+
+	campo.wrapper?.classList.toggle('hidden', !visible);
+	ocultarSugerenciasDireccionCampo(campo);
+	ocultarEstadoDireccionCampo(campo);
+
+	if (!esCampoDireccionPrincipal(campo)) {
+		return;
+	}
+
+	obtenerWrapperMapaDireccionPrincipal()?.classList.toggle('hidden', !visible);
+
+	if (visible && mapaPrincipal) {
+		window.requestAnimationFrame(() => {
+			mapaPrincipal?.resize();
+		});
+	}
+}
+
 function validarTextoDireccionCampo(campo, etiqueta, mostrarError = mostrarMensaje) {
 	const direccion = obtenerTextoDireccionCampo(campo);
 
@@ -1927,6 +1954,7 @@ function actualizarEstadoLugarEntrega() {
 	const campoDireccion = estadoAutocompleteDireccion.principal;
 
 	if (esPedidoParaRecoger()) {
+		actualizarVisibilidadCampoDireccion(campoDireccion, false);
 		limpiarCampoDireccion(campoDireccion);
 		habilitarCampoDireccion(campoDireccion, false);
 		lugarEntrega.value = 'Recoger en tienda';
@@ -1934,6 +1962,7 @@ function actualizarEstadoLugarEntrega() {
 		return;
 	}
 
+	actualizarVisibilidadCampoDireccion(campoDireccion, true);
 	habilitarCampoDireccion(campoDireccion, true);
 	lugarEntrega.value = obtenerTextoDireccionCampo(campoDireccion);
 
@@ -2218,6 +2247,7 @@ function actualizarCampoLugarSeparacion(tipoSelect, campoDireccion) {
 	}
 
 	if (tipoSelect.value === 'recoger') {
+		actualizarVisibilidadCampoDireccion(campoDireccion, false);
 		limpiarCampoDireccion(campoDireccion);
 		if (campoDireccion.lugar) {
 			campoDireccion.lugar.value = 'Recoger en tienda';
@@ -2226,6 +2256,7 @@ function actualizarCampoLugarSeparacion(tipoSelect, campoDireccion) {
 		return;
 	}
 
+	actualizarVisibilidadCampoDireccion(campoDireccion, true);
 	habilitarCampoDireccion(campoDireccion, true);
 
 	if (campoDireccion.lugar) {

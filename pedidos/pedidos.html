@@ -66,7 +66,7 @@
 				<div class="section-header">
 					<div>
 						<h2>Filtros</h2>
-						<p>Busca por pedido, cliente, repartidor o estatus.</p>
+						<p>Busca por pedido, cliente, repartidor, estatus o rango de fechas.</p>
 					</div>
 				</div>
 
@@ -92,6 +92,27 @@
 						<label for="filtroRepartidor">Repartidor</label>
 						<select id="filtroRepartidor" class="form-control">
 							<option value="">Todos</option>
+						</select>
+					</div>
+					<div class="form-group">
+						<label for="filtroFechaDesde">Fecha desde</label>
+						<input type="date" id="filtroFechaDesde" class="form-control">
+					</div>
+
+					<div class="form-group">
+						<label for="filtroFechaHasta">Fecha hasta</label>
+						<input type="date" id="filtroFechaHasta" class="form-control">
+					</div>
+
+					<div class="form-group">
+						<label for="filtroCantidadPedidos">Mostrar</label>
+						<select id="filtroCantidadPedidos" class="form-control">
+							<option value="todos" selected>Todos</option>
+							<option value="10">10</option>
+							<option value="20">20</option>
+							<option value="30">30</option>
+							<option value="40">40</option>
+							<option value="50">50</option>
 						</select>
 					</div>
 				</div>

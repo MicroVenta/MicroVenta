@@ -1311,6 +1311,33 @@ function habilitarCampoDireccion(campo, habilitado) {
 	}
 }
 
+function obtenerWrapperMapaDireccionPrincipal() {
+	const mapa = document.getElementById('mapaDireccionEntrega');
+	return mapa?.closest('.address-map-wrapper') ?? null;
+}
+
+function actualizarVisibilidadCampoDireccion(campo, visible) {
+	if (!campo) {
+		return;
+	}
+
+	campo.wrapper?.classList.toggle('hidden', !visible);
+	ocultarSugerenciasDireccionCampo(campo);
+	ocultarEstadoDireccionCampo(campo);
+
+	if (!esCampoDireccionPrincipal(campo)) {
+		return;
+	}
+
+	obtenerWrapperMapaDireccionPrincipal()?.classList.toggle('hidden', !visible);
+
+	if (visible && mapaPrincipal) {
+		window.requestAnimationFrame(() => {
+			mapaPrincipal?.resize();
+		});
+	}
+}
+
 function obtenerTextoDireccionCampo(campo) {
 	return String(campo?.input?.value ?? '').trim();
 }
@@ -1533,6 +1560,7 @@ function actualizarEstadoLugarEntrega() {
 	const campoDireccion = estadoAutocompleteDireccion.principal;
 
 	if (esPedidoParaRecoger()) {
+		actualizarVisibilidadCampoDireccion(campoDireccion, false);
 		usarDireccionPerfil.checked = false;
 		usarDireccionPerfil.disabled = true;
 		limpiarCampoDireccion(campoDireccion);
@@ -1542,6 +1570,7 @@ function actualizarEstadoLugarEntrega() {
 		return;
 	}
 
+	actualizarVisibilidadCampoDireccion(campoDireccion, true);
 	usarDireccionPerfil.disabled = false;
 	habilitarCampoDireccion(campoDireccion, true);
 
@@ -2370,6 +2399,7 @@ function actualizarCampoLugarSeparacion(tipoSelect, campoDireccion) {
 	}
 
 	if (tipoSelect.value === 'recoger') {
+		actualizarVisibilidadCampoDireccion(campoDireccion, false);
 		limpiarCampoDireccion(campoDireccion);
 
 		if (campoDireccion.lugar) {
@@ -2380,6 +2410,7 @@ function actualizarCampoLugarSeparacion(tipoSelect, campoDireccion) {
 		return;
 	}
 
+	actualizarVisibilidadCampoDireccion(campoDireccion, true);
 	habilitarCampoDireccion(campoDireccion, true);
 
 	const textoActual = obtenerTextoDireccionCampo(campoDireccion);

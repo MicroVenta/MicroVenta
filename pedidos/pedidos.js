@@ -4,6 +4,9 @@ const btnCerrarSesion = document.getElementById('btnCerrarSesion');
 const buscarPedido = document.getElementById('buscarPedido');
 const filtroEstatus = document.getElementById('filtroEstatus');
 const filtroRepartidor = document.getElementById('filtroRepartidor');
+const filtroFechaDesde = document.getElementById('filtroFechaDesde');
+const filtroFechaHasta = document.getElementById('filtroFechaHasta');
+const filtroCantidadPedidos = document.getElementById('filtroCantidadPedidos');
 
 const statTotalPedidos = document.getElementById('statTotalPedidos');
 const statEnProceso = document.getElementById('statEnProceso');
@@ -56,7 +59,11 @@ let estatusOriginales = [];
 let pedidoSeleccionado = null;
 
 function normalizarTexto(texto) {
-	return String(texto ?? '').trim().toLowerCase();
+	return String(texto ?? '')
+		.normalize('NFD')
+		.replace(/[\u0300-\u036f]/g, '')
+		.trim()
+		.toLowerCase();
 }
 
 function esAdministradorOAyudante(usuarioData) {
@@ -202,6 +209,43 @@ function formatearFechaParaInput(fecha) {
 	const fechaLocal = new Date(fechaObj.getTime() - (offset * 60000));
 
 	return fechaLocal.toISOString().slice(0, 16);
+}
+
+function construirFechaLocal(valorFecha, finDelDia = false) {
+	if (!valorFecha) {
+		return null;
+	}
+
+	const partes = String(valorFecha).split('-').map(Number);
+
+	if (partes.length !== 3 || partes.some((parte) => !Number.isFinite(parte))) {
+		return null;
+	}
+
+	const [anio, mes, dia] = partes;
+
+	if (finDelDia) {
+		return new Date(anio, mes - 1, dia, 23, 59, 59, 999);
+	}
+
+	return new Date(anio, mes - 1, dia, 0, 0, 0, 0);
+}
+
+function obtenerRangoFechas() {
+	const fechaDesdeValor = filtroFechaDesde?.value || '';
+	const fechaHastaValor = filtroFechaHasta?.value || '';
+
+	if (fechaDesdeValor && fechaHastaValor && fechaDesdeValor > fechaHastaValor) {
+		return {
+			fechaDesde: construirFechaLocal(fechaHastaValor, false),
+			fechaHasta: construirFechaLocal(fechaDesdeValor, true)
+		};
+	}
+
+	return {
+		fechaDesde: construirFechaLocal(fechaDesdeValor, false),
+		fechaHasta: construirFechaLocal(fechaHastaValor, true)
+	};
 }
 
 function mostrarMensajeAccion(tipo, texto) {
@@ -498,6 +542,8 @@ function aplicarFiltrosInterno() {
 	const texto = normalizarTexto(buscarPedido.value);
 	const estatusSeleccionado = filtroEstatus.value;
 	const repartidorSeleccionado = filtroRepartidor.value;
+	const cantidadSeleccionada = filtroCantidadPedidos?.value || 'todos';
+	const { fechaDesde, fechaHasta } = obtenerRangoFechas();
 
 	if (texto !== '') {
 		pedidosFiltrados = pedidosFiltrados.filter((pedido) => {
@@ -532,7 +578,39 @@ function aplicarFiltrosInterno() {
 		});
 	}
 
-	resumenPedidos.textContent = `${pedidosFiltrados.length} pedido(s) encontrado(s).`;
+	if (fechaDesde || fechaHasta) {
+		pedidosFiltrados = pedidosFiltrados.filter((pedido) => {
+			if (!pedido.fecha_pedido) {
+				return false;
+			}
+
+			const fechaPedido = new Date(pedido.fecha_pedido);
+
+			if (Number.isNaN(fechaPedido.getTime())) {
+				return false;
+			}
+
+			if (fechaDesde && fechaPedido < fechaDesde) {
+				return false;
+			}
+
+			if (fechaHasta && fechaPedido > fechaHasta) {
+				return false;
+			}
+
+			return true;
+		});
+	}
+
+	const totalCoincidencias = pedidosFiltrados.length;
+	const limiteCantidad = Number.parseInt(cantidadSeleccionada, 10);
+
+	if (cantidadSeleccionada !== 'todos' && Number.isFinite(limiteCantidad) && limiteCantidad > 0) {
+		pedidosFiltrados = pedidosFiltrados.slice(0, limiteCantidad);
+		resumenPedidos.textContent = `Mostrando ${pedidosFiltrados.length} de ${totalCoincidencias} pedido(s) encontrado(s).`;
+	} else {
+		resumenPedidos.textContent = `${totalCoincidencias} pedido(s) encontrado(s).`;
+	}
 
 	return pedidosFiltrados;
 }
@@ -868,6 +946,17 @@ btnGuardarCambiosPedido.addEventListener('click', async () => {
 buscarPedido.addEventListener('input', aplicarFiltros);
 filtroEstatus.addEventListener('change', aplicarFiltros);
 filtroRepartidor.addEventListener('change', aplicarFiltros);
+if (filtroFechaDesde) {
+	filtroFechaDesde.addEventListener('input', aplicarFiltros);
+}
+
+if (filtroFechaHasta) {
+	filtroFechaHasta.addEventListener('input', aplicarFiltros);
+}
+
+if (filtroCantidadPedidos) {
+	filtroCantidadPedidos.addEventListener('change', aplicarFiltros);
+}
 
 selectEstatusModal.addEventListener('change', actualizarCamposSegunEstatus);
 
