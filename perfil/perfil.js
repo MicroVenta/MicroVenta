@@ -6,6 +6,12 @@ const ID_ROL_CLIENTE = 4;
 const AWS_REGION = 'us-east-2';
 const AWS_LOCATION_KEY = 'v1.public.eyJqdGkiOiI4OTY5OGIyYy1hZmQyLTQyYmItYjZjNi0xZTAwNWU2MWY2N2UifRfhEn2cmnsmQT2oZxWtopI2LigByNeDiy0oA3Zqm4Yej9MvT33_zzXMYaad7gCh1zuVnyCyAUHBwg5htBa5nQhuCY4ViXzP8lO94Nx6tD3EqmkvjIKEvR3d4JCTYoFcHdOWKmOmUEeSKKiFNpK0e6E4fk7mvX4a5pdSEnv3zvu6ohA7qEvycpJsUjuP7h8FT6p5gLLp6XUfV-CQSqxKAzU2waRJGNvFlJttMF7KXBgli9nErtyG7Hyz56FDKL0GlLwC7Wl3-3xjcXNz7AY5Yd4TQXh97P3AUuZ-DoCXaGsG3NZdCqT42UvsTcDYmE49e97pyeBwCR5BMuOdH_a-YOU.NjAyMWJkZWUtMGMyOS00NmRkLThjZTMtODEyOTkzZTUyMTBi';
 const AWS_BIAS_POSITION = [-104.8957, 21.5095];
+const MUNICIPIOS_PERMITIDOS = [
+	'tepic',
+	'xalisco',
+	'ixtlan del rio',
+	'ixtlan del r\u00edo'
+];
 
 const nombreClienteTopbar = document.getElementById('nombreClienteTopbar');
 const nombreClienteHero = document.getElementById('nombreClienteHero');
@@ -398,6 +404,28 @@ function obtenerDireccionAws(item) {
 	return item?.Address?.Label || item?.Title || '';
 }
 
+function normalizarTextoDireccion(valor) {
+	return String(valor ?? '')
+		.normalize('NFD')
+		.replace(/[\u0300-\u036f]/g, '')
+		.toLowerCase()
+		.trim();
+}
+
+function direccionPermitidaAws(item) {
+	const texto = normalizarTextoDireccion([
+		item?.Address?.Label,
+		item?.Address?.Locality,
+		item?.Address?.SubRegion,
+		item?.Address?.Region,
+		item?.Title
+	].filter(Boolean).join(' '));
+
+	return MUNICIPIOS_PERMITIDOS.some((municipio) => {
+		return texto.includes(normalizarTextoDireccion(municipio));
+	});
+}
+
 function obtenerTituloAws(item) {
 	return item?.Title || item?.Address?.Label || 'Dirección';
 }
@@ -445,7 +473,13 @@ async function buscarAutocompleteAws(texto) {
 		throw new Error('No se pudo consultar AWS Location.');
 	}
 
-	return respuesta.json();
+	const data = await respuesta.json();
+	const resultados = data.ResultItems ?? [];
+
+	return resultados
+		.filter((item) => obtenerDireccionAws(item) !== '')
+		.filter(direccionPermitidaAws)
+		.slice(0, 5);
 }
 
 async function geocodificarDireccionAws(direccion) {
@@ -465,7 +499,7 @@ async function geocodificarDireccionAws(direccion) {
 		body: JSON.stringify({
 			QueryText: texto,
 			Language: 'es',
-			MaxResults: 1,
+			MaxResults: 5,
 			Filter: {
 				IncludeCountries: ['MEX']
 			},
@@ -478,7 +512,7 @@ async function geocodificarDireccionAws(direccion) {
 	}
 
 	const data = await respuesta.json();
-	const item = data.ResultItems?.[0];
+	const item = (data.ResultItems ?? []).find(direccionPermitidaAws);
 
 	if (!item?.Position || !Array.isArray(item.Position)) {
 		return null;
@@ -509,7 +543,7 @@ async function obtenerDireccionDesdeUbicacion(latitud, longitud) {
 		body: JSON.stringify({
 			QueryPosition: [Number(longitud), Number(latitud)],
 			Language: 'es',
-			MaxResults: 1
+			MaxResults: 5
 		})
 	});
 
@@ -518,7 +552,7 @@ async function obtenerDireccionDesdeUbicacion(latitud, longitud) {
 	}
 
 	const data = await respuesta.json();
-	const item = data.ResultItems?.[0];
+	const item = (data.ResultItems ?? []).find(direccionPermitidaAws);
 
 	if (!item) {
 		throw new Error('No se obtuvo una dirección válida.');
@@ -593,7 +627,7 @@ function renderizarSugerenciasDirecciones(resultados) {
 		sugerenciasDireccion.innerHTML = `
 			<div class="address-suggestion-item" style="cursor: default;">
 				<span class="address-suggestion-main">No se encontraron coincidencias</span>
-				<span class="address-suggestion-secondary">Prueba escribiendo calle, colonia o ciudad.</span>
+				<span class="address-suggestion-secondary">Solo se permiten direcciones de Tepic, Xalisco e Ixtlan del Rio.</span>
 			</div>
 		`;
 		sugerenciasDireccion.classList.remove('hidden');
@@ -655,9 +689,9 @@ async function buscarSugerenciasDireccion(texto) {
 
 		mostrarEstadoDireccion('Buscando sugerencias con AWS...');
 
-		const data = await buscarAutocompleteAws(termino);
+		const resultados = await buscarAutocompleteAws(termino);
 
-		renderizarSugerenciasDirecciones(data.ResultItems ?? []);
+		renderizarSugerenciasDirecciones(resultados);
 		ocultarEstadoDireccion();
 	} catch (error) {
 		if (error.name === 'AbortError') {
