@@ -851,6 +851,36 @@ async function cargarPedidos() {
 	aplicarFiltros();
 }
 
+async function enviarCorreoPedido({ correo, nombre, idPedido, estatus }) {
+	const estatusNormalizado = normalizarTexto(estatus);
+
+	if (estatusNormalizado !== 'aceptado' && estatusNormalizado !== 'enviando') {
+		return false;
+	}
+
+	if (!correo || correo === 'Sin correo') {
+		console.warn('El pedido no tiene correo registrado.');
+		return false;
+	}
+
+	const { data, error } = await db.functions.invoke('enviar-correo-pedido', {
+		body: {
+			correo,
+			nombre,
+			idPedido,
+			estatus: estatusNormalizado
+		}
+	});
+
+	if (error) {
+		console.error('Error al enviar correo:', error);
+		return false;
+	}
+
+	console.log('Correo enviado:', data);
+	return true;
+}
+
 async function actualizarPedido(idPedido, datosActualizar) {
 	const { error } = await db
 		.from('pedido')
@@ -922,6 +952,15 @@ btnGuardarCambiosPedido.addEventListener('click', async () => {
 				fecha_entrega_aproximada: permiteFecha ? convertirFechaLocalParaBD(nuevaFechaEntrega) : null
 			}
 		);
+
+		enviarCorreoPedido({
+			correo: obtenerCorreoCliente(pedidoSeleccionado),
+			nombre: obtenerNombreCliente(pedidoSeleccionado),
+			idPedido: pedidoSeleccionado.id_pedido,
+			estatus: nuevaDescripcionEstatus
+		}).catch((error) => {
+			console.error('Error inesperado al enviar correo:', error);
+		});
 
 		await cargarPedidos();
 

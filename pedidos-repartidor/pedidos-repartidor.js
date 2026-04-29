@@ -419,6 +419,14 @@ function obtenerNombreCliente(pedido) {
 	return pedido.cliente?.nombre_completo ?? 'Cliente no disponible';
 }
 
+function obtenerCorreoCliente(pedido) {
+	if (esPedidoInvitado(pedido)) {
+		return pedido.invitado?.correo_contacto ?? 'Sin correo';
+	}
+
+	return pedido.cliente?.correo ?? 'Sin correo';
+}
+
 function obtenerTelefonoCliente(pedido) {
 	if (esPedidoInvitado(pedido)) {
 		return pedido.invitado?.telefono_contacto ?? 'Sin teléfono';
@@ -1829,17 +1837,50 @@ function obtenerIdEstatusPorDescripcion(...descripciones) {
 	return null;
 }
 
+async function enviarCorreoPedido({ correo, nombre, idPedido, estatus }) {
+	const estatusNormalizado = String(estatus ?? '').trim().toLowerCase();
+
+	if (estatusNormalizado !== 'enviando') {
+		return false;
+	}
+
+	if (!correo || correo === 'Sin correo') {
+		console.warn('El pedido no tiene correo registrado.');
+		return false;
+	}
+
+	const { data, error } = await db.functions.invoke('enviar-correo-pedido', {
+		body: {
+			correo,
+			nombre,
+			idPedido,
+			estatus: estatusNormalizado
+		}
+	});
+
+	if (error) {
+		console.error('Error al enviar correo:', error);
+		return false;
+	}
+
+	console.log('Correo enviado:', data);
+	return true;
+}
+
 async function actualizarEstatusPedido(idPedido, accion, boton) {
 	if (!idPedido) {
 		return;
 	}
 
+	const pedidoActual = pedidosOriginales.find((item) => Number(item.id_pedido) === Number(idPedido));
 	let nuevoIdEstatus = null;
 	let etiquetaAccion = '';
+	let debeEnviarCorreo = false;
 
 	if (accion === 'ruta') {
-		nuevoIdEstatus = obtenerIdEstatusPorDescripcion('en ruta', 'enviando', 'en camino');
+		nuevoIdEstatus = obtenerIdEstatusPorDescripcion('enviando', 'en ruta', 'en camino');
 		etiquetaAccion = 'en ruta';
+		debeEnviarCorreo = Boolean(mapaEstatus.enviando) && nuevoIdEstatus === mapaEstatus.enviando;
 	} else if (accion === 'entregado') {
 		nuevoIdEstatus = obtenerIdEstatusPorDescripcion('entregado', 'completado');
 		etiquetaAccion = 'entregado';
@@ -1870,6 +1911,17 @@ async function actualizarEstatusPedido(idPedido, accion, boton) {
 			console.error('Error al actualizar estatus del pedido:', error);
 			mostrarMensaje('No se pudo actualizar el estatus del pedido.', 'error');
 			return;
+		}
+
+		if (debeEnviarCorreo && pedidoActual) {
+			enviarCorreoPedido({
+				correo: obtenerCorreoCliente(pedidoActual),
+				nombre: obtenerNombreCliente(pedidoActual),
+				idPedido,
+				estatus: 'enviando'
+			}).catch((errorCorreo) => {
+				console.error('Error inesperado al enviar correo:', errorCorreo);
+			});
 		}
 
 		mostrarMensaje(`Pedido #${idPedido} actualizado correctamente a ${etiquetaAccion}.`, 'success');
@@ -2058,6 +2110,7 @@ async function cargarPedidosRepartidor() {
 				cliente:usuario!pedido_id_cliente_fkey (
 					id_usuario,
 					nombre_completo,
+					correo,
 					telefono
 				),
 				invitado:invitado!pedido_id_invitado_fkey (
