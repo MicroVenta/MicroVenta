@@ -4,16 +4,36 @@ const COORDENADAS_TEPIC = { lat: 21.5095, lon: -104.8957 };
 const AWS_REGION = 'us-east-2';
 const AWS_LOCATION_KEY = 'v1.public.eyJqdGkiOiI4OTY5OGIyYy1hZmQyLTQyYmItYjZjNi0xZTAwNWU2MWY2N2UifRfhEn2cmnsmQT2oZxWtopI2LigByNeDiy0oA3Zqm4Yej9MvT33_zzXMYaad7gCh1zuVnyCyAUHBwg5htBa5nQhuCY4ViXzP8lO94Nx6tD3EqmkvjIKEvR3d4JCTYoFcHdOWKmOmUEeSKKiFNpK0e6E4fk7mvX4a5pdSEnv3zvu6ohA7qEvycpJsUjuP7h8FT6p5gLLp6XUfV-CQSqxKAzU2waRJGNvFlJttMF7KXBgli9nErtyG7Hyz56FDKL0GlLwC7Wl3-3xjcXNz7AY5Yd4TQXh97P3AUuZ-DoCXaGsG3NZdCqT42UvsTcDYmE49e97pyeBwCR5BMuOdH_a-YOU.NjAyMWJkZWUtMGMyOS00NmRkLThjZTMtODEyOTkzZTUyMTBi';
 const AWS_BIAS_POSITION = [-104.8957, 21.5095];
-const AWS_MAP_STYLE = 'Standard';
-const AWS_MAP_STYLE_URL = `https://maps.geo.${AWS_REGION}.amazonaws.com/v2/styles/${AWS_MAP_STYLE}/descriptor?key=${AWS_LOCATION_KEY}`;
 const AWS_ROUTES_URL = `https://routes.geo.${AWS_REGION}.amazonaws.com/v2/routes?key=${AWS_LOCATION_KEY}`;
-const AWS_STATIC_MAP_URL = `https://maps.geo.${AWS_REGION}.amazonaws.com/v2/static/ruta-pedido.jpg`;
 const MUNICIPIOS_PERMITIDOS = [
 	'tepic',
 	'xalisco',
 	'ixtlan del rio',
 	'ixtlan del río'
 ];
+
+const MAP_STYLE = {
+	version: 8,
+	sources: {
+		'osm-raster': {
+			type: 'raster',
+			tiles: [
+				'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+			],
+			tileSize: 256,
+			attribution: '© OpenStreetMap contributors'
+		}
+	},
+	layers: [
+		{
+			id: 'osm-raster-layer',
+			type: 'raster',
+			source: 'osm-raster',
+			minzoom: 0,
+			maxzoom: 19
+		}
+	]
+};
 
 const nombreRepartidor = document.getElementById('nombreRepartidor');
 const btnCerrarSesion = document.getElementById('btnCerrarSesion');
@@ -632,6 +652,7 @@ function crearMarcadorMapa(colorFondo, textoInterior) {
 	const contenedor = document.createElement('div');
 	contenedor.className = 'route-marker';
 	contenedor.innerHTML = `
+		<div class="route-marker-shadow"></div>
 		<div class="route-marker-pin" style="background: ${colorFondo};"></div>
 		<div class="route-marker-core" style="color: ${colorFondo};">
 			${escaparHtml(textoInterior)}
@@ -1207,6 +1228,7 @@ function asegurarCapasRutaMapa() {
 	if (!mapaRuta.getSource('ruta-source')) {
 		mapaRuta.addSource('ruta-source', {
 			type: 'geojson',
+			lineMetrics: true,
 			data: crearGeoJsonRutaDesdeCoordenadas([])
 		});
 	}
@@ -1222,8 +1244,9 @@ function asegurarCapasRutaMapa() {
 			},
 			paint: {
 				'line-color': '#ffffff',
-				'line-width': 10,
-				'line-opacity': 0.95
+				'line-width': 11,
+				'line-opacity': 0.78,
+				'line-blur': 1.2
 			}
 		});
 	}
@@ -1239,13 +1262,37 @@ function asegurarCapasRutaMapa() {
 			},
 			paint: {
 				'line-color': '#2563eb',
-				'line-width': 6,
-				'line-opacity': 0.95
+				'line-width': 6.5,
+				'line-opacity': 0.96,
+				'line-gradient': crearGradienteRuta('#16a34a')
 			}
 		});
 	}
 
 	return true;
+}
+
+function crearGradienteRuta(colorDestino = '#16a34a') {
+	return [
+		'interpolate',
+		['linear'],
+		['line-progress'],
+		0,
+		'#d96c8a',
+		0.45,
+		'#fb7185',
+		1,
+		colorDestino
+	];
+}
+
+function crearContenidoPopupRuta(etiqueta, texto) {
+	return `
+		<div class="route-popup">
+			<strong class="route-popup-title">${escaparHtml(etiqueta)}</strong>
+			<span class="route-popup-text">${escaparHtml(texto)}</span>
+		</div>
+	`;
 }
 
 function ejecutarCuandoMapaRutaEsteListo(callback) {
@@ -1320,10 +1367,12 @@ function renderizarRutaEnMapa(origen, destino, coordenadasRuta, opciones = {}) {
 			source.setData(crearGeoJsonRutaDesdeCoordenadas(coordenadasValidas));
 		}
 
-		mapaRuta.setPaintProperty('ruta-base-layer', 'line-width', esAproximada ? 8 : 10);
-		mapaRuta.setPaintProperty('ruta-base-layer', 'line-opacity', esAproximada ? 0.9 : 0.95);
-		mapaRuta.setPaintProperty('ruta-main-layer', 'line-width', esAproximada ? 4 : 6);
-		mapaRuta.setPaintProperty('ruta-main-layer', 'line-opacity', esAproximada ? 0.85 : 0.95);
+		mapaRuta.setPaintProperty('ruta-base-layer', 'line-width', esAproximada ? 9 : 11);
+		mapaRuta.setPaintProperty('ruta-base-layer', 'line-opacity', esAproximada ? 0.72 : 0.78);
+		mapaRuta.setPaintProperty('ruta-base-layer', 'line-blur', esAproximada ? 0.8 : 1.2);
+		mapaRuta.setPaintProperty('ruta-main-layer', 'line-width', esAproximada ? 4.5 : 6.5);
+		mapaRuta.setPaintProperty('ruta-main-layer', 'line-opacity', esAproximada ? 0.86 : 0.96);
+		mapaRuta.setPaintProperty('ruta-main-layer', 'line-gradient', crearGradienteRuta(colorDestino));
 		mapaRuta.setPaintProperty(
 			'ruta-main-layer',
 			'line-dasharray',
@@ -1336,10 +1385,7 @@ function renderizarRutaEnMapa(origen, destino, coordenadasRuta, opciones = {}) {
 		})
 			.setLngLat([origen.lon, origen.lat])
 			.setPopup(
-				new maplibregl.Popup({ offset: 28 }).setHTML(`
-					<strong>Origen</strong><br>
-					${escaparHtml(origen.texto ?? 'Ubicación de origen')}
-				`)
+				new maplibregl.Popup({ offset: 28 }).setHTML(crearContenidoPopupRuta('Origen', origen.texto ?? 'Ubicacion de origen'))
 			)
 			.addTo(mapaRuta);
 
@@ -1349,10 +1395,7 @@ function renderizarRutaEnMapa(origen, destino, coordenadasRuta, opciones = {}) {
 		})
 			.setLngLat([destino.lon, destino.lat])
 			.setPopup(
-				new maplibregl.Popup({ offset: 28 }).setHTML(`
-					<strong>Destino</strong><br>
-					${escaparHtml(destino.texto ?? 'Ubicación de destino')}
-				`)
+				new maplibregl.Popup({ offset: 28 }).setHTML(crearContenidoPopupRuta('Destino', destino.texto ?? 'Ubicacion de destino'))
 			)
 			.addTo(mapaRuta);
 
@@ -1586,12 +1629,16 @@ function inicializarMapaRuta() {
 
 	mapaRuta = new maplibregl.Map({
 		container: 'mapaRuta',
-		style: AWS_MAP_STYLE_URL,
+		style: MAP_STYLE,
 		center: [coordenadasNegocio.lon, coordenadasNegocio.lat],
-		zoom: 13
+		zoom: 13,
+		attributionControl: false,
+		pitchWithRotate: false,
+		dragRotate: false
 	});
 
 	mapaRuta.addControl(new maplibregl.NavigationControl(), 'top-right');
+	mapaRuta.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
 
 	mapaRuta.on('load', () => {
 		mapaRutaListo = true;
