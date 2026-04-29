@@ -104,6 +104,7 @@ loginForm.addEventListener('submit', async function (e) {
 				correo,
 				contrasena,
 				id_rol,
+				estado,
 				rol (
 					id_rol,
 					nombre_rol
@@ -124,6 +125,16 @@ loginForm.addEventListener('submit', async function (e) {
 
 		if (data.contrasena !== password) {
 			estadoBotonLogin('error', '✕ Datos incorrectos');
+
+			setTimeout(() => {
+				restaurarBotonLogin();
+			}, 1400);
+
+			return;
+		}
+
+		if (!data.estado) {
+			estadoBotonLogin('error', '✕ Cuenta inactiva');
 
 			setTimeout(() => {
 				restaurarBotonLogin();

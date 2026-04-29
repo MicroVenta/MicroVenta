@@ -138,11 +138,13 @@ async function cargarUsuarios() {
 			correo,
 			contrasena,
 			id_rol,
+			estado,
 			rol (
 				id_rol,
 				nombre_rol
 			)
 		`)
+		.eq('estado', true)
 		.order('id_usuario', { ascending: true });
 
 	if (error) {
@@ -234,7 +236,7 @@ window.editarUsuario = editarUsuario;
 ========================= */
 
 async function eliminarUsuario(id) {
-	const confirmar = confirm('¿Deseas eliminar este usuario?');
+	const confirmar = confirm('¿Deseas desactivar este usuario?');
 
 	if (!confirmar) {
 		return;
@@ -242,12 +244,12 @@ async function eliminarUsuario(id) {
 
 	const { error } = await db
 		.from('usuario')
-		.delete()
+		.update({ estado: false })
 		.eq('id_usuario', id);
 
 	if (error) {
-		console.error('Error al eliminar usuario:', error);
-		alert('No se pudo eliminar el usuario.');
+		console.error('Error al desactivar usuario:', error);
+		alert('No se pudo desactivar el usuario.');
 		return;
 	}
 
